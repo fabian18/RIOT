@@ -84,4 +84,18 @@ as system clock source.
 More pins can be used for hardware interrupts using the Pin Change
 Interrupt feature. See @ref boards_common_atmega for details.
 
+## SPI pin mapping
+
+In the [Wiki Page](https://wiki.microduinoinc.com/Microduino-Module_CoreUSB)
+there is a mistake regarding the SPI pin mapping between "Original Pin Name"
+and "Map Pin Name". The "SS" pin is labeled as "PB0", but actually it should
+be "PB4".
+
+| MCU Pin  | SPi    | Microduino CoreRF  |
+|:-------- |:------ |:------------------ |
+|  PB1     |  SCK   |  D13               |
+|  PB2     |  MOSI  |  D11               |
+|  PB3     |  MISO  |  D12               |
+|  PB4     |  SS    |  D10               |
+
  */
