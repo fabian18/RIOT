@@ -1,0 +1,19 @@
+ifneq (,$(filter netdev_default gnrc_netdev_default,$(USEMODULE)))
+  USEMODULE += stm32_eth
+  USEMODULE += slipdev
+  USEMODULE += cc1101
+  USEMODULE += sx1276
+  USEMODULE += nrf24l01p_ng
+  USEMODULE += at86rf233
+endif
+
+USEMODULE += bme680_i2c
+USEMODULE += sht3x
+USEMODULE += at24c256
+
+ifneq (,$(filter saul_default,$(USEMODULE)))
+  USEMODULE += sht3x
+  USEMODULE += bme680_i2c
+endif
+
+include $(RIOTBOARD)/common/nucleo/Makefile.dep
