@@ -43,8 +43,7 @@
  *    EEPROM_RESERV_CPU_HI
  * @endcode
  *
- * Pointer length is dependent on the size of the available EEPROM (see
- * EEPREG_PTR_LEN below).
+ * Pointer length is dependent on the size of the available EEPROM
  *
  * @{
  *
@@ -59,8 +58,7 @@
 
 #include <stdint.h>
 
-#include "periph_cpu.h"
-#include "periph_conf.h"
+#include "mtd_eeprom.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,19 +101,6 @@ extern "C" {
 #endif
 
 /**
- * @brief   Size in bytes of pointer meta-data in EEPROM
- */
-#if (EEPROM_SIZE > 0x1000000)
-#define EEPREG_PTR_LEN    (4U)
-#elif (EEPROM_SIZE > 0x10000)
-#define EEPREG_PTR_LEN    (3U)
-#elif (EEPROM_SIZE > 0x100)
-#define EEPREG_PTR_LEN    (2U)
-#else
-#define EEPREG_PTR_LEN    (1U)
-#endif
-
-/**
  * @brief   Signature of callback for iterating over entries in EEPROM registry
  *
  * @param[in] name    name of an entry in the registry
@@ -125,6 +110,17 @@ extern "C" {
  * @return    < 0 on failure
  */
 typedef int (*eepreg_iter_cb_t)(char *name, void *arg);
+
+/**
+ * @brief   Initialize EEPROM registry with a kind of MTD EEPROM
+ *
+ * @pre     The MTD device must have been initialized with a driver
+ *          and @ref mtd_init() must have been called
+ *
+ * @return  0 on success
+ * @return  negative number on error
+ */
+int eepreg_init(mtd_eeprom_t *mtd);
 
 /**
  * @brief   Load or write meta-data in EEPROM registry

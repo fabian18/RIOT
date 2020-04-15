@@ -23,7 +23,6 @@
 #include <string.h>
 
 #include "eepreg.h"
-#include "periph/eeprom.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
@@ -31,24 +30,46 @@
 /* EEPREG magic number */
 static const char eepreg_magic[] = "RIOTREG";
 
+typedef struct {
+    mtd_eeprom_t *eeprom;   /**< MTD EEPROM pointer */
+    uint32_t size;          /**< EEPROM size */
+    uint8_t ptr_len;        /**< length of pointer to address EEPROM */
+} eepreg_t;
+
+static eepreg_t _reg;       /**< eepreg singleton */
+
+#define EEPREG_EEPROM_DEV   (_reg.eeprom->base)
+#define EEPREG_EEPROM_SIZE  (_reg.size)
+#define EEPREG_PTR_LEN      (_reg.ptr_len)
+
 /* constant lengths */
-#define MAGIC_SIZE      (sizeof(eepreg_magic) - 1)    /* -1 to remove null */
-#define ENT_LEN_SIZ     (1U)
+#define MAGIC_SIZE          (sizeof(eepreg_magic) - 1)  /* -1 to remove null */
+#define ENT_LEN_SIZ         (1U)
 
 /* constant locations */
-#define REG_START          (EEPROM_RESERV_CPU_LOW + EEPROM_RESERV_BOARD_LOW)
-#define REG_MAGIC_LOC      (REG_START)
-#define REG_END_PTR_LOC    (REG_MAGIC_LOC + MAGIC_SIZE)
-#define REG_ENT1_LOC       (REG_END_PTR_LOC + EEPREG_PTR_LEN)
-#define DAT_START          (EEPROM_SIZE - EEPROM_RESERV_CPU_HI \
+#define REG_START           (EEPROM_RESERV_CPU_LOW + EEPROM_RESERV_BOARD_LOW)
+#define REG_MAGIC_LOC       (REG_START)
+#define REG_END_PTR_LOC     (REG_MAGIC_LOC + MAGIC_SIZE)
+#define REG_ENT1_LOC        (REG_END_PTR_LOC + EEPREG_PTR_LEN)
+#define DAT_START           (EEPREG_EEPROM_SIZE - EEPROM_RESERV_CPU_HI \
                             - EEPROM_RESERV_BOARD_HI - 1)
+
+static inline int _eeprom_read(void* dst, uint32_t loc, uint32_t len)
+{
+    return EEPREG_EEPROM_DEV.driver->read(&EEPREG_EEPROM_DEV, dst, loc, len);
+}
+
+static inline int _eeprom_write(const void* src, uint32_t loc, uint32_t len)
+{
+    return EEPREG_EEPROM_DEV.driver->write(&EEPREG_EEPROM_DEV, src, loc, len);
+}
 
 static inline uint32_t _read_meta_uint(uint32_t loc)
 {
     uint8_t data[4];
     uint32_t ret;
 
-    eeprom_read(loc, data, EEPREG_PTR_LEN);
+    _eeprom_read(data, loc, EEPREG_PTR_LEN);
 
     /* unused array members will be discarded */
     ret = ((uint32_t)data[0] << 24)
@@ -73,7 +94,7 @@ static inline void _write_meta_uint(uint32_t loc, uint32_t val)
     data[2] = (uint8_t)(val >> 8);
     data[3] = (uint8_t)val;
 
-    eeprom_write(loc, data, EEPREG_PTR_LEN);
+    _eeprom_write(data, loc, EEPREG_PTR_LEN);
 }
 
 static inline uint32_t _get_reg_end(void)
@@ -103,12 +124,14 @@ static inline uint32_t _calc_free_space(uint32_t reg_end, uint32_t last_loc)
 
 static inline uint8_t _get_meta_len(uint32_t meta_loc)
 {
-    return eeprom_read_byte(meta_loc);
+    uint8_t len;
+    _eeprom_read(&len, meta_loc, 1);
+    return len;
 }
 
 static inline void _set_meta_len(uint32_t meta_loc, uint8_t meta_len)
 {
-    eeprom_write_byte(meta_loc, meta_len);
+    _eeprom_write(&meta_len, meta_loc, 1);
 }
 
 static inline uint32_t _get_data_loc(uint32_t meta_loc, uint8_t meta_len)
@@ -133,8 +156,7 @@ static inline uint8_t _calc_name_len(uint8_t meta_len)
 static inline void _get_name(uint32_t meta_loc, char *name, uint8_t meta_len)
 {
     /* name is after entry length */
-    eeprom_read(meta_loc + ENT_LEN_SIZ, (uint8_t *)name,
-                _calc_name_len(meta_len));
+    _eeprom_read(name, meta_loc + ENT_LEN_SIZ, _calc_name_len(meta_len));
 }
 
 static inline int _cmp_name(uint32_t meta_loc, const char *name,
@@ -146,13 +168,14 @@ static inline int _cmp_name(uint32_t meta_loc, const char *name,
     uint8_t len = _calc_name_len(meta_len);
 
     uint8_t offset;
+    uint8_t c = 0;
     for (offset = 0; offset < len; offset++) {
         if (name[offset] == '\0') {
             /* entry name is longer than name */
             return 0;
         }
-
-        if (eeprom_read_byte(loc + offset) != (uint8_t)name[offset]) {
+        _eeprom_read(&c, loc + offset, 1);
+        if (c != (uint8_t)name[offset]) {
             /* non-matching character */
             return 0;
         }
@@ -218,7 +241,7 @@ static inline int _new_entry(const char *name, uint32_t data_len)
     _set_meta_len(reg_end, meta_len);
 
     /* write name of entry */
-    eeprom_write(reg_end + ENT_LEN_SIZ, (uint8_t *)name, name_len);
+    _eeprom_write(name, reg_end + ENT_LEN_SIZ, name_len);
 
     /* set the location of the data */
     _set_data_loc(reg_end, meta_len, last_loc - data_len);
@@ -243,10 +266,35 @@ static inline void _move_data(uint32_t oldpos, uint32_t newpos, uint32_t len)
             offset = len - count;
         }
 
-        uint8_t byte = eeprom_read_byte(oldpos + offset);
-
-        eeprom_write_byte(newpos + offset, byte);
+        uint8_t byte;
+        _eeprom_read(&byte, oldpos + offset, 1);
+        _eeprom_write(&byte, newpos + offset, 1);
     }
+}
+
+int eepreg_init(mtd_eeprom_t *mtd)
+{
+    int init = mtd_init((mtd_dev_t *)mtd);
+    if (init != 0) {
+        return init;
+    }
+    _reg.eeprom = mtd;
+    _reg.size = mtd->base.page_size *
+                mtd->base.pages_per_sector *
+                mtd->base.sector_count;
+    if (_reg.size > 0x1000000) {
+        _reg.ptr_len = 4U;
+    }
+    else if (_reg.size > 0x10000) {
+        _reg.ptr_len = 3U;
+    }
+    else if (_reg.size > 0x100) {
+        _reg.ptr_len = 2U;
+    }
+    else {
+        _reg.ptr_len = 1U;
+    }
+    return 0;
 }
 
 int eepreg_add(uint32_t *pos, const char *name, uint32_t len)
@@ -428,9 +476,7 @@ int eepreg_check(void)
     char magic[MAGIC_SIZE];
 
     /* get magic number from EEPROM */
-    if (eeprom_read(REG_MAGIC_LOC, (uint8_t *)magic, MAGIC_SIZE)
-        != MAGIC_SIZE) {
-
+    if (_eeprom_read(magic, REG_MAGIC_LOC, MAGIC_SIZE) != MAGIC_SIZE) {
         DEBUG("[eepreg_check] EEPROM read error\n");
         return -EIO;
     }
@@ -447,9 +493,7 @@ int eepreg_check(void)
 int eepreg_reset(void)
 {
     /* write new registry magic number */
-    if (eeprom_write(REG_MAGIC_LOC, (uint8_t *)eepreg_magic, MAGIC_SIZE)
-        != MAGIC_SIZE) {
-
+    if (_eeprom_write(eepreg_magic, REG_MAGIC_LOC, MAGIC_SIZE) != MAGIC_SIZE) {
         DEBUG("[eepreg_reset] EEPROM write error\n");
         return -EIO;
     }
