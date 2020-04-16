@@ -160,6 +160,18 @@ int ringbuffer_peek_one(const ringbuffer_t *__restrict rb);
 unsigned ringbuffer_peek(const ringbuffer_t *__restrict rb, char *buf,
                          unsigned n);
 
+/**
+ * @brief           Access buffer at some offset
+ * If @p offset is less than 0, the offset is treated relatively to the end
+ * of the buffer, else the offet is treated relatively to the beginning of the
+ * buffer.
+ * @param[in]       rb    Ringbuffer to operate on
+ * @param[out]      ptr   Address of a pointer that will point into buffer
+ * @param[in]       offset Relative offset
+ */
+unsigned ringbuffer_access(const ringbuffer_t *restrict rb, char** ptr,
+                           long offset);
+
 #ifdef __cplusplus
 }
 #endif

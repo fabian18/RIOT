@@ -147,3 +147,30 @@ unsigned ringbuffer_peek(const ringbuffer_t *restrict rb_, char *buf,
 
     return ringbuffer_get(&rb, buf, n);
 }
+
+unsigned ringbuffer_access(const ringbuffer_t *restrict rb, char** ptr,
+                           long offset)
+{
+    unsigned pos;
+    if (offset < 0) {
+        /* seek from end */
+        unsigned off = -offset;
+        if (off > rb->avail) {
+            return off - rb->avail;
+        }
+        if ((pos = rb->start + rb->avail - off) >= rb->size) {
+            pos = pos - rb->size;
+        }
+    }
+    else {
+        /* seek from start */
+        if ((unsigned)offset > rb->avail) {
+            return offset - rb->avail;
+        }
+        if ((pos = rb->start + offset) >= rb->size) {
+            pos = pos - rb->size;
+        }
+    }
+    *ptr = &rb->buf[pos];
+    return 0;
+}
