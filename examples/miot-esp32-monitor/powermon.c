@@ -176,10 +176,9 @@ RESCHEDULE: {
 
 int powermon_init(void)
 {
-    int init;
     unsigned success = 0;
     for (unsigned num = 0; num < INA3221_NUM; num++) {
-        init = ina3221_init(&_mons[num].dev, &ina3221_params[num]);
+        int init = ina3221_init(&_mons[num].dev, &ina3221_params[num]);
         if (init == INA3221_OK) {
             if (success < num) {
                 _mons[success].dev = _mons[num].dev;

@@ -62,7 +62,6 @@ int _parse_channel(int* argc, char** arg, powermon_config_t* cfg)
     assert(!strcmp(*arg, "-c"));
     DEBUG("%s: argc: %d\n", "_parse_channel", *argc);
     char** a = arg;
-    char* c;
     int argi = *argc - 1; /* at lease 1 processed because of "-c" */
     int ch;
     if (*argc < 1) {
@@ -71,7 +70,7 @@ int _parse_channel(int* argc, char** arg, powermon_config_t* cfg)
     }
     while (argi && ++a) {
         DEBUG("arg: %s\n", *a);
-        c = *a;
+        char* c = *a;
         if (isdigit(c[0]) && !c[1]) {
             ch = c[0] - '0';
             if (ch == 1) {
@@ -107,7 +106,6 @@ int _parse_num(int* argc, char** arg, powermon_config_t* cfg)
     assert(!strcmp(*arg, "-n"));
     DEBUG("%s: argc: %d\n", "_parse_num", *argc);
     char** a = arg;
-    char* c;
     int argi = *argc - 1; /* at lease 1 processed because of "-n" */
     int num = 0;
     if (*argc < 2) {
@@ -116,7 +114,7 @@ int _parse_num(int* argc, char** arg, powermon_config_t* cfg)
     }
     if (argi && ++a) {
         DEBUG("arg: %s\n", *a);
-        c = *a;
+        char* c = *a;
         unsigned i;
         for (i = 0; c[i]; i++) {
             if (isdigit(c[i])) {
@@ -147,7 +145,6 @@ int _parse_sadc(int* argc, char** arg, powermon_config_t* cfg)
     assert(!strcmp(*arg, "-s"));
     DEBUG("%s: argc: %d\n", "_parse_sadc", *argc);
     char** a = arg;
-    char* c;
     int argi = *argc - 1; /* at lease 1 processed because of "-s" */
     int sadc = 0;
     if (*argc < 2) {
@@ -155,7 +152,7 @@ int _parse_sadc(int* argc, char** arg, powermon_config_t* cfg)
         return -EINVAL;
     }
     if (argi && ++a) {
-        c = *a;
+        char* c = *a;
         unsigned i;
         for (i = 0; c[i]; i++) {
             if (isdigit(c[i])) {
@@ -186,7 +183,6 @@ int _parse_badc(int* argc, char** arg, powermon_config_t* cfg)
     assert(!strcmp(*arg, "-b"));
     DEBUG("%s: argc: %d\n", "_parse_badc", *argc);
     char** a = arg;
-    char* c;
     int argi = *argc - 1; /* at least 1 processed argument because of "-b" */
     int badc = 0;
     if (*argc < 2) {
@@ -194,7 +190,7 @@ int _parse_badc(int* argc, char** arg, powermon_config_t* cfg)
         return -EINVAL;
     }
     if (argi && ++a) {
-        c = *a;
+        char* c = *a;
         unsigned i;
         for (i = 0; c[i]; i++) {
             if (isdigit(c[i])) {
@@ -225,14 +221,13 @@ int _parse_mode(int* argc, char** arg, powermon_config_t* cfg)
     assert(!strcmp(*arg, "-m"));
     DEBUG("%s: argc: %d\n", "_parse_mode", *argc);
     char** a = arg;
-    char* c;
     int argi = *argc - 1; /* at least 1 processed argument because of "-m" */
     if (*argc < 2) {
         *argc = 0;
         return -EINVAL;
     }
     if (argi && ++a) {
-        c = *a;
+        char* c = *a;
         DEBUG("%s: mode: %s\n", "_parse_mode", c);
         if(!strcmp(c, _modes[0])) {
             cfg->mode = INA3221_MODE_POWER_DOWN;
@@ -302,7 +297,6 @@ int sc_powermon(int argc, char* argv[])
                 case 's':
                     shunt_adc = &pm_cfg.shunt_adc;
                     err = _parse_sadc(&argi, arg_ptr, &pm_cfg);
-                    break;
                     break;
                 case 'b':
                     bus_adc = &pm_cfg.bus_adc;
