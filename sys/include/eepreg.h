@@ -100,6 +100,17 @@ extern "C" {
 #define EEPROM_RESERV_BOARD_HI    (0U)
 #endif
 
+#ifndef EEPROM_CHECK_ERRORS
+/**
+ * @brief   Check EEPROm read/write operations and propagate errors
+ *
+ * For MCU EEPROM and SPI EEPROM this is not necessary because they only
+ * fail if memory bounds are disregard. But this is taken care of by the
+ * regestry itself.
+ */
+#define EEPROM_CHECK_ERRORS       (0U)
+#endif
+
 /**
  * @brief   Signature of callback for iterating over entries in EEPROM registry
  *
@@ -115,7 +126,6 @@ typedef int (*eepreg_iter_cb_t)(char *name, void *arg);
  * @brief   Initialize EEPROM registry with a kind of MTD EEPROM
  *
  * @pre     The MTD device must have been initialized with a driver
- *          and @ref mtd_init() must have been called
  *
  * @return  0 on success
  * @return  negative number on error
