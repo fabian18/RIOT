@@ -36,7 +36,7 @@ static int _init(mtd_dev_t *dev)
     return 0;
 }
 
-static int _read(mtd_dev_t *dev, void *buf, uint32_t addr, uint32_t size)
+static int _read(mtd_dev_t *dev, void *buf, uint32_t addr, size_t size)
 {
     assert(addr < MTD_FLASHPAGE_END_ADDR);
 
@@ -57,7 +57,7 @@ static int _read(mtd_dev_t *dev, void *buf, uint32_t addr, uint32_t size)
     return size;
 }
 
-static int _write(mtd_dev_t *dev, const void *buf, uint32_t addr, uint32_t size)
+static int _write(mtd_dev_t *dev, const void *buf, uint32_t addr, size_t size)
 {
     (void)dev;
 
@@ -85,7 +85,7 @@ static int _write(mtd_dev_t *dev, const void *buf, uint32_t addr, uint32_t size)
     return size;
 }
 
-int _erase(mtd_dev_t *dev, uint32_t addr, uint32_t size)
+int _erase(mtd_dev_t *dev, uint32_t addr, size_t size)
 {
     size_t sector_size = dev->page_size * dev->pages_per_sector;
 

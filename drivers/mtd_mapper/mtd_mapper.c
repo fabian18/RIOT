@@ -83,7 +83,7 @@ static int _init(mtd_dev_t *mtd)
 }
 
 static int _write(mtd_dev_t *mtd, const void *src, uint32_t addr,
-                  uint32_t count)
+                  size_t count)
 {
     mtd_mapper_region_t *region = container_of(mtd, mtd_mapper_region_t, mtd);
 
@@ -97,7 +97,7 @@ static int _write(mtd_dev_t *mtd, const void *src, uint32_t addr,
     return res;
 }
 
-static int _read(mtd_dev_t *mtd, void *dest, uint32_t addr, uint32_t count)
+static int _read(mtd_dev_t *mtd, void *dest, uint32_t addr, size_t count)
 {
     mtd_mapper_region_t *region = container_of(mtd, mtd_mapper_region_t, mtd);
 
@@ -111,7 +111,7 @@ static int _read(mtd_dev_t *mtd, void *dest, uint32_t addr, uint32_t count)
     return res;
 }
 
-static int _erase(mtd_dev_t *mtd, uint32_t addr, uint32_t count)
+static int _erase(mtd_dev_t *mtd, uint32_t addr, size_t count)
 {
     mtd_mapper_region_t *region = container_of(mtd, mtd_mapper_region_t, mtd);
 

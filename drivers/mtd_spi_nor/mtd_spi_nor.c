@@ -50,9 +50,9 @@
 #define MTD_4K_ADDR_MASK    (0xFFF)
 
 static int mtd_spi_nor_init(mtd_dev_t *mtd);
-static int mtd_spi_nor_read(mtd_dev_t *mtd, void *dest, uint32_t addr, uint32_t size);
-static int mtd_spi_nor_write(mtd_dev_t *mtd, const void *src, uint32_t addr, uint32_t size);
-static int mtd_spi_nor_erase(mtd_dev_t *mtd, uint32_t addr, uint32_t size);
+static int mtd_spi_nor_read(mtd_dev_t *mtd, void *dest, uint32_t addr, size_t size);
+static int mtd_spi_nor_write(mtd_dev_t *mtd, const void *src, uint32_t addr, size_t size);
+static int mtd_spi_nor_erase(mtd_dev_t *mtd, uint32_t addr, size_t size);
 static int mtd_spi_nor_power(mtd_dev_t *mtd, enum mtd_power_state power);
 
 const mtd_desc_t mtd_spi_nor_driver = {
@@ -394,7 +394,7 @@ static int mtd_spi_nor_init(mtd_dev_t *mtd)
     return 0;
 }
 
-static int mtd_spi_nor_read(mtd_dev_t *mtd, void *dest, uint32_t addr, uint32_t size)
+static int mtd_spi_nor_read(mtd_dev_t *mtd, void *dest, uint32_t addr, size_t size)
 {
     DEBUG("mtd_spi_nor_read: %p, %p, 0x%" PRIx32 ", 0x%" PRIx32 "\n",
           (void *)mtd, dest, addr, size);
@@ -426,7 +426,7 @@ static int mtd_spi_nor_read(mtd_dev_t *mtd, void *dest, uint32_t addr, uint32_t 
     return size;
 }
 
-static int mtd_spi_nor_write(mtd_dev_t *mtd, const void *src, uint32_t addr, uint32_t size)
+static int mtd_spi_nor_write(mtd_dev_t *mtd, const void *src, uint32_t addr, size_t size)
 {
     uint32_t total_size = mtd->page_size * mtd->pages_per_sector * mtd->sector_count;
 
@@ -464,7 +464,7 @@ static int mtd_spi_nor_write(mtd_dev_t *mtd, const void *src, uint32_t addr, uin
     return size;
 }
 
-static int mtd_spi_nor_erase(mtd_dev_t *mtd, uint32_t addr, uint32_t size)
+static int mtd_spi_nor_erase(mtd_dev_t *mtd, uint32_t addr, size_t size)
 {
     DEBUG("mtd_spi_nor_erase: %p, 0x%" PRIx32 ", 0x%" PRIx32 "\n",
           (void *)mtd, addr, size);

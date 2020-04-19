@@ -498,7 +498,7 @@ static int _flash_init  (mtd_dev_t *dev)
     return 0;
 }
 
-static int _flash_read  (mtd_dev_t *dev, void *buff, uint32_t addr, uint32_t size)
+static int _flash_read  (mtd_dev_t *dev, void *buff, uint32_t addr, size_t size)
 {
     DEBUG("%s dev=%p addr=%08x size=%u buf=%p\n", __func__, dev, addr, size, buff);
 
@@ -511,7 +511,7 @@ static int _flash_read  (mtd_dev_t *dev, void *buff, uint32_t addr, uint32_t siz
     return (spi_flash_read(_flash_beg + addr, buff, size) == ESP_OK) ? (int)size : -EIO;
 }
 
-static int _flash_write (mtd_dev_t *dev, const void *buff, uint32_t addr, uint32_t size)
+static int _flash_write (mtd_dev_t *dev, const void *buff, uint32_t addr, size_t size)
 {
     DEBUG("%s dev=%p addr=%08x size=%u buf=%p\n", __func__, dev, addr, size, buff);
 
@@ -528,7 +528,7 @@ static int _flash_write (mtd_dev_t *dev, const void *buff, uint32_t addr, uint32
     return (spi_flash_write(_flash_beg + addr, buff, size) == ESP_OK) ? (int)size : -EIO;
 }
 
-static int _flash_erase (mtd_dev_t *dev, uint32_t addr, uint32_t size)
+static int _flash_erase (mtd_dev_t *dev, uint32_t addr, size_t size)
 {
     DEBUG("%s dev=%p addr=%08x size=%u\n", __func__, dev, addr, size);
 

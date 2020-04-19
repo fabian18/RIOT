@@ -50,7 +50,7 @@ static int init(mtd_dev_t *dev)
     return 0;
 }
 
-static int read(mtd_dev_t *dev, void *buff, uint32_t addr, uint32_t size)
+static int read(mtd_dev_t *dev, void *buff, uint32_t addr, size_t size)
 {
     (void)dev;
 
@@ -62,7 +62,7 @@ static int read(mtd_dev_t *dev, void *buff, uint32_t addr, uint32_t size)
     return size;
 }
 
-static int write(mtd_dev_t *dev, const void *buff, uint32_t addr, uint32_t size)
+static int write(mtd_dev_t *dev, const void *buff, uint32_t addr, size_t size)
 {
     (void)dev;
 
@@ -77,7 +77,7 @@ static int write(mtd_dev_t *dev, const void *buff, uint32_t addr, uint32_t size)
     return size;
 }
 
-static int erase(mtd_dev_t *dev, uint32_t addr, uint32_t size)
+static int erase(mtd_dev_t *dev, uint32_t addr, size_t size)
 {
     (void)dev;
 

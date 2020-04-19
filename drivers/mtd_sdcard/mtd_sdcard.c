@@ -30,10 +30,10 @@
 
 static int mtd_sdcard_init(mtd_dev_t *mtd);
 static int mtd_sdcard_read(mtd_dev_t *mtd, void *dest, uint32_t addr,
-                           uint32_t size);
+                           size_t size);
 static int mtd_sdcard_write(mtd_dev_t *mtd, const void *src, uint32_t addr,
-                            uint32_t size);
-static int mtd_sdcard_erase(mtd_dev_t *mtd, uint32_t addr, uint32_t size);
+                            size_t size);
+static int mtd_sdcard_erase(mtd_dev_t *mtd, uint32_t addr, size_t size);
 static int mtd_sdcard_power(mtd_dev_t *mtd, enum mtd_power_state power);
 
 const mtd_desc_t mtd_sdcard_driver = {
@@ -63,9 +63,9 @@ static int mtd_sdcard_init(mtd_dev_t *dev)
 }
 
 static int mtd_sdcard_read(mtd_dev_t *dev, void *buff, uint32_t addr,
-                           uint32_t size)
+                           size_t size)
 {
-    DEBUG("mtd_sdcard_read: addr:%" PRIu32 " size:%" PRIu32 "\n", addr, size);
+    DEBUG("mtd_sdcard_read: addr:%" PRIu32 " size:%zu" "\n", addr, size);
     mtd_sdcard_t *mtd_sd = (mtd_sdcard_t*)dev;
     sd_rw_response_t err;
     int res = sdcard_spi_read_blocks(mtd_sd->sd_card, addr / SD_HC_BLOCK_SIZE,
@@ -79,9 +79,9 @@ static int mtd_sdcard_read(mtd_dev_t *dev, void *buff, uint32_t addr,
 }
 
 static int mtd_sdcard_write(mtd_dev_t *dev, const void *buff, uint32_t addr,
-                            uint32_t size)
+                            size_t size)
 {
-    DEBUG("mtd_sdcard_write: addr:%" PRIu32 " size:%" PRIu32 "\n", addr, size);
+    DEBUG("mtd_sdcard_write: addr:%" PRIu32 " size:%zu" "\n", addr, size);
     mtd_sdcard_t *mtd_sd = (mtd_sdcard_t*)dev;
     sd_rw_response_t err;
     int res = sdcard_spi_write_blocks(mtd_sd->sd_card, addr / SD_HC_BLOCK_SIZE,
@@ -96,9 +96,9 @@ static int mtd_sdcard_write(mtd_dev_t *dev, const void *buff, uint32_t addr,
 
 static int mtd_sdcard_erase(mtd_dev_t *dev,
                             uint32_t addr,
-                            uint32_t size)
+                            size_t size)
 {
-    DEBUG("mtd_sdcard_erase: addr:%" PRIu32 " size:%" PRIu32 "\n", addr, size);
+    DEBUG("mtd_sdcard_erase: addr:%" PRIu32 " size:%zu" "\n", addr, size);
     (void)dev;
     (void)addr;
     (void)size;
