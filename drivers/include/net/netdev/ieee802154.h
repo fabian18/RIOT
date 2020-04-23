@@ -116,6 +116,7 @@ typedef struct {
     uint8_t page;                           /**< channel page */
     uint16_t flags;                         /**< flags as defined above */
     int16_t txpower;                        /**< tx power in dBm */
+    int16_t rxsens;                        /**< rx sensibility in dBm */
     /** @} */
 } netdev_ieee802154_t;
 

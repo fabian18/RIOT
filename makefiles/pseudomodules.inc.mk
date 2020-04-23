@@ -4,6 +4,9 @@ PSEUDOMODULES += at_urc_isr_low
 PSEUDOMODULES += at_urc_isr_medium
 PSEUDOMODULES += at_urc_isr_highest
 PSEUDOMODULES += at24c%
+PSEUDOMODULES += at86rf2xx_common_aes
+PSEUDOMODULES += at86rf2xx_periph
+PSEUDOMODULES += at86rf2xx_spi
 PSEUDOMODULES += base64url
 PSEUDOMODULES += can_mbox
 PSEUDOMODULES += can_pm
@@ -146,7 +149,11 @@ PSEUDOMODULES += at86rf21%
 PSEUDOMODULES += at86rfa1
 PSEUDOMODULES += at86rfr2
 PSEUDOMODULES += at86rf2xx_aes_spi
+PSEUDOMODULES += at86rf2xx_common_aes_spi
+PSEUDOMODULES += at86rf2xx_periph
+PSEUDOMODULES += at86rf2xx_spi
 NO_PSEUDOMODULES += at86rf215
+NO_PSEUDOMODULES += at86rf2xx_common
 
 # include variants of the BME680 drivers as pseudo modules
 PSEUDOMODULES += bme680_i2c
