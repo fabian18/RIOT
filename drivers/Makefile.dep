@@ -20,7 +20,11 @@ ifneq (,$(filter at86rf215%,$(USEMODULE)))
   USEMODULE += at86rf215
 endif
 
-ifneq (,$(filter at86rf%, $(filter-out at86rf215% at86rf2xx_common% at86rf2xx_spi% at86rf2xx_periph%,$(USEMODULE))))
+ifneq (,$(filter at86rf233%,$(USEMODULE)))
+  USEMODULE += at86rf233
+endif
+
+ifneq (,$(filter at86rf%, $(filter-out at86rf215% at86rf233% at86rf2xx_common% at86rf2xx_spi% at86rf2xx_periph%,$(USEMODULE))))
   USEMODULE += at86rf2xx
 endif
 

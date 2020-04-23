@@ -37,6 +37,11 @@ void gnrc_netif_init_devs(void)
         auto_init_at86rf215();
     }
 
+    if (IS_USED(MODULE_AUTO_INIT_AT86RF233)) {
+        extern void auto_init_at86rf233(void);
+        auto_init_at86rf233();
+    }
+
     if (IS_USED(MODULE_AUTO_INIT_AT86RF2XX)) {
         extern void auto_init_at86rf2xx(void);
         auto_init_at86rf2xx();

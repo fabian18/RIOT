@@ -289,11 +289,11 @@ static int _send(gnrc_netif_t *netif, gnrc_pktsnip_t *pkt)
     if (netif->mac.mac_info & GNRC_NETIF_MAC_INFO_CSMA_ENABLED) {
         res = csma_sender_csma_ca_send(dev, &iolist, &netif->mac.csma_conf);
     }
-    else {
-        res = dev->driver->send(dev, &iolist);
-    }
+    do { res = dev->driver->send(dev, &iolist); }
+    while (res == -EINTR || res == -EAGAIN);
 #else
-    res = dev->driver->send(dev, &iolist);
+    do { res = dev->driver->send(dev, &iolist); }
+    while (res == -EINTR || res == -EAGAIN);
 #endif
 
     /* release old data */

@@ -98,7 +98,7 @@ typedef struct {
 #endif
 
     /**
-     * @brief   PAN ID in network byte order
+     * @brief   PAN ID
      */
     uint16_t pan;
 
