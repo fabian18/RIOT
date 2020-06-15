@@ -13,7 +13,7 @@ void blink_sync(void) {
     blink_byte(SYNC_WORD);
 }
 
-void blink_byte(uint8_t byte) {
+void blink_byte(char byte) {
     DEBUG("[blink] %u\n", byte);
     for(uint8_t i = 0; i < 8; i++) {
         if (byte & (1 << (7 - i))) {
@@ -33,9 +33,16 @@ void blink_byte(uint8_t byte) {
     }
 }
 
-void blink_data(const uint8_t *data, uint16_t len) {
-    for (uint16_t i = 0; i < len; i++) {
-        uint8_t c = data[i];
-        blink_byte(c);
+void blink_data(const char *data, uint8_t len) {
+    for (uint8_t i = 0; i < len; i++) {
+        blink_byte(data[i]);
+    }
+}
+
+void blink_messages(const blink_msg_t *msg) {
+    for (uint8_t i = 0; msg[i].data; i++) {
+        blink_sync();
+        DEBUG("%s %u\n", (char *)msg[i].data, msg[i].data_len);
+        blink_data(msg[i].data, msg[i].data_len);
     }
 }

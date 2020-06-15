@@ -17,22 +17,19 @@
 int main(void) {
     xtimer_init();
     blink_init();
+
+    const blink_msg_t messages[] = MESSAGES;
+
 #if defined(BLINK_MAIN_THREAD)
-    const uint8_t data[] = MESSAGE;
-    uint16_t data_len = strlen((char *)data);
     while (1) {
-        blink_sync();
-        blink_data(data, data_len);
+        blink_messages(messages);
     }
 #elif defined(BLINK_OWN_THREAD)
     static const shell_command_t shell_commands[] = {
         { NULL, NULL, NULL }
     };
 
-    const uint8_t data[] = MESSAGE;
-    uint16_t data_len = strlen((char *)data);
-
-    if (blink_thread_create(data, &data_len) <= 0) {
+    if (blink_thread_create(messages) <= 0) {
         exit(EXIT_FAILURE);
     }
 
@@ -45,12 +42,7 @@ int main(void) {
         { NULL, NULL, NULL }
     };
 
-    const uint8_t data[] = MESSAGE;
-    uint16_t data_len = strlen((char *)data);
-
-    if (blink_interrupt_start(data, &data_len) != 0) {
-        exit(EXIT_FAILURE);
-    }
+    blink_interrupt_start(messages);
 
     /* run the shell */
     char line_buf[SHELL_DEFAULT_BUFSIZE];

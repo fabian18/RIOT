@@ -2,7 +2,7 @@ APPLICATION = blink
 
 BOARD ?= native
 
-FBLINK ?= 10
+FBLINK ?= 6
 
 #PROGRAMMER = wiring
 

@@ -8,7 +8,7 @@ extern "C"
 {
 #endif
 
-int blink_thread_create(const uint8_t *data, const uint16_t *data_len);
+int blink_thread_create(const blink_msg_t *messages);
 void blink_thread_halt(void);
 void blink_thread_continue(void);
 

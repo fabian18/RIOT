@@ -12,7 +12,7 @@ extern "C"
 #define MSG_MAX_LEN     (64)
 #endif
 
-int blink_interrupt_start(const uint8_t *data, const uint16_t *data_len);
+void blink_interrupt_start(const blink_msg_t *messages) ;
 void blink_interrupt_stop(void);
 
 #ifdef __cplusplus
