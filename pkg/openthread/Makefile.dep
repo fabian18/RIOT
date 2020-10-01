@@ -1,4 +1,5 @@
 USEMODULE += openthread_contrib
+USEMODULE += mbedcrypto
 
 USEMODULE += openthread_contrib_netdev
 USEMODULE += l2util

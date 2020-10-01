@@ -1,6 +1,7 @@
 SCANBUILD_ENV_VARS := \
   APPDIR \
   AR \
+  ARFLAGS \
   AS \
   ASFLAGS \
   BINDIR \

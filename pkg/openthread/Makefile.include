@@ -13,6 +13,3 @@ ifneq (,$(filter cortex-m0% cortex-m3%,$(CPU_CORE)))
   # ranlib + LLVM/clang in this package with Cortex-M0 and M3
   TOOLCHAINS_BLACKLIST += llvm
 endif
-
-ARCHIVES += $(addprefix $(BINDIR)/,$(addsuffix .a,$(filter openthread-%,$(USEMODULE))))
-ARCHIVES += $(BINDIR)/mbedcrypto.a
