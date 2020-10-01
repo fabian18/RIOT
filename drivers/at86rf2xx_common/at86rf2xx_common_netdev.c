@@ -41,6 +41,9 @@
 #include "include/at86rf2xx_common_internal.h"
 #include "include/at86rf2xx_common_states.h"
 #include "include/at86rf2xx_common_netdev.h"
+#if IS_USED(MODULE_AT86RF2XX_COMMON_AES_SPI)
+#include "include/at86rf2xx_common_aes.h"
+#endif
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -357,3 +360,77 @@ int at86rf2xx_netdev_set(at86rf2xx_t *dev, netopt_t opt, const void *val, size_t
 
     return netdev_ieee802154_set(&dev->base.netdev, opt, val, len);
 }
+
+#if IS_USED(MODULE_AT86RF2XX_COMMON_AES_SPI) && \
+    IS_USED(MODULE_IEEE802154_SECURITY)
+/**
+ * @brief   Pass the 802.15.4 encryption key to the transceiver hardware
+ *
+ * @note    @p sctx must be a member of netdev_ieee802154_t, which must be
+ *          castable to at86rf2xx_t
+ */
+static void _at86rf2xx_set_key(ieee802154_sec_context_t *sctx, const block16_t key)
+{
+    netdev_ieee802154_t* d = container_of(sctx, netdev_ieee802154_t, sec_ctx);
+    at86rf2xx_aes_key_write_encrypt((at86rf2xx_t *)d, key);
+}
+
+/**
+ * @brief   Compute CBC-MAC from IEEE 802.15.4 security context
+ *
+ * @note    @p sctx must be a member of netdev_ieee802154_t, which must be
+ *          castable to at86rf2xx_t
+ *
+ * @param[in]       sctx        Pointer to IEEE 802.15.4 security context
+ * @param[out]      cipher      Buffer to store cipher blocks
+ * @param[in]       iv          Initial vector
+ * @param[in]       plain       Input data blocks
+ * @param[in]       nblocks     Number of blocks
+ */
+static void _at86rf2xx_cbc(ieee802154_sec_context_t *sctx,
+                           block16_t *cipher,
+                           block16_t iv,
+                           const block16_t *plain,
+                           uint8_t nblocks)
+{
+    netdev_ieee802154_t* d = container_of(sctx, netdev_ieee802154_t, sec_ctx);
+    at86rf2xx_aes_cbc_encrypt((at86rf2xx_t *)d,
+                              (aes_block_t *)cipher,
+                              NULL,
+                              iv,
+                              (aes_block_t *)plain,
+                              nblocks);
+}
+
+/**
+ * @brief   Perform ECB encryption
+ *
+ * @note    @p sctx must be a member of netdev_ieee802154_t, which must be
+ *          castable to at86rf2xx_t
+ *
+ * @param[in]       ctx         IEEE 802.15.4 security context
+ * @param[out]      cipher      Output cipher blocks
+ * @param[in]       plain       Plain blocks
+ * @param[in]       nblocks     Number of blocks
+ */
+static void _at86rf2xx_ecb(ieee802154_sec_context_t *sctx,
+                           block16_t *cipher,
+                           const block16_t *plain,
+                           uint8_t nblocks)
+{
+    netdev_ieee802154_t* d = container_of(sctx, netdev_ieee802154_t, sec_ctx);
+    at86rf2xx_aes_ecb_encrypt((at86rf2xx_t *)d,
+                              (aes_block_t *)cipher,
+                              NULL,
+                              (aes_block_t *)plain,
+                              nblocks);
+
+}
+
+const ieee802154_cipher_ops_t _at86rf2xx_cipher_ops = {
+    .set_key = _at86rf2xx_set_key,
+    .ecb = _at86rf2xx_ecb,
+    .cbc = _at86rf2xx_cbc
+};
+#endif /* IS_USED(MODULE_AT86RF2XX_COMMON_AES_SPI) && \
+          IS_USED(MODULE_IEEE802154_SECURITY) */

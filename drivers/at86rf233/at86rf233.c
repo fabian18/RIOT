@@ -40,6 +40,7 @@
 #include "../at86rf2xx_common/include/at86rf2xx_common_registers.h"
 #include "../at86rf2xx_common/include/at86rf2xx_common_communication_spi.h"
 #include "../at86rf2xx_common/include/at86rf2xx_common_states.h"
+#include "../at86rf2xx_common/include/at86rf2xx_common_internal.h"
 #include "../at86rf2xx_common/include/at86rf2xx_common_netdev.h"
 #include "include/at86rf233_defines.h"
 #include "include/at86rf233_hardware.h"
@@ -71,19 +72,19 @@ void at86rf233_init_default(at86rf233_t *dev)
 {
     {
         uint8_t addr[] = AT86RF233_LONG_ADDR_DEFAULT;
-        memmove(dev->base.netdev.long_addr,
-                addr,
-                IEEE802154_LONG_ADDRESS_LEN);
+        memcpy(dev->base.netdev.long_addr,
+               addr,
+               IEEE802154_LONG_ADDRESS_LEN);
     }
     {
         const uint8_t addr[] = AT86RF233_SHORT_ADDR_DEFAULT;
-        memmove(dev->base.netdev.short_addr,
-                addr,
-                IEEE802154_SHORT_ADDRESS_LEN);
+        memcpy(dev->base.netdev.short_addr,
+               addr,
+               IEEE802154_SHORT_ADDRESS_LEN);
     }
     {
         const uint8_t pan[] = AT86RF233_PAN_ID_DEFAULT;
-        memmove(&dev->base.netdev.pan, pan, 2);
+        memcpy(&dev->base.netdev.pan, pan, 2);
     }
     dev->base.netdev.chan = AT86RF233_CHANNEL_DEFAULT;
     dev->base.netdev.rxsens = AT86RF233_RX_SENSITIVITY_DEFAULT_DBM;

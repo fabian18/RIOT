@@ -49,6 +49,7 @@
 #include "../at86rf2xx_common/include/at86rf2xx_common_internal.h"
 #include "../at86rf2xx_common/include/at86rf2xx_common_states.h"
 #include "../at86rf2xx_common/include/at86rf2xx_common_netdev.h"
+#include "../at86rf2xx_common/include/at86rf2xx_common_aes.h"
 #include "include/at86rf233_defines.h"
 #include "include/at86rf233_hardware.h"
 #include "include/at86rf233_internal.h"
@@ -158,7 +159,7 @@ int _init(netdev_t *netdev)
         gpio_set(dev->params.base_params.reset_pin);
         spi_init_cs(dev->params.base_params.spi, dev->params.base_params.cs_pin);
         if (gpio_init_int(dev->params.base_params.int_pin,
-                        GPIO_IN, GPIO_RISING, _irq_handler, dev) != 0) {
+                          GPIO_IN, GPIO_RISING, _irq_handler, dev) != 0) {
             AT86RF2XX_DEBUG_PUTS("init() gpio error\n");
             return -EIO;
         }
@@ -210,8 +211,18 @@ int _init(netdev_t *netdev)
         AT86RF2XX_REG__IRQ_MASK,
         AT86RF2XX_REG__IRQ_MASK);
 
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+    _set(&dev->base.netdev.netdev, NETOPT_ENCRYPTION, &en, sizeof(en));
+    _set(&dev->base.netdev.netdev, NETOPT_ENCRYPTION_KEY,
+         dev->base.netdev.sec_ctx.cipher.context.context, IEEE802154_SEC_KEY_LENGTH);
+#if IS_USED(MODULE_AT86RF2XX_COMMON_AES_SPI)
+    dev->base.netdev.sec_ctx.cipher_ops = &_at86rf2xx_cipher_ops;
+#endif
+#endif
+
     /* idle */
     _set_state_netopt(dev, NETOPT_STATE_IDLE);
+
     return 0;
 }
 
@@ -542,6 +553,7 @@ bool _netopt_set_require_wakeup(netopt_t opt)
         case NETOPT_CSMA_MAXBE:
         case NETOPT_CSMA_MINBE:
         case NETOPT_CCA_THRESHOLD:
+        case NETOPT_ENCRYPTION_KEY:
             return true;
     }
 }
@@ -583,7 +595,21 @@ int _set(netdev_t *netdev, netopt_t opt, const void *val, size_t len)
             at86rf233_set_cca_threshold(dev, *((int8_t *)val));
             res = sizeof(int8_t);
             break;
-
+#if IS_USED(MODULE_AT86RF2XX_COMMON_AES_SPI) && \
+    IS_USED(MODULE_IEEE802154_SECURITY)
+        /* override NETOPT_ENCRYPTION_KEY from netdev_ieee802154_t */
+        case NETOPT_ENCRYPTION_KEY:
+            assert(len >= IEEE802154_SEC_KEY_LENGTH);
+            at86rf2xx_aes_key_write_encrypt((at86rf2xx_t *)dev, val);
+            if (memcmp(dev->base.netdev.sec_ctx.cipher.context.context, val, len)) {
+                /* If the key changes, the frame conter can be reset to 0*/
+                dev->base.netdev.sec_ctx.frame_counter = 0;
+            }
+            memcpy(dev->base.netdev.sec_ctx.cipher.context.context, val,
+                   IEEE802154_SEC_KEY_LENGTH);
+            res = IEEE802154_SEC_KEY_LENGTH;
+            break;
+#endif
         default: break;
     }
 

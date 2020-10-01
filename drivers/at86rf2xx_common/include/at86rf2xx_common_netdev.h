@@ -53,6 +53,7 @@ extern "C" {
 #define AT86RF2XX_OPT_AUTOCCA           (0x0020)    /**< CSMA active (en. TX_ARET_ON) */
 #define AT86RF2XX_OPT_AUTOACK           (0x0040)    /**< auto ACK active (en. RX_AACK_ON) */
 #define AT86RF2XX_OPT_PROMISCUOUS       (0x0080)    /**< promiscuous mode is active */
+#define AT86RF2XX_OPT_ENCRYPTION        (0x0100)    /**< encryption (CCM64) */
 /** @} */
 
 /**
@@ -132,6 +133,16 @@ int at86rf2xx_netdev_get(at86rf2xx_t *dev, netopt_t opt, void *val, size_t max_l
  * @return  Negative integer on error
  */
 int at86rf2xx_netdev_set(at86rf2xx_t *dev, netopt_t opt, const void *val, size_t len);
+
+#if IS_USED(MODULE_AT86RF2XX_COMMON_AES_SPI) && \
+    IS_USED(MODULE_IEEE802154_SECURITY)
+/**
+ * @brief   Struct that contains IEEE 802.15.4 security operations
+ *          which are implemented, using the transceiver´s hardware
+ *          crypto capabilities
+ */
+extern const ieee802154_cipher_ops_t _at86rf2xx_cipher_ops;
+#endif /* IS_USED(MODULE_IEEE802154_SECURITY) */
 
 #ifdef __cplusplus
 }
