@@ -6,10 +6,12 @@
  * directory for more details.
  */
 /**
- * @defgroup    drivers_usbdev_mock USBdev mockup device
- * @ingroup     drivers
+ * @defgroup    tests_usbdev_mock USBdev mockup device
+ * @ingroup     tests
  * @brief       USBdev mockup device for testing
  * @{
+ *
+ * @file
  *
  * @author      Koen Zandberg <koen@bergzand.net>
  */
@@ -112,5 +114,4 @@ void usbdev_mock_setup(usbdev_mock_esr_cb_t esr_cb,
 #endif
 
 #endif /* USBDEV_MOCK_H */
-/** @} */
 /** @} */
