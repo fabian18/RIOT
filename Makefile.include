@@ -565,7 +565,6 @@ DIRS += $(EXTERNAL_MODULE_DIRS)
 BUILDDEPS += $(RIOTBUILD_CONFIG_HEADER_C)
 BUILDDEPS += pkg-prepare
 BUILDDEPS += $(APPDEPS)
-BUILDDEPS += $(MODULE_LIST_DIR)
 
 # Save value to verify it is not modified later
 _BASELIBS_VALUE_BEFORE_USAGE := $(BASELIBS)
@@ -585,19 +584,15 @@ ifeq ($(BUILD_IN_DOCKER),1)
 link: ..in-docker-container
 else
 ifeq (,$(RIOTNOLINK))
-link: ..compiler-check ..build-message $(BUILD_FILES) print-size ..module-check
+link: ..compiler-check ..build-message $(BUILD_FILES) print-size
 else
-link: ..compiler-check ..build-message $(BASELIBS) $(ARCHIVES) ..module-check
+link: ..compiler-check ..build-message $(BASELIBS) $(ARCHIVES)
 endif # RIOTNOLINK
 
 $(ELFFILE): $(BASELIBS) $(ARCHIVES)
 	$(Q)$(_LINK) -o $@
 
 .PHONY: $(APPLICATION_MODULE).module
-
-..module-check: $(BASELIBS)
-	@[ -z "$(strip $(NON_GENERATED_MODULES))" ] || \
-	($(COLOR_ECHO) "$(COLOR_RED)Error - using unknown modules: $(COLOR_RESET)$(NON_GENERATED_MODULES)" && false)
 
 $(APPLICATION_MODULE).module: pkg-build $(BUILDDEPS)
 	$(Q)DIRS="$(DIRS)" APPLICATION_BLOBS="$(BLOBS)" \
