@@ -25,6 +25,11 @@
 #include "random.h"
 
 #include "net/netdev/ieee802154.h"
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+#include "crypto/ciphers.h"
+#include "crypto/modes/ecb.h"
+#include "crypto/modes/cbc.h"
+#endif
 
 #define ENABLE_DEBUG (0)
 #include "debug.h"
@@ -45,6 +50,11 @@ void netdev_ieee802154_reset(netdev_ieee802154_t *dev)
     /* Initialize PAN ID and call netdev::set to propagate it */
     dev->pan = CONFIG_IEEE802154_DEFAULT_PANID;
     dev->netdev.driver->set(&dev->netdev, NETOPT_NID, &dev->pan, sizeof(dev->pan));
+
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+    dev->sec_ctx.cipher_ops = &_netdev_ieee802154_cipher_ops;
+    ieee802154_sec_init(&dev->sec_ctx);
+#endif
 }
 
 static inline uint16_t _get_ieee802154_pdu(netdev_ieee802154_t *dev)
@@ -115,6 +125,23 @@ int netdev_ieee802154_get(netdev_ieee802154_t *dev, netopt_t opt, void *value,
             *((uint16_t *)value) = (uint16_t)dev->chan;
             res = sizeof(dev->chan);
             break;
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+        case NETOPT_ENCRYPTION:
+            assert(max_len == sizeof(netopt_enable_t));
+            if (dev->flags & NETDEV_IEEE802154_SECURITY_EN) {
+                *((netopt_enable_t *)value) = NETOPT_ENABLE;
+            }
+            else {
+                *((netopt_enable_t *)value) = NETOPT_DISABLE;
+            }
+            res = sizeof(netopt_enable_t);
+            break;
+        case NETOPT_ENCRYPTION_KEY:
+            assert(max_len == IEEE802154_SEC_KEY_LENGTH);
+            memcpy((uint8_t *)value, dev->sec_ctx.cipher.context.context, IEEE802154_SEC_KEY_LENGTH);
+            res = IEEE802154_SEC_KEY_LENGTH;
+            break;
+#endif /* IS_USED(MODULE_IEEE802154_SECURITY) */
         case NETOPT_ACK_REQ:
             assert(max_len == sizeof(netopt_enable_t));
             if (dev->flags & NETDEV_IEEE802154_ACK_REQ) {
@@ -219,6 +246,28 @@ int netdev_ieee802154_set(netdev_ieee802154_t *dev, netopt_t opt, const void *va
             dev->pan = *((uint16_t *)value);
             res = sizeof(dev->pan);
             break;
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+        case NETOPT_ENCRYPTION:
+            assert(len == sizeof(netopt_enable_t));
+            if ((*(bool *)value)) {
+                dev->flags |= NETDEV_IEEE802154_SECURITY_EN;
+            }
+            else {
+                dev->flags &= ~NETDEV_IEEE802154_SECURITY_EN;
+            }
+            res = sizeof(netopt_enable_t);
+            break;
+        case NETOPT_ENCRYPTION_KEY:
+            assert(len >= IEEE802154_SEC_KEY_LENGTH);
+            if (memcmp(dev->sec_ctx.cipher.context.context, value, len)) {
+                /* If the key changes, the frame conter can be reset to 0*/
+                dev->sec_ctx.frame_counter = 0;
+            }
+            memcpy(dev->sec_ctx.cipher.context.context, value,
+                   IEEE802154_SEC_KEY_LENGTH);
+            res = IEEE802154_SEC_KEY_LENGTH;
+            break;
+#endif /* IS_USED(MODULE_IEEE802154_SECURITY) */
         case NETOPT_ACK_REQ:
             if ((*(bool *)value)) {
                 dev->flags |= NETDEV_IEEE802154_ACK_REQ;
@@ -284,4 +333,67 @@ int netdev_ieee802154_dst_filter(netdev_ieee802154_t *dev, const uint8_t *mhr)
     return 1;
 }
 
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+/**
+ * @brief   Set the encryption key to be used for the next cipher operation
+ *
+ * @param[in] ctx       Security context
+ * @param[in] key       Key to be use for the next cipher operation
+ */
+static void _netdev_ieee802154_sec_set_key(ieee802154_sec_context_t *ctx,
+                                           const block16_t key)
+{
+    /* NOP */
+    (void)ctx;
+    (void)key;
+}
+
+/**
+ * @brief   Perform ECB block cipher for IEEE802154 security layer
+ *
+ * @param[in] ctx       Security context
+ * @param[out] cipher   Output cipher blocks
+ * @param[in] plain     Input plain blocks
+ * @param[in] nblocks   Number of blocks
+ */
+static void _netdev_ieee802154_sec_ecb(ieee802154_sec_context_t *ctx,
+                                       block16_t *cipher,
+                                       const block16_t *plain,
+                                       uint8_t nblocks)
+{
+    cipher_encrypt_ecb(&ctx->cipher,
+                       (uint8_t *)plain,
+                       nblocks * IEEE802154_SEC_BLOCK_SIZE,
+                       (uint8_t *)cipher);
+}
+
+/**
+ * @brief   Perform CBC block cipher for IEEE802154 security layer
+ *          MIC computation
+ *
+ * @param[in] ctx       Security context
+ * @param[out] cipher   Output cipher blocks
+ * @param[in] iv        Initial vector
+ * @param[in] plain     Input plain blocks
+ * @param[in] nblocks   Number of blocks
+ */
+static void _netdev_ieee802154_sec_cbc(ieee802154_sec_context_t *ctx,
+                                       block16_t *cipher,
+                                       block16_t iv,
+                                       const block16_t *plain,
+                                       uint8_t nblocks)
+{
+    cipher_encrypt_cbc(&ctx->cipher,
+                       iv,
+                       (uint8_t *)plain,
+                       nblocks * IEEE802154_SEC_BLOCK_SIZE,
+                       (uint8_t *)cipher);
+}
+
+const ieee802154_cipher_ops_t _netdev_ieee802154_cipher_ops = {
+    .set_key = _netdev_ieee802154_sec_set_key,
+    .ecb = _netdev_ieee802154_sec_ecb,
+    .cbc = _netdev_ieee802154_sec_cbc
+};
+#endif /* IS_USED(MODULE_IEEE802154_SECURITY) */
 /** @} */

@@ -22,6 +22,9 @@
 
 #include "net/eui_provider.h"
 #include "net/ieee802154.h"
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+#include "net/ieee802154_security.h"
+#endif
 #include "net/gnrc/nettype.h"
 #include "net/netopt.h"
 #include "net/netdev.h"
@@ -117,6 +120,10 @@ typedef struct {
     uint16_t flags;                         /**< flags as defined above */
     int16_t txpower;                        /**< tx power in dBm */
     int16_t rxsens;                        /**< rx sensibility in dBm */
+#if IS_USED(MODULE_IEEE802154_SECURITY) || defined (Doxygen)
+    /* maybe it can be a pointer, so context may be shared among devices */
+    ieee802154_sec_context_t sec_ctx;       /**< security context */
+#endif
     /** @} */
 } netdev_ieee802154_t;
 
@@ -214,6 +221,14 @@ static inline void netdev_ieee802154_setup(netdev_ieee802154_t *dev)
     eui_short_from_eui64((eui64_t *)&dev->long_addr,
                          (network_uint16_t *)&dev->short_addr);
 }
+
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+/**
+ * @brief   The default cipher operations to use, if a transceiver does not
+ *          provide hardware support for AES
+ */
+extern const ieee802154_cipher_ops_t _netdev_ieee802154_cipher_ops;
+#endif /* IS_USED(MODULE_IEEE802154_SECURITY) */
 
 #ifdef __cplusplus
 }
