@@ -138,11 +138,11 @@ static gnrc_pktsnip_t *_recv(gnrc_netif_t *netif)
             /* Normal mode, try to parse the frame according to IEEE 802.15.4 */
             gnrc_pktsnip_t *ieee802154_hdr, *netif_hdr;
             gnrc_netif_hdr_t *hdr;
+            size_t mhr_len = ieee802154_get_frame_hdr_len(pkt->data);
+            uint8_t *mhr = pkt->data;
 #if ENABLE_DEBUG
             char src_str[GNRC_NETIF_HDR_L2ADDR_PRINT_LEN];
 #endif
-            size_t mhr_len = ieee802154_get_frame_hdr_len(pkt->data);
-
             /* nread was checked for <= 0 before so we can safely cast it to
              * unsigned */
             if ((mhr_len == 0) || ((size_t)nread < mhr_len)) {
@@ -150,21 +150,12 @@ static gnrc_pktsnip_t *_recv(gnrc_netif_t *netif)
                 gnrc_pktbuf_release(pkt);
                 return NULL;
             }
-            nread -= mhr_len;
-            /* mark IEEE 802.15.4 header */
-            ieee802154_hdr = gnrc_pktbuf_mark(pkt, mhr_len, GNRC_NETTYPE_UNDEF);
-            if (ieee802154_hdr == NULL) {
-                DEBUG("_recv_ieee802154: no space left in packet buffer\n");
-                gnrc_pktbuf_release(pkt);
-                return NULL;
-            }
-            netif_hdr = _make_netif_hdr(ieee802154_hdr->data);
+            netif_hdr = _make_netif_hdr(mhr);
             if (netif_hdr == NULL) {
                 DEBUG("_recv_ieee802154: no space left in packet buffer\n");
                 gnrc_pktbuf_release(pkt);
                 return NULL;
             }
-
             hdr = netif_hdr->data;
 
 #ifdef MODULE_L2FILTER
@@ -177,7 +168,7 @@ static gnrc_pktsnip_t *_recv(gnrc_netif_t *netif)
             }
 #endif
 #ifdef MODULE_GNRC_NETIF_DEDUP
-            if (_already_received(netif, hdr, ieee802154_hdr->data)) {
+            if (_already_received(netif, hdr, mhr)) {
                 gnrc_pktbuf_release(pkt);
                 gnrc_pktbuf_release(netif_hdr);
                 DEBUG("_recv_ieee802154: packet dropped by deduplication\n");
@@ -186,9 +177,34 @@ static gnrc_pktsnip_t *_recv(gnrc_netif_t *netif)
             memcpy(netif->last_pkt.src, gnrc_netif_hdr_get_src_addr(hdr),
                    hdr->src_l2addr_len);
             netif->last_pkt.src_len = hdr->src_l2addr_len;
-            netif->last_pkt.seq = ieee802154_get_seq(ieee802154_hdr->data);
+            netif->last_pkt.seq = ieee802154_get_seq(mhr);
 #endif /* MODULE_GNRC_NETIF_DEDUP */
-
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+            gnrc_pktsnip_t *ieee802154_aux_hdr = NULL;
+            uint8_t *auxiliary_hdr = NULL;
+            uint8_t auxiliary_hdr_size = 0;
+            uint8_t *payload = NULL;
+            uint8_t payload_size = 0;
+            uint8_t *mic = NULL;
+            uint8_t mic_size = 0;
+            if (mhr[0] & NETDEV_IEEE802154_SECURITY_EN) {
+                if (ieee802154_sec_decrypt_frame(&((netdev_ieee802154_t *)dev)->sec_ctx,
+                                                 nread,
+                                                 mhr,
+                                                 mhr_len,
+                                                 &auxiliary_hdr,
+                                                 &auxiliary_hdr_size,
+                                                 &payload,
+                                                 &payload_size,
+                                                 &mic,
+                                                 &mic_size,
+                                                 gnrc_netif_hdr_get_src_addr(hdr)) != 0) {
+                    gnrc_pktbuf_release(pkt);
+                    DEBUG("_recv_ieee802154: packet dropped by security check\n");
+                    return NULL;
+                }
+            }
+#endif
             hdr->lqi = rx_info.lqi;
             hdr->rssi = rx_info.rssi;
             gnrc_netif_hdr_set_netif(hdr, netif);
@@ -203,11 +219,34 @@ static gnrc_pktsnip_t *_recv(gnrc_netif_t *netif)
             od_hex_dump(pkt->data, nread, OD_WIDTH_DEFAULT);
 #endif
 #endif
+            /* mark IEEE 802.15.4 header */
+            ieee802154_hdr = gnrc_pktbuf_mark(pkt, mhr_len, GNRC_NETTYPE_UNDEF);
+            if (ieee802154_hdr == NULL) {
+                DEBUG("_recv_ieee802154: no space left in packet buffer\n");
+                gnrc_pktbuf_release(pkt);
+                return NULL;
+            }
+            nread -= ieee802154_hdr->size;
             gnrc_pktbuf_remove_snip(pkt, ieee802154_hdr);
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+            if (auxiliary_hdr_size) {
+                ieee802154_aux_hdr = gnrc_pktbuf_mark(pkt, auxiliary_hdr_size, GNRC_NETTYPE_UNDEF);
+                if (!ieee802154_aux_hdr) {
+                    DEBUG("_recv_ieee802154: no space left in auxiliary buffer\n");
+                    gnrc_pktbuf_release(pkt);
+                    return NULL;
+                }
+                nread -= ieee802154_aux_hdr->size;
+                gnrc_pktbuf_remove_snip(pkt, ieee802154_aux_hdr);
+            }
+            if (mic_size) {
+                nread -= mic_size;
+            }
+#endif
             LL_APPEND(pkt, netif_hdr);
         }
 
-        DEBUG("_recv_ieee802154: reallocating.\n");
+        DEBUG("_recv_ieee802154: reallocating MAC payload for upper layer.\n");
         gnrc_pktbuf_realloc_data(pkt, nread);
     } else if (bytes_expected > 0) {
         DEBUG("_recv_ieee802154: received frame is too short\n");
@@ -253,13 +292,21 @@ static int _send(gnrc_netif_t *netif, gnrc_pktsnip_t *pkt)
         dst = gnrc_netif_hdr_get_dst_addr(netif_hdr);
         dst_len = netif_hdr->dst_l2addr_len;
     }
-    src_len = netif_hdr->src_l2addr_len;
-    if (src_len > 0) {
-        src = gnrc_netif_hdr_get_src_addr(netif_hdr);
+    if (flags & NETDEV_IEEE802154_SECURITY_EN) {
+        /* need to include long source address because the recipient
+           will need it to decrypt the frame */
+        src_len = IEEE802154_LONG_ADDRESS_LEN;
+        src = state->long_addr;
     }
     else {
-        src_len = netif->l2addr_len;
-        src = netif->l2addr;
+        src_len = netif_hdr->src_l2addr_len;
+        if (src_len > 0) {
+            src = gnrc_netif_hdr_get_src_addr(netif_hdr);
+        }
+        else {
+            src_len = netif->l2addr_len;
+            src = netif->l2addr;
+        }
     }
     /* fill MAC header, seq should be set by device */
     if ((res = ieee802154_set_frame_hdr(mhr, src, src_len,
@@ -268,14 +315,49 @@ static int _send(gnrc_netif_t *netif, gnrc_pktsnip_t *pkt)
         DEBUG("_send_ieee802154: Error preperaring frame\n");
         return -EINVAL;
     }
-
-    /* prepare iolist for netdev / mac layer */
-    iolist_t iolist = {
-        .iol_next = (iolist_t *)pkt->next,
-        .iol_base = mhr,
-        .iol_len = (size_t)res
+    iolist_t iolist_payload = {
+        .iol_next = (iolist_t *)pkt->next->next,
+        .iol_base = pkt->next->data,
+        .iol_len = pkt->next->size
     };
-
+    iolist_t iolist_header = {
+        .iol_next = &iolist_payload,
+        .iol_base = mhr,
+        .iol_len = res
+    };
+#if IS_USED(MODULE_IEEE802154_SECURITY)
+    gnrc_pktbuf_merge(pkt->next);
+    iolist_payload.iol_next = (iolist_t *)pkt->next->next,
+    iolist_payload.iol_base = pkt->next->data,
+    iolist_payload.iol_len = pkt->next->size;
+    uint8_t ahr_len, mic_len;
+    uint8_t ahr[IEEE802154_MAX_AUX_HDR_LEN];
+    uint8_t mic[IEEE802154_MAC_SIZE];
+    if (flags & NETDEV_IEEE802154_SECURITY_EN) {
+        res = ieee802154_sec_encrypt_frame(&state->sec_ctx,
+                                           mhr, res,
+                                           ahr, &ahr_len,
+                                           pkt->next->data, pkt->next->size,
+                                           mic, &mic_len,
+                                           state->long_addr);
+        if (res != 0) {
+            return res;
+        }
+    }
+    iolist_t iolist_aux_header = {
+        .iol_next = &iolist_payload,
+        .iol_base = ahr,
+        .iol_len = ahr_len
+    };
+    iolist_t iolist_mic = {
+        .iol_next = NULL,
+        .iol_base = mic,
+        .iol_len = mic_len
+    };
+    iolist_header.iol_next = &iolist_aux_header;
+    iolist_mic.iol_next = iolist_payload.iol_next;
+    iolist_payload.iol_next = &iolist_mic;
+#endif
 #ifdef MODULE_NETSTATS_L2
     if (netif_hdr->flags &
             (GNRC_NETIF_HDR_FLAGS_BROADCAST | GNRC_NETIF_HDR_FLAGS_MULTICAST)) {
@@ -287,12 +369,14 @@ static int _send(gnrc_netif_t *netif, gnrc_pktsnip_t *pkt)
 #endif
 #ifdef MODULE_GNRC_MAC
     if (netif->mac.mac_info & GNRC_NETIF_MAC_INFO_CSMA_ENABLED) {
-        res = csma_sender_csma_ca_send(dev, &iolist, &netif->mac.csma_conf);
+        res = csma_sender_csma_ca_send(dev, &iolist_header, &netif->mac.csma_conf);
     }
-    do { res = dev->driver->send(dev, &iolist); }
-    while (res == -EINTR || res == -EAGAIN);
+    else {
+        do { res = dev->driver->send(dev, &iolist_header); }
+        while (res == -EINTR || res == -EAGAIN);
+    }
 #else
-    do { res = dev->driver->send(dev, &iolist); }
+    do { res = dev->driver->send(dev, &iolist_header); }
     while (res == -EINTR || res == -EAGAIN);
 #endif
 
