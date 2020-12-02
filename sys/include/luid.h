@@ -195,6 +195,24 @@ void luid_custom(void *buf, size_t len, int gen);
  */
 void luid_base(void *buf, size_t len);
 
+/**
+ * @brief   Get a unique netdev address
+ *
+ * The resulting address is by default built from the base ID generated with luid_base(),
+ * which isXORed with the netdev type and netdev index in the least significant bytes.
+ *
+ * @pre the netdev registered itself with @see netdev_register
+ * @note the function has __attribute__((weak)) and thus can be overridden
+ *
+ * @param[in]  netdev   Netdev to generate the address for.
+ * @param[out] addr     Memory location to copy the address into.
+ * @param[in]  len      Length of address
+ * @param[in]  counter  Incrementing nonce if called in a loop
+ */
+void luid_netdev_get(const netdev_t *netdev,
+                     void *addr, size_t len,
+                     uint8_t counter);
+
 #ifdef __cplusplus
 }
 #endif
