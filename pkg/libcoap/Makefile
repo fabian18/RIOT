@@ -1,6 +1,6 @@
 PKG_NAME=libcoap
 PKG_URL=https://github.com/obgm/libcoap
-PKG_VERSION=ef41ce5d02d64cec0751882ae8fd95f6c32bc018
+PKG_VERSION=f29f053d53c3dd16394b3a3d8ec604f3ffb277bf
 PKG_LICENSE=BSD-2-Clause
 
 include $(RIOTBASE)/pkg/pkg.mk
