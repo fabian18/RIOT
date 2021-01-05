@@ -1,0 +1,40 @@
+From 177876db2cedadb3469a9e75c59eec2fc6f68a7a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Fabian=20H=C3=BC=C3=9Fler?= <fabian.huessler@st.ovgu.de>
+Date: Tue, 5 Jan 2021 16:55:26 +0100
+Subject: [PATCH 4/4] fix compiler warnings
+
+---
+ src/coap_debug.c | 3 +++
+ src/pdu.c        | 2 +-
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/coap_debug.c b/src/coap_debug.c
+index 176f061..91c8a73 100644
+--- a/src/coap_debug.c
++++ b/src/coap_debug.c
+@@ -98,6 +98,9 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
+                   (unsigned int)((coap_ticks_to_rt_us(t) % 1000000)/1000));
+ #else /* HAVE_SNPRINTF */
+   /* @todo do manual conversion of timestamp */
++  (void)s;
++  (void)len;
++  (void)t;
+   return 0;
+ #endif /* HAVE_SNPRINTF */
+ }
+diff --git a/src/pdu.c b/src/pdu.c
+index 82be8de..ae999c8 100644
+--- a/src/pdu.c
++++ b/src/pdu.c
+@@ -744,7 +744,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
+ bad:
+       coap_log(LOG_DEBUG,
+                "coap_pdu_parse: %d.%02d: option %u has bad length %u\n",
+-               pdu->code >> 5, pdu->code & 0x1F, pdu->max_opt, len);
++               pdu->code >> 5, pdu->code & 0x1F, pdu->max_opt, (unsigned)len);
+       good = 0;
+     }
+ 
+-- 
+2.29.2
+
