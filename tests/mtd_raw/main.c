@@ -31,32 +31,16 @@
 #include "board.h"
 #include "macros/units.h"
 
-#ifndef MTD_NUMOF
-#ifdef MTD_0
-#define MTD_NUMOF 1
-#else
-#define MTD_NUMOF 0
-#endif
-#endif
-
 static mtd_dev_t *_get_mtd_dev(unsigned idx)
 {
-    switch (idx) {
-#ifdef MTD_0
-    case 0: return MTD_0;
-#endif
-#ifdef MTD_1
-    case 1: return MTD_1;
-#endif
-#ifdef MTD_2
-    case 2: return MTD_2;
-#endif
-#ifdef MTD_3
-    case 3: return MTD_3;
-#endif
-    }
-
+#ifndef MTD_NUMOF
     return NULL;
+#else
+    if (idx >= MTD_NUMOF) {
+        return NULL;
+    }
+    return mtd[idx];
+#endif
 }
 
 static mtd_dev_t *_get_dev(int argc, char **argv)

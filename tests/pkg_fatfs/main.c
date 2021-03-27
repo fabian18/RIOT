@@ -51,7 +51,7 @@ FATFS fat_fs; /* FatFs work area needed for each volume */
 
 #ifdef MODULE_MTD_NATIVE
 /* mtd device for native is provided in boards/native/board_init.c */
-extern mtd_dev_t *mtd0;
+extern mtd_dev_t *mtd[MTD_NUMOF];
 mtd_dev_t *fatfs_mtd_devs[1];
 #elif MODULE_MTD_SDCARD
 #include "mtd_sdcard.h"
@@ -63,7 +63,7 @@ mtd_sdcard_t mtd_sdcard_devs[SDCARD_SPI_NUM];
 mtd_dev_t *fatfs_mtd_devs[SDCARD_SPI_NUM];
 #endif
 
-#define MTD_NUM ARRAY_SIZE(fatfs_mtd_devs)
+#define FATFS_MTD_NUM ARRAY_SIZE(fatfs_mtd_devs)
 
 static int _mount(int argc, char **argv)
 {
@@ -76,8 +76,8 @@ static int _mount(int argc, char **argv)
 
     vol_idx = atoi(argv[1]);
 
-    if (vol_idx > (int)(MTD_NUM-1)) {
-        printf("max allowed <volume_idx> is %d\n", (int)(MTD_NUM - 1));
+    if (vol_idx > (int)(FATFS_MTD_NUM-1)) {
+        printf("max allowed <volume_idx> is %d\n", (int)(FATFS_MTD_NUM - 1));
         return -1;
     }
 
@@ -341,8 +341,8 @@ static int _mkfs(int argc, char **argv)
         return -1;
     }
 
-    if (vol_idx > (int)(MTD_NUM - 1)) {
-        printf("max allowed <volume_idx> is %d\n", (int)(MTD_NUM - 1));
+    if (vol_idx > (int)(FATFS_MTD_NUM - 1)) {
+        printf("max allowed <volume_idx> is %d\n", (int)(FATFS_MTD_NUM - 1));
         return -1;
     }
 
@@ -400,7 +400,7 @@ int main(void)
 
 
     #if MODULE_MTD_NATIVE
-    fatfs_mtd_devs[0] = mtd0;
+    fatfs_mtd_devs[0] = mtd[0];
     #elif MODULE_MTD_SDCARD
     for (unsigned int i = 0; i < SDCARD_SPI_NUM; i++){
         mtd_sdcard_devs[i].base.driver = &mtd_sdcard_driver;
