@@ -314,8 +314,13 @@ static int cc110x_init(netdev_t *netdev)
      * has the value 0x00 and is used for broadcast)
      */
     dev->addr = dev->params.l2addr;
-    while (dev->addr == CC110X_L2ADDR_AUTO) {
-        luid_get(&dev->addr, 1);
+    for(uint8_t i = 0; dev->addr == CC110X_L2ADDR_AUTO; i++) {
+        luid_netdev_get(netdev, &dev->addr, 1, i);
+        if (i == UINT8_MAX && dev->addr == CC110X_L2ADDR_AUTO) {
+            cc110x_release(dev);
+            DEBUG("[cc110x] netdev_driver_t::init(): Failed to setup address\n");
+            return -EADDRNOTAVAIL;
+        }
     }
     cc110x_write(dev, CC110X_REG_ADDR, dev->addr);
 
