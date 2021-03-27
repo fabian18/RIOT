@@ -196,10 +196,13 @@ static int _init(netdev_t *netdev)
     /* assign to pipe 0 the broadcast address*/
     nrf24l01p_ng_write_reg(dev, NRF24L01P_NG_REG_RX_ADDR_P0,
                            NRF24L01P_NG_ADDR_P0(dev), aw);
-    luid_get_lb(NRF24L01P_NG_ADDR_P1(dev), aw);
      /* "The LSByte must be unique for all six pipes" [datasheet p.38] */
-    if (NRF24L01P_NG_ADDR_P1(dev)[aw - 1] == bc[aw - 1]) {
-        luid_get_lb(NRF24L01P_NG_ADDR_P1(dev), aw);
+    for (uint8_t i = 0; !i || NRF24L01P_NG_ADDR_P1(dev)[aw - 1] == bc[aw - 1]; i++) {
+        luid_netdev_get(netdev, NRF24L01P_NG_ADDR_P1(dev), aw, i);
+        if (i == UINT8_MAX && NRF24L01P_NG_ADDR_P1(dev)[aw - 1] == bc[aw - 1]) {
+            nrf24l01p_ng_release(dev);
+            return -EADDRNOTAVAIL;
+        }
     }
     /* assign to pipe 0 the "main" listening address */
     nrf24l01p_ng_write_reg(dev, NRF24L01P_NG_REG_RX_ADDR_P1,
