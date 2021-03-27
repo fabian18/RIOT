@@ -73,7 +73,9 @@ static mtd_spi_nor_t mulle_nor_dev = {
     .params = &mulle_nor_params,
 };
 
-mtd_dev_t *mtd0 = (mtd_dev_t *)&mulle_nor_dev;
+mtd_dev_t *mtd[MTD_NUMOF] = {
+    (mtd_dev_t *)&mulle_nor_dev
+};
 
 static devfs_t mulle_nor_devfs = {
     .path = "/mtd0",
@@ -194,7 +196,7 @@ static void increase_boot_count(void)
 
 int mulle_nor_init(void)
 {
-    int res = mtd_init(mtd0);
+    int res = mtd_init(mtd[0]);
 
     if (res >= 0) {
         /* Register DevFS node */

@@ -54,7 +54,9 @@ static mtd_spi_nor_t serpente_nor_dev = {
     .params = &_serpente_nor_params,
 };
 
-mtd_dev_t *mtd0 = (mtd_dev_t *)&serpente_nor_dev;
+mtd_dev_t *mtd[MTD_NUMOF] = {
+    (mtd_dev_t *)&serpente_nor_dev
+};
 #endif /* MODULE_MTD */
 
 void board_init(void)

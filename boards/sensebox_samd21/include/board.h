@@ -165,11 +165,12 @@ extern "C" {
 
 #if defined(MODULE_MTD_SDCARD) || defined(DOXYGEN)
 /**
- * @brief MTD device 0 (SD Card) definition. mtd0 is defined in board.c
+ * @brief MTD device 0 (SD Card) definition. mtd is defined in board.c
  * @{
  */
-extern mtd_dev_t *mtd0;
-#define MTD_0 mtd0
+#define MTD_NUMOF 1
+extern mtd_dev_t *mtd[MTD_NUMOF];
+#define MTD_0 mtd[0]
 /** @} */
 
 /**

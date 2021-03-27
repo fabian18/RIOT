@@ -49,7 +49,6 @@ static mtd_spi_nor_t same54_nor_dev = {
     },
     .params = &_same54_nor_params,
 };
-mtd_dev_t *mtd0 = (mtd_dev_t *)&same54_nor_dev;
 
 #include "mtd_at24cxxx.h"
 #include "at24cxxx_params.h"
@@ -61,7 +60,11 @@ static mtd_at24cxxx_t at24mac_dev = {
     .at24cxxx_eeprom = &at24cxxx_dev,
     .params = at24cxxx_params,
 };
-mtd_dev_t *mtd1 = (mtd_dev_t *)&at24mac_dev;
+
+mtd_dev_t *mtd[MTD_NUMOF] = {
+    (mtd_dev_t *)&same54_nor_dev,
+    (mtd_dev_t *)&at24mac_dev
+};
 #endif /* MODULE_MTD */
 
 void board_init(void)

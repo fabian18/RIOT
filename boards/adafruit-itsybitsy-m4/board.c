@@ -52,7 +52,9 @@ static mtd_spi_nor_t samd51_nor_dev = {
     .params = &_samd51_nor_params,
 };
 
-mtd_dev_t *mtd0 = (mtd_dev_t *)&samd51_nor_dev;
+mtd_dev_t *mtd[MTD_NUMOF] = {
+    (mtd_dev_t *)&samd51_nor_dev
+};
 #endif /* MODULE_MTD */
 
 void board_init(void)

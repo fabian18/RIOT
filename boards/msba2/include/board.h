@@ -51,8 +51,9 @@ extern "C" {
  * @{
  */
 #ifdef MODULE_MTD_MCI
-extern mtd_dev_t *mtd0;
-#define MTD_0 mtd0
+#define MTD_NUMOF 1
+extern mtd_dev_t *mtd[MTD_NUMOF];
+#define MTD_0 mtd[0]
 #endif
 /** @} */
 

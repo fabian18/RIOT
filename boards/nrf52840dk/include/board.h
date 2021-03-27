@@ -76,11 +76,12 @@ extern "C" {
 #define NRF52840DK_NOR_SPI_MODE           SPI_MODE_0
 /** @} */
 
-/** Default MTD device */
-#define MTD_0 mtd0
-
+/** Number of MTD devices */
+#define MTD_NUMMOF 1
 /** mtd flash emulation device */
-extern mtd_dev_t *mtd0;
+extern mtd_dev_t *mtd[MTD_NUMMOF];
+/** Default MTD device */
+#define MTD_0 mtd[0]
 
 /**
  * @name    Button pin configuration

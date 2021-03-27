@@ -39,7 +39,9 @@ mtd_sdcard_t sensebox_sd_dev = {
     .params = &sdcard_spi_params[0]
 };
 
-mtd_dev_t *mtd0 = (mtd_dev_t *)&sensebox_sd_dev;
+mtd_dev_t *mtd[MTD_NUMOF] = {
+    (mtd_dev_t *)&sensebox_sd_dev
+};
 #endif /* MODULE_MTD_SDCARD || DOXYGEN */
 
 void board_init(void)

@@ -33,7 +33,9 @@
 #ifdef MODULE_MTD_MCI
 extern const mtd_desc_t mtd_mci_driver;
 static mtd_dev_t _mtd_mci = { .driver = &mtd_mci_driver };
-mtd_dev_t *mtd0 = &_mtd_mci;
+mtd_dev_t *mtd[MTD_NUMOF] = {
+    &_mtd_mci
+};
 #endif
 
 void board_init(void)

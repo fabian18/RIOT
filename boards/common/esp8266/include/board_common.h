@@ -92,11 +92,12 @@ extern "C" {
  */
 #include "mtd.h"
 
-/** Default MTD device definition */
-#define MTD_0 mtd0
-
+/** Number of MTD devices */
+#define MTD_NUMOF 1
 /** Pointer to the default MTD device structure */
-extern mtd_dev_t *mtd0;
+extern mtd_dev_t *mtd[MTD_NUMOF];
+/** Default MTD device definition */
+#define MTD_0 mtd[0]
 
 /** @} */
 #endif /* defined(MODULE_MTD) || defined(DOXYGEN) */

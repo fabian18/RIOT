@@ -53,6 +53,8 @@ static mtd_spi_nor_t nrf52840dk_nor_dev = {
     .params = &_nrf52840dk_nor_params,
 };
 
-mtd_dev_t *mtd0 = (mtd_dev_t *)&nrf52840dk_nor_dev;
+mtd_dev_t *mtd[MTD_NUMOF] = {
+    (mtd_dev_t *)&nrf52840dk_nor_dev
+};
 
 #endif

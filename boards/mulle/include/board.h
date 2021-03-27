@@ -156,8 +156,9 @@ void board_init(void);
  * @name MTD configuration
  */
 /** @{ */
-extern mtd_dev_t *mtd0;
-#define MTD_0 mtd0
+#define MTD_NUMOF 1
+extern mtd_dev_t *mtd[MTD_NUMOF];
+#define MTD_0 mtd[0]
 /** @} */
 
 /**

@@ -73,11 +73,14 @@ void _native_LED_RED_TOGGLE(void);
 #endif
 /** @} */
 
-/** Default MTD device */
-#define MTD_0 mtd0
+/** Number of MTD devices */
+#define MTD_NUMOF 1
 
 /** mtd flash emulation device */
-extern mtd_dev_t *mtd0;
+extern mtd_dev_t *mtd[MTD_NUMOF];
+
+/** Default MTD device */
+#define MTD_0 mtd[0]
 #endif
 
 #if defined(MODULE_SPIFFS) || DOXYGEN

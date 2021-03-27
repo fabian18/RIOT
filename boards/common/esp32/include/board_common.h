@@ -125,11 +125,12 @@ extern "C" {
 #define SPI_FLASH_DRIVE_START  0
 #endif
 
-/** Default MTD drive definition */
-#define MTD_0 mtd0
-
+/** Number of MTD devices */
+#define MTD_NUMOF 1
 /** Pointer to the default MTD drive structure */
-extern mtd_dev_t *mtd0;
+extern mtd_dev_t *mtd[MTD_NUMOF];
+/** Default MTD drive definition */
+#define MTD_0 mtd[0]
 
 /** @} */
 #endif /* MODULE_MTD || DOXYGEN */

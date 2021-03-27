@@ -45,5 +45,7 @@ static mtd_native_dev_t mtd0_dev = {
     .fname = MTD_NATIVE_FILENAME,
 };
 
-mtd_dev_t *mtd0 = (mtd_dev_t *)&mtd0_dev;
+mtd_dev_t *mtd[MTD_NUMOF] = {
+    (mtd_dev_t *)&mtd0_dev
+};
 #endif
