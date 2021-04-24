@@ -26,6 +26,16 @@
 #include "kernel_defines.h"
 #include "log.h"
 
+/**
+ * @brief   Automatic initialization hook for board setup
+ *
+ * @pre     CPU peripherals have been initialized
+ * @pre     The RIOT main thread has been created
+ */
+void __attribute__((weak)) auto_init_board(void)
+{
+}
+
 void auto_init(void)
 {
     if (IS_USED(MODULE_AUTO_INIT_RANDOM)) {
@@ -174,6 +184,11 @@ void auto_init(void)
         extern void sock_dtls_init(void);
         sock_dtls_init();
     }
+
+    /* perform board specific initialization tasks
+       after the base system has been initialized and
+       before drivers are going to be initialized */
+    auto_init_board();
 
     /* initialize USB devices */
     if (IS_USED(MODULE_AUTO_INIT_USBUS)) {
