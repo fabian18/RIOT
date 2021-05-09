@@ -48,6 +48,21 @@ typedef struct {
  */
 extern const mtd_desc_t mtd_at25xxx_driver;
 
+#if IS_USED(MODULE_AUTO_INIT_STORAGE_AT25XXX) || defined(DOXYGEN)
+/**
+ * @brief   Get a pointer to all auto-initialized at25xxx MTD
+ *
+ * @return  Pointer to all auto-initialized at25xxx MTD
+ */
+mtd_at25xxx_t *mtd_at25xxx_devs(void);
+/**
+ * @brief   Get the number of all auto-initialized at25xxx MTD
+ *
+ * @return  Number of all auto-initialized at25xxx MTD
+ */
+at25xxx_id_t mtd_at25xxx_numof(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

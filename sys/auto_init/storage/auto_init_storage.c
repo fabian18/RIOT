@@ -18,7 +18,14 @@
  *
  * @}
  */
+#include "kernel_defines.h"
+#include "log.h"
 
 void auto_init_storage(void)
 {
+    if(IS_USED(MODULE_AUTO_INIT_STORAGE_AT25XXX)) {
+        LOG_DEBUG("Auto initialization at25xxx.\n");
+        extern void auto_init_at25xxx(void);
+        auto_init_at25xxx();
+    }
 }

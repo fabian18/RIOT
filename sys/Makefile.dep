@@ -88,6 +88,10 @@ ifneq (,$(filter auto_init_storage_%,$(USEMODULE)))
   USEMODULE += auto_init_storage
 endif
 
+ifneq (,$(filter auto_init_storage_at25xxx,$(USEMODULE)))
+  USEMODULE += at25xxx
+endif
+
 ifneq (,$(filter auto_init_saul,$(USEMODULE)))
   USEMODULE += saul_init_devs
 endif

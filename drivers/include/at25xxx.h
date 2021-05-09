@@ -153,6 +153,31 @@ int at25xxx_set(const at25xxx_t *dev, uint32_t pos, uint8_t val, size_t len);
  */
 int at25xxx_clear(const at25xxx_t *dev, uint32_t pos, size_t len);
 
+#if IS_USED(MODULE_AUTO_INIT_STORAGE_AT25XXX) || defined(DOXYGEN)
+/**
+ * @brief   Signed type to store a unique ID for each auto-initialized
+ *          at25xxx device
+ */
+typedef int8_t at25xxx_id_t;
+/**
+ * @brief   Maximum ID of an at25xxx device
+ */
+#define AT25XXX_ID_MAX \
+    ((((1LL << (sizeof(at25xxx_id_t) * 8 - 2)) - 1) << 1) + 1)
+/**
+ * @brief   Get a pointer to all auto-initialized at25xxx devices
+ *
+ * @return  Pointer to an array of all auto-initilized at25xxx devices
+ */
+at25xxx_t *at25xxx_devs(void);
+/**
+ * @brief   Get the number of auto-initialized at25xxx devices
+ *
+ * @return  Number of auto-initialized at25xxx devices
+ */
+at25xxx_id_t at25xxx_numof(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
