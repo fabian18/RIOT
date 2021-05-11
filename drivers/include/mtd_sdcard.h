@@ -67,6 +67,21 @@ typedef struct {
  */
 extern const mtd_desc_t mtd_sdcard_driver;
 
+#if IS_USED(MODULE_AUTO_INIT_STORAGE_SDCARD_SPI) || defined(DOXYGEN)
+/**
+ * @brief   Get a pointer to all auto-initialized sdcard MTD
+ *
+ * @return  Pointer to all auto-initialized sdcard MTD
+ */
+mtd_sdcard_t *mtd_sdcard_devs(void);
+/**
+ * @brief   Get the number of all auto-initialized sdcard MTD
+ *
+ * @return  Number of all auto-initialized sdcard MTD
+ */
+sdcard_spi_id_t mtd_sdcard_numof(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

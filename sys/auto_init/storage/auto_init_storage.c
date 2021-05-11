@@ -17,7 +17,14 @@
  *
  * @}
  */
+#include "kernel_defines.h"
+#include "log.h"
 
 void auto_init_storage(void)
 {
+    if (IS_USED(MODULE_AUTO_INIT_STORAGE_SDCARD_SPI)) {
+        LOG_DEBUG("Auto init sdcard SPI.\n");
+        extern void auto_init_sdcard_spi(void);
+        auto_init_sdcard_spi();
+    }
 }

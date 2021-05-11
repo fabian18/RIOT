@@ -264,6 +264,31 @@ int sdcard_spi_write_blocks(sdcard_spi_t *card, int blockaddr, const uint8_t *da
  */
 uint64_t sdcard_spi_get_capacity(sdcard_spi_t *card);
 
+#if IS_USED(MODULE_AUTO_INIT_STORAGE_SDCARD_SPI) || defined(DOXYGEN)
+/**
+ * @brief   Signed type to store a unique ID for each auto-initialized
+ *          sdcard_spi device
+ */
+typedef int8_t sdcard_spi_id_t;
+/**
+ * @brief   Maximum ID of an sdcard_spi device
+ */
+#define SDCARD_SPI_ID_MAX \
+    ((((1LL << (sizeof(sdcard_spi_id_t) * 8 - 2)) - 1) << 1) + 1)
+/**
+ * @brief   Get a pointer to all auto-initialized sdcard_spi devices
+ *
+ * @return  Pointer to an array of all auto-initilized sdcard_spi devices
+ */
+sdcard_spi_t *sdcard_spi_devs(void);
+/**
+ * @brief   Get the number of auto-initialized sdcard_spi devices
+ *
+ * @return  Number of auto-initialized sdcard_spi devices
+ */
+sdcard_spi_id_t sdcard_spi_numof(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
