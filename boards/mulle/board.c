@@ -33,6 +33,16 @@
 #include "fs/devfs.h"
 #include "mtd_spi_nor.h"
 
+#if !IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR)
+#include "mtd_spi_nor_params.h"
+static mtd_spi_nor_t _mtd_spi_nor_devs[] = {
+    MTD_SPI_NOR_DEVS
+};
+mtd_dev_t *mtd0 = (mtd_dev_t *)&_mtd_spi_nor_devs[0];
+#else
+mtd_dev_t *mtd0;
+#endif
+
 static nvram_t mulle_nvram_dev;
 nvram_t *mulle_nvram = &mulle_nvram_dev;
 static nvram_spi_params_t nvram_spi_params = {
@@ -48,37 +58,9 @@ static devfs_t mulle_nvram_devfs = {
     .private_data = &mulle_nvram_dev,
 };
 
-static const mtd_spi_nor_params_t mulle_nor_params = {
-    .opcode = &mtd_spi_nor_opcode_default,
-    .wait_chip_erase = 16LU * US_PER_SEC,
-    .wait_sector_erase = 10LU * US_PER_MS,
-    .wait_32k_erase = 20LU * US_PER_MS,
-    .wait_chip_wake_up = 1LU * US_PER_MS,
-    .spi = MULLE_NOR_SPI_DEV,
-    .addr_width = 3,
-    .mode = SPI_MODE_3,
-    .cs = MULLE_NOR_SPI_CS,
-    .wp = GPIO_UNDEF,
-    .hold = GPIO_UNDEF,
-    .clk = SPI_CLK_10MHZ,
-};
-
-static mtd_spi_nor_t mulle_nor_dev = {
-    .base = {
-        .driver = &mtd_spi_nor_driver,
-        .page_size = 256,
-        .pages_per_sector = 256,
-        .sector_count = 32,
-    },
-    .params = &mulle_nor_params,
-};
-
-mtd_dev_t *mtd0 = (mtd_dev_t *)&mulle_nor_dev;
-
 static devfs_t mulle_nor_devfs = {
     .path = "/mtd0",
     .f_op = &mtd_vfs_ops,
-    .private_data = &mulle_nor_dev,
 };
 
 /** @brief Initialize the GPIO pins controlling the power switches. */
@@ -126,8 +108,13 @@ void board_init(void)
         increase_boot_count();
     }
 
+#if !IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR)
+    _mtd_spi_nor_devs[0].params = &mtd_spi_nor_params[0];
     /* Initialize NOR flash */
     mulle_nor_init();
+#else
+    mtd0 = (mtd_dev_t *)mtd_spi_nor_devs();
+#endif
 }
 
 static inline void power_pins_init(void)
@@ -195,7 +182,7 @@ static void increase_boot_count(void)
 int mulle_nor_init(void)
 {
     int res = mtd_init(mtd0);
-
+    mulle_nor_devfs.private_data = mtd0;
     if (res >= 0) {
         /* Register DevFS node */
         res = devfs_register(&mulle_nor_devfs);
@@ -203,3 +190,12 @@ int mulle_nor_init(void)
 
     return res;
 }
+
+#if IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR)
+void auto_init_mtd_spi_nor(mtd_spi_nor_t *spi_nor, spi_nor_id_t numof)
+{
+    if (spi_nor && numof) {
+        mulle_nor_init();
+    }
+}
+#endif
