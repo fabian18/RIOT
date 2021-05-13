@@ -23,6 +23,7 @@
 #include "mtd.h"
 #include "periph_conf.h"
 #include "periph_cpu.h"
+#include "timex.h"
 
 #ifdef __cplusplus
 extern "C" {
