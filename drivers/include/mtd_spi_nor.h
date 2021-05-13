@@ -175,6 +175,34 @@ extern const mtd_spi_nor_opcode_t mtd_spi_nor_opcode_default;
  */
 extern const mtd_spi_nor_opcode_t mtd_spi_nor_opcode_default_4bytes;
 
+#if IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR) || defined(DOXYGEN)
+/**
+ * @brief   Signed type to store a unique ID for each auto-initialized
+ *          SPI NOR flash device
+ */
+typedef int8_t spi_nor_id_t;
+
+/**
+ * @brief   Maximum ID of an SPI NOR flash device
+ */
+#define SPI_NOR_ID_MAX \
+    ((((1LL << (sizeof(spi_nor_id_t) * 8 - 2)) - 1) << 1) + 1)
+
+/**
+ * @brief   Get a pointer to all auto-initialized SPI NOR MTD
+ *
+ * @return  Pointer to auto-initialized SPI NOR MTD
+ */
+mtd_spi_nor_t *mtd_spi_nor_devs(void);
+
+/**
+ * @brief   Get the number of auto-initialized SPI NOR MTD
+ *
+ * @return  Number of auto-initialized SPI NOR MTD
+ */
+spi_nor_id_t mtd_spi_nor_numof(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

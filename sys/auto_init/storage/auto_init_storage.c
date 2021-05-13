@@ -18,7 +18,14 @@
  *
  * @}
  */
+#include "kernel_defines.h"
+#include "log.h"
 
 void auto_init_storage(void)
 {
+    if (IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR)) {
+        LOG_DEBUG("Auto init SPI NOR flash.\n");
+        extern void auto_init_spi_nor(void);
+        auto_init_spi_nor();
+    }
 }
