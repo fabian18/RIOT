@@ -20,42 +20,22 @@
 
 #include "cpu.h"
 #include "board.h"
-#include "mtd.h"
-#include "mtd_spi_nor.h"
 #include "periph/gpio.h"
 #include "periph/spi.h"
-#include "timex.h"
 
-#ifdef MODULE_MTD
+#if IS_USED(MODULE_MTD)
+#include "mtd_spi_nor.h"
+#if !IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR)
+#include "mtd_spi_nor_params.h"
 /* GD25Q32C */
-static const mtd_spi_nor_params_t _serpente_nor_params = {
-    .opcode = &mtd_spi_nor_opcode_default,
-    .wait_chip_erase = 15LU * US_PER_SEC,
-    .wait_32k_erase = 250LU * US_PER_MS,
-    .wait_sector_erase = 50LU * US_PER_MS,
-    .wait_chip_wake_up = 1LU * US_PER_MS,
-    .clk = SERPENTE_NOR_SPI_CLK,
-    .flag = SERPENTE_NOR_FLAGS,
-    .spi = SERPENTE_NOR_SPI_DEV,
-    .mode = SERPENTE_NOR_SPI_MODE,
-    .cs = SERPENTE_NOR_SPI_CS,
-    .wp = GPIO_UNDEF,
-    .hold = GPIO_UNDEF,
-    .addr_width = 3,
+static mtd_spi_nor_t _mtd_spi_nor_devs[] = {
+    MTD_SPI_NOR_DEVS
 };
-
-static mtd_spi_nor_t serpente_nor_dev = {
-    .base = {
-        .driver = &mtd_spi_nor_driver,
-        .page_size = SERPENTE_NOR_PAGE_SIZE,
-        .pages_per_sector = SERPENTE_NOR_PAGES_PER_SECTOR,
-        .sector_count = SERPENTE_NOR_SECTOR_COUNT,
-    },
-    .params = &_serpente_nor_params,
-};
-
-mtd_dev_t *mtd0 = (mtd_dev_t *)&serpente_nor_dev;
-#endif /* MODULE_MTD */
+mtd_dev_t *mtd0 = (mtd_dev_t *)&_mtd_spi_nor_devs[0];
+#else
+mtd_dev_t *mtd0;
+#endif
+#endif
 
 void board_init(void)
 {
@@ -70,4 +50,12 @@ void board_init(void)
     LED0_OFF;
     LED1_OFF;
     LED2_OFF;
+
+#if IS_USED(MODULE_MTD)
+#if !IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR)
+    _mtd_spi_nor_devs[0].params = &mtd_spi_nor_params[0];
+#else
+    mtd0 = (mtd_dev_t *)mtd_spi_nor_devs();
+#endif
+#endif
 }
