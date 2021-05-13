@@ -17,41 +17,21 @@
  *
  * @}
  */
-
+#include "kernel_defines.h"
 #include "board.h"
 #include "cpu.h"
-#include "mtd.h"
+
+#if IS_USED(MODULE_MTD)
 #include "mtd_spi_nor.h"
-#include "timex.h"
-
-#ifdef MODULE_MTD
-static const mtd_spi_nor_params_t _ikea_tradfri_nor_params = {
-    .opcode = &mtd_spi_nor_opcode_default,
-    .wait_chip_erase = 2LU * US_PER_SEC,
-    .wait_32k_erase = 500LU *US_PER_MS,
-    .wait_sector_erase = 300LU * US_PER_MS,
-    .wait_chip_wake_up = 1LU * US_PER_MS,
-    .clk = IKEA_TRADFRI_NOR_SPI_CLK,
-    .flag = IKEA_TRADFRI_NOR_FLAGS,
-    .spi = IKEA_TRADFRI_NOR_SPI_DEV,
-    .mode = IKEA_TRADFRI_NOR_SPI_MODE,
-    .cs = IKEA_TRADFRI_NOR_SPI_CS,
-    .wp = GPIO_UNDEF,
-    .hold = GPIO_UNDEF,
-    .addr_width = 3,
+#if !IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR)
+#include "mtd_spi_nor_params.h"
+static mtd_spi_nor_t _mtd_spi_nor_devs[] = {
+    MTD_SPI_NOR_DEVS
 };
-
-static mtd_spi_nor_t ikea_tradfri_nor_dev = {
-    .base = {
-        .driver = &mtd_spi_nor_driver,
-        .page_size = IKEA_TRADFRI_NOR_PAGE_SIZE,
-        .pages_per_sector = IKEA_TRADFRI_NOR_PAGES_PER_SECTOR,
-        .sector_count = IKEA_TRADFRI_NOR_SECTOR_COUNT,
-    },
-    .params = &_ikea_tradfri_nor_params,
-};
-
-mtd_dev_t *mtd0 = (mtd_dev_t *)&ikea_tradfri_nor_dev;
+mtd_dev_t *mtd0 = (mtd_dev_t *)&_mtd_spi_nor_devs[0];
+#else
+mtd_dev_t *mtd0;
+#endif /* !IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR) */
 #endif /* MODULE_MTD */
 
 void board_init(void)
@@ -65,11 +45,16 @@ void board_init(void)
     gpio_init(LED1_PIN, GPIO_OUT);
 #endif
 
-#ifdef MODULE_MTD
+#if IS_USED(MODULE_MTD)
     /* enable NOR flash (only on the ICC-1-A) */
     if (gpio_is_valid(IKEA_TRADFRI_NOR_EN)) {
         gpio_init(IKEA_TRADFRI_NOR_EN, GPIO_OUT);
         gpio_set(IKEA_TRADFRI_NOR_EN);
     }
+#if !IS_USED(MODULE_AUTO_INIT_STORAGE_SPI_NOR)
+    _mtd_spi_nor_devs[0].params = &mtd_spi_nor_params[0];
+#else
+    mtd0 = (mtd_dev_t *)mtd_spi_nor_devs();
+#endif
 #endif
 }

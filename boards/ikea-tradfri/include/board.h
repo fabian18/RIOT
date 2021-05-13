@@ -24,7 +24,7 @@
 #include "periph/adc.h"
 #include "periph/gpio.h"
 #include "periph/spi.h"
-
+#include "timex.h"
 #include "mtd.h"
 
 #ifdef __cplusplus
