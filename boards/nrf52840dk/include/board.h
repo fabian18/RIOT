@@ -22,6 +22,7 @@
 
 #include "board_common.h"
 #include "mtd.h"
+#include "timex.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,11 +77,13 @@ extern "C" {
 #define NRF52840DK_NOR_SPI_MODE           SPI_MODE_0
 /** @} */
 
-/** Default MTD device */
-#define MTD_0 mtd0
-
-/** mtd flash emulation device */
+/**
+ * @name MTD configuration
+ * @{
+ */
 extern mtd_dev_t *mtd0;
+#define MTD_0 mtd0
+/** @} */
 
 /**
  * @name    Button pin configuration
