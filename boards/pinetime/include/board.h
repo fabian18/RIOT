@@ -24,6 +24,7 @@
 #include "cpu.h"
 #include "board_common.h"
 #include "mtd.h"
+#include "timex.h"
 
 #ifdef __cplusplus
 extern "C" {
