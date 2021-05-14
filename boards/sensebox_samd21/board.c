@@ -17,30 +17,25 @@
  * @author      Leandro Lanzieri <leandro.lanzieri@haw-hamburg.de>
  * @}
  */
-
+#include "kernel_defines.h"
 #include "cpu.h"
 #include "board.h"
 #include "periph/gpio.h"
-#include "sdcard_spi_params.h"
+
+#if IS_USED(MODULE_MTD_SDCARD)
 #include "mtd_sdcard.h"
-
-#if defined(MODULE_MTD_SDCARD) || defined(DOXYGEN)
- /* this is provided by the sdcard_spi driver
-  * see drivers/sdcard_spi/sdcard_spi.c */
-extern sdcard_spi_t sdcard_spi_devs[ARRAY_SIZE(sdcard_spi_params)];
-mtd_sdcard_t sensebox_sd_dev = {
-    .base = {
-        .driver = &mtd_sdcard_driver,
-        .page_size = MTD_SD_CARD_PAGE_SIZE,
-        .pages_per_sector = MTD_SD_CARD_PAGES_PER_SECTOR,
-        .sector_count = MTD_SD_CARD_SECTOR_COUNT
-    },
-    .sd_card = &sdcard_spi_devs[0],
-    .params = &sdcard_spi_params[0]
+#if !IS_USED(MODULE_AUTO_INIT_STORAGE_SDCARD_SPI)
+#include "sdcard_spi_params.h"
+#include "mtd_sdcard_params.h"
+static sdcard_spi_t sdcard_spi_devs[MTD_SDCARD_NUMOF];
+static mtd_sdcard_t mtd_sdcard_devs[MTD_SDCARD_NUMOF] = {
+    MTD_SDCARD_DEVS
 };
-
-mtd_dev_t *mtd0 = (mtd_dev_t *)&sensebox_sd_dev;
-#endif /* MODULE_MTD_SDCARD || DOXYGEN */
+mtd_dev_t *mtd0 = (mtd_dev_t *)&mtd_sdcard_devs[0];
+#else
+mtd_dev_t *mtd0;
+#endif /* !IS_USED(MODULE_AUTO_INIT_STORAGE_SDCARD_SPI) */
+#endif /* MODULE_MTD_SDCARD */
 
 void board_init(void)
 {
@@ -78,4 +73,13 @@ void board_init(void)
     for (unsigned i = 0; i < WAIT_FOR_SPI_RESET; i++) {
         __asm__("nop");
     }
+
+#if IS_USED(MODULE_MTD_SDCARD)
+#if !IS_USED(MODULE_AUTO_INIT_STORAGE_SDCARD_SPI)
+    mtd_sdcard_devs[0].sd_card = &sdcard_spi_devs[0];
+    mtd_sdcard_devs[0].params = &sdcard_spi_params[0];
+#else
+    mtd0 = (mtd_dev_t *)mtd_sdcard_devs();
+#endif
+#endif
 }
