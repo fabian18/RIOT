@@ -72,8 +72,8 @@ mtd_dev_t *fatfs_mtd_devs[FF_VOLUMES];
 extern mtd_dev_t *mtd0;
 #elif MODULE_MTD_SDCARD
 #define SDCARD_SPI_NUM ARRAY_SIZE(sdcard_spi_params)
-extern sdcard_spi_t sdcard_spi_devs[SDCARD_SPI_NUM];
-mtd_sdcard_t mtd_sdcard_devs[SDCARD_SPI_NUM];
+static sdcard_spi_t sdcard_spi_devs[SDCARD_SPI_NUM];
+static mtd_sdcard_t mtd_sdcard_devs[SDCARD_SPI_NUM];
 /* always default to first sdcard*/
 static mtd_dev_t *mtd1 = (mtd_dev_t*)&mtd_sdcard_devs[0];
 #endif
