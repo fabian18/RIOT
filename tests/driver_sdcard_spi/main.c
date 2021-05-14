@@ -34,12 +34,9 @@
 #define FIRST_PRINTABLE_ASCII_CHAR 0x20
 #define ASCII_UNPRINTABLE_REPLACEMENT "."
 
-/* this is provided by the sdcard_spi driver
- * see drivers/sdcard_spi/sdcard_spi.c */
-extern sdcard_spi_t sdcard_spi_devs[ARRAY_SIZE(sdcard_spi_params)];
-sdcard_spi_t *card = &sdcard_spi_devs[0];
-
-uint8_t buffer[SD_HC_BLOCK_SIZE * MAX_BLOCKS_IN_BUFFER];
+static sdcard_spi_t sdcard_spi_devs[ARRAY_SIZE(sdcard_spi_params)];
+static sdcard_spi_t *card = &sdcard_spi_devs[0];
+static uint8_t buffer[SD_HC_BLOCK_SIZE * MAX_BLOCKS_IN_BUFFER];
 
 static int _init(int argc, char **argv)
 {
