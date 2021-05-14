@@ -32,17 +32,13 @@
 #include "sdcard_spi.h"
 #include "sdcard_spi_params.h"
 
-#define SDCARD_SPI_NUM ARRAY_SIZE(sdcard_spi_params)
-
-/* SD card devices are provided by drivers/sdcard_spi/sdcard_spi.c */
-extern sdcard_spi_t sdcard_spi_devs[SDCARD_SPI_NUM];
-
+static sdcard_spi_t sdcard_spi_dev;
 /* Configure MTD device for the first SD card */
 static mtd_sdcard_t mtd_sdcard_dev = {
     .base = {
         .driver = &mtd_sdcard_driver
     },
-    .sd_card = &sdcard_spi_devs[0],
+    .sd_card = &sdcard_spi_dev,
     .params = &sdcard_spi_params[0],
 };
 static mtd_dev_t *mtd0 = (mtd_dev_t*)&mtd_sdcard_dev;
