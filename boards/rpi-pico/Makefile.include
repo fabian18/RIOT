@@ -1,0 +1,3 @@
+PROGRAMMER ?= openocd
+
+OPENOCD_DEBUG_ADAPTER = dap
