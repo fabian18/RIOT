@@ -1,0 +1,9 @@
+LINKFLAGS += -L$(RIOTCPU)/$(CPU)/ldscripts
+
+LINKER_SCRIPT = rp2040.ld
+
+CFLAGS += -DRP2040
+
+INCLUDES += -I$(RIOTCPU)/rp2040/include
+
+include $(RIOTMAKE)/arch/cortexm.inc.mk

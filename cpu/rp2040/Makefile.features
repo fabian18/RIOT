@@ -1,0 +1,2 @@
+CPU_CORE := cortex-m0plus
+include $(RIOTCPU)/cortexm_common/Makefile.features
