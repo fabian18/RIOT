@@ -15,6 +15,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -22,6 +23,62 @@
 #include "crypto/modes/ecb.h"
 #include "crypto/modes/cbc.h"
 #include "net/ieee802154_security.h"
+
+#define ENABLE_DEBUG 0
+#include "debug.h"
+
+#if IS_USED(MODULE_IEEE802154_SECURITY_PERSIST)
+/**
+ * @brief   Called exactly once for each interface to initialize
+ *          @ref ieee802154_sec_context_t::persist
+ *
+ * @param[in]       ctx         IEEE 802.15.4 security context
+ *
+ * @retval          <0: unexpected failure
+ * @retval          ENOTSUP: persistent memory backend not available
+ * @retval          ENODATA: persistent data not found or corrupted
+ * @retval          0: persistent data has been loaded successfully
+ */
+int ieee802154_sec_persist_init(ieee802154_sec_context_t *ctx);
+/**
+ * @brief   Read persistency state
+ *
+ * @param[in]       ctx         IEEE 802.15.4 security context to read from
+ * @param[out]      dst         Buffer to write from
+ * @param[in]       offset      offsetof(ieee802154_sec_persist_t, member)
+ * @param[in]       size        sizeof(((ieee802154_sec_persist_t *)NULL)->member)
+ *
+ * @return          0 on success
+ */
+int ieee802154_sec_persist_read(const ieee802154_sec_context_t *ctx,
+                                void *dst, size_t offset, size_t size);
+/**
+ * @brief   Write persistency state
+ *
+ * @param[in]       ctx         IEEE 802.15.4 security context to write to
+ * @param[in]       src         Buffer to read from
+ * @param[in]       offset      offsetof(ieee802154_sec_persist_t, member)
+ * @param[in]       size        sizeof(((ieee802154_sec_persist_t *)NULL)->member)
+ *
+ * @return          0 on success
+ */
+int ieee802154_sec_persist_write(void *persist, const void *src, size_t offset, size_t size);
+#else
+static inline int ieee802154_sec_persist_init(ieee802154_sec_context_t *ctx)
+{
+    (void)ctx; return ENOTSUP;
+}
+static inline int ieee802154_sec_persist_read(const ieee802154_sec_context_t *ctx,
+                                              void *dst, size_t offset, size_t size)
+{
+    (void)ctx; (void)dst; (void)offset; (void)size; return -ENOTSUP;
+}
+static inline int ieee802154_sec_persist_write(ieee802154_sec_context_t *ctx,
+                                               const void *src, size_t offset, size_t size)
+{
+    (void)ctx; (void)src; (void)offset; (void)size; return -ENOTSUP;
+}
+#endif /* IS_USED(MODULE_IEEE802154_SECURITY_PERSIST) */
 
 const ieee802154_radio_cipher_ops_t ieee802154_radio_cipher_ops = {
     .set_key = NULL,
@@ -32,6 +89,22 @@ const ieee802154_radio_cipher_ops_t ieee802154_radio_cipher_ops = {
 static inline uint16_t _min(uint16_t a, uint16_t b)
 {
     return a < b ? a : b;
+}
+
+static inline void _persist_read_fc(ieee802154_sec_context_t *ctx, uint32_t *fc)
+{
+    if (ieee802154_sec_persist_read(ctx, fc,
+                                    offsetof(ieee802154_sec_persist_t, fc),
+                                    sizeof(((ieee802154_sec_persist_t *)NULL)->fc))) {
+        *fc = ctx->frame_counter;
+    }
+}
+
+static inline void _persist_write_fc(ieee802154_sec_context_t *ctx, uint32_t fc)
+{
+    ieee802154_sec_persist_write(ctx, &fc,
+                                 offsetof(ieee802154_sec_persist_t, fc),
+                                 sizeof(fc));
 }
 
 static void _set_key(ieee802154_sec_context_t *ctx,
@@ -391,6 +464,7 @@ static void _ctr_mic(ieee802154_sec_context_t *ctx,
 
 void ieee802154_sec_init(ieee802154_sec_context_t *ctx)
 {
+    ieee802154_sec_persist_init(ctx);
     /* device driver can override this */
     ctx->dev.cipher_ops = &ieee802154_radio_cipher_ops;
     /* device driver can override this */
@@ -401,10 +475,20 @@ void ieee802154_sec_init(ieee802154_sec_context_t *ctx)
     memset(ctx->key_source, 0, sizeof(ctx->key_source));
     ctx->key_index = 0;
     ctx->frame_counter = 0;
+    _persist_read_fc(ctx, &ctx->frame_counter);
     uint8_t key[] = CONFIG_IEEE802154_SEC_DEFAULT_KEY;
     assert(sizeof(key) >= IEEE802154_SEC_KEY_LENGTH);
     assert(CIPHER_MAX_CONTEXT_SIZE >= IEEE802154_SEC_KEY_LENGTH);
     cipher_init(&ctx->cipher, CIPHER_AES, key, IEEE802154_SEC_KEY_LENGTH);
+}
+
+void ieee802154_sec_set_key(ieee802154_sec_context_t *ctx, const void *key)
+{
+    if (memcmp(ctx->cipher.context.context, key, IEEE802154_SEC_KEY_LENGTH)) {
+        /* If the key changes, the frame counter can be reset to 0 */
+        _persist_write_fc(ctx, 0);
+        memcpy(ctx->cipher.context.context, key, IEEE802154_SEC_KEY_LENGTH);
+    }
 }
 
 int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
@@ -421,6 +505,9 @@ int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
         *mic_size = 0;
         return IEEE802154_SEC_OK;
     }
+    _persist_read_fc(ctx, &ctx->frame_counter);
+    DEBUG("[ieee802154_security] %p using frame counter: %"PRIu32"\n",
+          (void *)ctx, ctx->frame_counter);
     if (ctx->frame_counter == 0xFFFFFFFF) {
         /* Letting the frame counter overflow is explicitly prohibited by the specification.
            (see 9.4.2) */
@@ -438,6 +525,7 @@ int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
         return -IEEE802154_SEC_NO_KEY;
     }
     _set_key(ctx, key);
+    _persist_write_fc(ctx, ctx->frame_counter + 1);
 
     *mic_size = _mac_size(ctx->security_level);
     const uint8_t *a = header;

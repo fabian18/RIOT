@@ -107,6 +107,17 @@ struct ieee802154_sec_dev {
     void *ctx;
 };
 
+/**
+ * @brief   Data that should be stored persistently per interface
+ */
+typedef struct ieee802154_sec_persist {
+    /**
+     * @brief   Frame counter that should be retained
+     *          during resets and power off
+     */
+    uint32_t fc;
+} ieee802154_sec_persist_t;
+
 #if !defined(CONFIG_IEEE802154_SEC_DEFAULT_KEY) || defined(DOXYGEN)
 /**
  * @brief   AES default key
@@ -267,6 +278,15 @@ typedef struct ieee802154_sec_context {
      * @brief   802.15.4 security dev
      */
     ieee802154_sec_dev_t dev;
+#if IS_USED(MODULE_IEEE802154_SECURITY_PERSIST)
+    /**
+     * @brief   pointer to persistent security data
+     *
+     * The actualt data behind the pointer depends on
+     * the used module IEEE802154_SECURITY_PERSIST_*
+     */
+    void *persist;
+#endif
 } ieee802154_sec_context_t;
 
 /**
@@ -382,6 +402,14 @@ typedef struct __attribute__((packed)) {
  * @param[out]      ctx                     IEEE 802.15.4 security context
  */
 void ieee802154_sec_init(ieee802154_sec_context_t *ctx);
+
+/**
+ * @brief   Change the key to be used with @p ctx
+ *
+ * @param[in]       ctx                     IEEE 802.15.4 security context
+ * @param[in]       key                     Pointer to key of IEEE802154_SEC_KEY_LENGTH bytes
+ */
+void ieee802154_sec_set_key(ieee802154_sec_context_t *ctx, const void *key);
 
 /**
  * @brief   Encrypt IEEE 802.15.4 frame according to @p ctx

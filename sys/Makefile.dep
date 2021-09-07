@@ -68,6 +68,11 @@ ifneq (,$(filter ieee802154_security,$(USEMODULE)))
   USEMODULE += cipher_modes
 endif
 
+ifneq (,$(filter ieee802154_security_persist_backup_ram,$(USEMODULE)))
+  FEATURES_REQUIRED += periph_backup_ram
+  USEMODULE += ieee802154_security_persist
+endif
+
 ifneq (,$(filter rtt_cmd,$(USEMODULE)))
   FEATURES_REQUIRED += periph_rtt
 endif
