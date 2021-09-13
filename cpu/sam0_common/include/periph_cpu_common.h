@@ -752,6 +752,11 @@ static inline void sercom_set_gen(void *sercom, uint8_t gclk)
 }
 
 /**
+ * @brief Enable backup RAM access
+ */
+static inline void backup_ram_init(void) {}
+
+/**
  * @brief   Returns true if the CPU woke deep sleep (backup/standby)
  */
 static inline bool cpu_woke_from_backup(void)
