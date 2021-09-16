@@ -1174,6 +1174,39 @@ void stm32_eth_common_init(void);
 #define HAVE_PTP_TIMER_SET_ABSOLUTE 1   /**< Native implementation available */
 /** @} */
 
+#if defined(CPU_HAS_BACKUP_RAM) || defined(DOXYGEN)
+/**
+ * @brief   Enable backup RAM access
+ */
+void backup_ram_init(void);
+
+/**
+ * @brief   Check whether the backup RAM regulator is on and backup RAM
+ *          content is retained while asleep
+ */
+bool backup_ram_is_retained(void);
+
+/**
+ * @brief   Enable the backup RAM regulator to retain it´s content
+ *          during standby mode
+ */
+void backup_ram_sleep(void);
+
+/**
+ * @brief   Disable the backup RAM regulator
+ */
+void backup_ram_awake(void);
+
+/**
+ * @brief   Returns true if the CPU woke deep sleep (backup/standby)
+ */
+static inline bool cpu_woke_from_backup(void) {
+    uint32_t coldboot = (RCC->CSR & (RCC_CSR_PORRSTF | RCC_CSR_BORRSTF));
+    RCC->CSR |= RCC_CSR_RMVF; /* clear reset flags */
+    return !(coldboot == (RCC_CSR_PORRSTF | RCC_CSR_BORRSTF));
+}
+#endif
+
 #ifdef __cplusplus
 }
 #endif

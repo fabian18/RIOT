@@ -105,6 +105,11 @@
 #define PWR_WUP_REG    PWR->CSR
 #endif
 
+#if !defined(CPU_HAS_BACKUP_RAM)
+static inline void backup_ram_sleep(void) {}
+static inline void backup_ram_awake(void) {}
+#endif
+
 void pm_set(unsigned mode)
 {
     int deep;
@@ -132,6 +137,7 @@ void pm_set(unsigned mode)
             PWR_WUP_REG |= PM_EWUP_CONFIG;
             /* Set SLEEPDEEP bit of system control block */
             deep = 1;
+            backup_ram_sleep();
             break;
 #endif
         case STM32_PM_STOP:
@@ -139,6 +145,7 @@ void pm_set(unsigned mode)
             PWR_CR_REG |= PM_STOP_CONFIG;
             /* Set SLEEPDEEP bit of system control block */
             deep = 1;
+            backup_ram_sleep();
             break;
         default:
             deep = 0;
@@ -148,6 +155,7 @@ void pm_set(unsigned mode)
     cortexm_sleep(deep);
 
     if (deep) {
+        backup_ram_awake();
         /* Re-init clock after STOP */
 #if !defined(CPU_FAM_STM32MP1) || IS_USED(MODULE_STM32MP1_ENG_MODE)
         stmclk_init_sysclk();

@@ -40,4 +40,8 @@ ifneq (,$(filter periph_rtc_mem,$(USEMODULE)))
   FEATURES_REQUIRED += periph_rtc
 endif
 
+ifneq (,$(filter periph_pm,$(USEMODULE)))
+  FEATURES_OPTIONAL += periph_backup_ram
+endif
+
 include $(RIOTCPU)/cortexm_common/Makefile.dep

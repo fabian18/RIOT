@@ -129,6 +129,7 @@ void reset_handler_default(void)
     }
 
 #ifdef CPU_HAS_BACKUP_RAM
+    backup_ram_init();
     if (!cpu_woke_from_backup() ||
         CPU_BACKUP_RAM_NOT_RETAINED) {
 

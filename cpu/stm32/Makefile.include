@@ -90,6 +90,16 @@ ifeq (,$(filter STM32MP157Cxx STM32F030x4,$(CPU_LINE)))
   BUILDDEPS += $(STM32IRQS_INCLUDE_FILE)
 endif
 
+F2_WITH_BKPRAM := STM32F205xx STM32F207xx STM32F215xx STM32F217xx
+F4_WITH_BKPRAM := STM32F405xx STM32F407xx STM32F415xx STM32F417xx \
+                  STM32F427xx STM32F429xx STM32F437xx STM32F439xx \
+                  STM32F446xx STM32F469xx STM32F479xx
+F7_WITH_BKPRAM := STM32F7xxxx
+ifneq (,$filter $(F2_WITH_BKPRAM) $(F4_WITH_BKPRAM) $(F7_WITH_BKPRAM),$(CPU_LINE))
+  BACKUP_RAM_ADDR = 0x40024000
+  BACKUP_RAM_LEN = 0x1000
+endif
+
 # The IRQ header for a given family requires the family headers to be fetched
 # before since it's generated from all CMSIS content of that family
 $(STM32IRQS_INCLUDE_FILE): $(STM32FAM_INCLUDE_FILE)

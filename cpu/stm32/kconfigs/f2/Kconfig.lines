@@ -13,15 +13,19 @@
 config CPU_LINE_STM32F205XX
     bool
     select CPU_FAM_F2
+    select HAS_PERIPH_BACKUP_RAM
 
 config CPU_LINE_STM32F207XX
     bool
     select CPU_FAM_F2
+    select HAS_PERIPH_BACKUP_RAM
 
 config CPU_LINE_STM32F215XX
     bool
     select CPU_FAM_F2
+    select HAS_PERIPH_BACKUP_RAM
 
 config CPU_LINE_STM32F217XX
     bool
     select CPU_FAM_F2
+    select HAS_PERIPH_BACKUP_RAM
