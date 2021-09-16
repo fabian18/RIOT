@@ -1,6 +1,6 @@
 include ../Makefile.tests_common
 
-FEATURES_REQUIRED = backup_ram
+FEATURES_REQUIRED = periph_backup_ram
 
 USEMODULE += pm_layered
 USEMODULE += periph_rtc
