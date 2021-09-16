@@ -8,8 +8,8 @@
 config CPU_FAM_LPC23XX
     bool
     select CPU_CORE_ARM7TDMI_S
-    select HAS_BACKUP_RAM
     select HAS_CPU_LPC23XX
+    select HAS_PERIPH_BACKUP_RAM
     select HAS_PERIPH_DAC
     select HAS_PERIPH_FLASHPAGE
     select HAS_PERIPH_GPIO
