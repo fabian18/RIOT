@@ -1,0 +1,53 @@
+# Copyright (c) 2022 Otto-von-Guericke-Universität Magdeburg
+#
+# This file is subject to the terms and conditions of the GNU Lesser
+# General Public License v2.1. See the file LICENSE in the top level
+# directory for more details.
+
+menuconfig KCONFIG_USEMODULE_MBEDTLS_CRYPTO
+    bool "Configure mbed TLS Encryption/Decryption module"
+    help
+        Configure mbed TLS Encryption/Decryption module using Kconfig.
+
+if KCONFIG_USEMODULE_MBEDTLS_CRYPTO
+
+config MBEDTLS_PK_PARSE_C
+    bool "Generic public (asymetric) key parser"
+    select MBEDTLS_PK_C
+
+config MBEDTLS_PK_WRITE_C
+    bool "Generic public (asymetric) key writer"
+    select MBEDTLS_PK_C
+
+config MBEDTLS_PEM_PARSE_C
+    bool "PEM parsing"
+    select MBEDTLS_BASE64_C
+
+config MBEDTLS_PEM_WRITE_C
+    bool "PEM writing"
+    select MBEDTLS_BASE64_C
+
+config MBEDTLS_ECP_C
+    bool "Eliptic Curves"
+    select MBEDTLS_BIGNUM_C
+    select MBEDTLS_MD_C
+
+config MBEDTLS_RSA_PKCS1_V15
+    bool "RSA PKCS1v15"
+    select MBEDTLS_PKCS1_V15
+    select MBEDTLS_RSA_C
+    select MBEDTLS_MD_C
+
+config MBEDTLS_RSA_PKCS1_V21
+    bool "RSA PKCS1v21"
+    select MBEDTLS_PKCS1_V21
+    select MBEDTLS_RSA_C
+    select MBEDTLS_MD_C
+
+config MBEDTLS_ECDSA_C
+    bool "Elliptic curve DSA library"
+    select MBEDTLS_ECP_C
+    select MBEDTLS_ASN1_WRITE_C
+    select MBEDTLS_ASN1_PARSE_C
+
+endif # KCONFIG_USEMODULE_MBEDTLS_CRYPTO

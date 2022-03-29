@@ -19,3 +19,90 @@ ifneq (,$(filter mbedtls_entropy,$(USEMODULE)))
     USEMODULE += entropy_source_adc_noise
   endif
 endif
+
+# resolve dependencies according to the documentation in mbedtls_config.h
+
+ifneq (,$(filter mbedtls_rsa_pkcs1_v15,$(USEMODULE)))
+  USEMODULE += mbedtls_pkcs1_v15
+  USEMODULE += mbedtls_rsa
+endif
+
+ifneq (,$(filter mbedtls_rsa_pkcs1_v21,$(USEMODULE)))
+  USEMODULE += mbedtls_pkcs1_v21
+  USEMODULE += mbedtls_rsa
+  USEMODULE += mbedtls_md
+endif
+
+ifneq (,$(filter mbedtls_ecdsa,$(USEMODULE)))
+  USEMODULE += mbedtls_ecp
+  USEMODULE += mbedtls_asn1_write
+  USEMODULE += mbedtls_asn1_parse
+endif
+
+ifneq (,$(filter mbedtls_ecp,$(USEMODULE)))
+  USEMODULE += mbedtls_bignum
+# not listed as a dependency in mbedtls_config.h but actuallly needed
+  USEMODULE += mbedtls_md
+endif
+
+ifneq (,$(filter mbedtls_pem_parse,$(USEMODULE)))
+  USEMODULE += mbedtls_base64
+endif
+
+ifneq (,$(filter mbedtls_pem_write,$(USEMODULE)))
+  USEMODULE += mbedtls_base64
+endif
+
+ifneq (,$(filter mbedtls_pk,$(USEMODULE)))
+  ifeq (,$(filter mbedtls_rsa mbedtls_ecp,$(USEMODULE)))
+    $(error "Please add 'mbedtls_rsa_*' or 'mbedtls_ecp' to USEMODULE")
+  endif
+endif
+
+ifneq (,$(filter mbedtls_pk_parse,$(USEMODULE)))
+  USEMODULE += mbedtls_pk
+endif
+
+ifneq (,$(filter mbedtls_pk_write,$(USEMODULE)))
+  USEMODULE += mbedtls_pk
+endif
+
+ifneq (,$(filter mbedtls_rsa,$(USEMODULE)))
+  USEMODULE += mbedtls_bignum
+  USEMODULE += mbedtls_oid
+# not listed as a dependency in mbedtls_config.h but actuallly needed
+  USEMODULE += mbedtls_md
+endif
+
+ifneq (,$(filter mbedtls_x509,$(USEMODULE)))
+  USEMODULE += mbedtls_asn1_parse
+  USEMODULE += mbedtls_bignum
+  USEMODULE += mbedtls_oid
+  USEMODULE += mbedtls_pk_parse
+endif
+
+ifneq (,$(filter mbedtls_x509_crt_parse,$(USEMODULE)))
+  USEMODULE += mbedtls_x509
+endif
+
+ifneq (,$(filter mbedtls_x509_crl_parse,$(USEMODULE)))
+  USEMODULE += mbedtls_x509
+endif
+
+ifneq (,$(filter mbedtls_x509_csr_parse,$(USEMODULE)))
+  USEMODULE += mbedtls_x509
+endif
+
+ifneq (,$(filter mbedtls_x509_create,$(USEMODULE)))
+  USEMODULE += mbedtls_bignum
+  USEMODULE += mbedtls_oid
+  USEMODULE += mbedtls_pk_write
+endif
+
+ifneq (,$(filter mbedtls_x509_crt_write,$(USEMODULE)))
+  USEMODULE += mbedtls_x509_create
+endif
+
+ifneq (,$(filter mbedtls_x509_csr_write,$(USEMODULE)))
+  USEMODULE += mbedtls_x509_create
+endif

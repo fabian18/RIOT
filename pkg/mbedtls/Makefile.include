@@ -5,14 +5,15 @@ INCLUDES += -I$(RIOTPKG)/mbedtls/include
 
 CFLAGS += -DMBEDTLS_CONFIG_FILE='<riot_mbedtls_config.h>'
 
-# these PSEUDOMODULES can be used to enable/disable an entropy source
-PSEUDOMODULES += mbedtls_entropy_source_hwrng
-PSEUDOMODULES += mbedtls_entropy_source_adc
+# PSEUDOMODULES can be used to enable/disable mbedtls library modules
+PSEUDOMODULES += mbedtls_%
 
+NO_PSEUDOMODULES += mbedtls_contrib
 ifneq (,$(filter mbedtls_contrib,$(USEMODULE)))
   DIRS += $(RIOTPKG)/mbedtls/contrib
 endif
 
+NO_PSEUDOMODULES += mbedtls_entropy
 ifneq (,$(filter mbedtls_entropy,$(USEMODULE)))
   DIRS += $(RIOTPKG)/mbedtls/contrib/entropy
 endif
@@ -23,4 +24,114 @@ ifneq (,$(filter entropy_source_adc_noise,$(USEMODULE)))
     CFLAGS += -DCONFIG_ENTROPY_SOURCE_ADC_COND=0
     CFLAGS += -DCONFIG_ENTROPY_SOURCE_ADC_HEALTH_TEST=1
   endif
+endif
+
+# mirror mbedtls options as in mbedtls_config.h
+
+ifneq (,$(filter mbedtls_pkcs1_v15,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_PKCS1_V15=1
+endif
+
+ifneq (,$(filter mbedtls_pkcs1_v21,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_PKCS1_V21=1
+endif
+
+ifneq (,$(filter mbedtls_x509_rsassa_pss_support,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_X509_RSASSA_PSS_SUPPORT=1
+endif
+
+ifneq (,$(filter mbedtls_asn1_parse,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_ASN1_PARSE_C=1
+endif
+
+ifneq (,$(filter mbedtls_asn1_write,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_ASN1_WRITE_C=1
+endif
+
+ifneq (,$(filter mbedtls_base64,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_BASE64_C=1
+endif
+
+ifneq (,$(filter mbedtls_bignum,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_BIGNUM_C=1
+endif
+
+ifneq (,$(filter mbedtls_ecdsa,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_ECDSA_C=1
+endif
+
+ifneq (,$(filter mbedtls_ecp,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_ECP_C=1
+endif
+
+ifneq (,$(filter mbedtls_md,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_MD_C=1
+endif
+
+ifneq (,$(filter mbedtls_oid,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_OID_C=1
+endif
+
+ifneq (,$(filter mbedtls_pem_parse,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_PEM_PARSE_C=1
+endif
+
+ifneq (,$(filter mbedtls_pem_write,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_PEM_WRITE_C=1
+endif
+
+ifneq (,$(filter mbedtls_pk,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_PK_C=1
+endif
+
+ifneq (,$(filter mbedtls_pk_parse,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_PK_PARSE_C=1
+endif
+
+ifneq (,$(filter mbedtls_pk_write,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_PK_WRITE_C=1
+endif
+
+ifneq (,$(filter mbedtls_rsa,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_RSA_C=1
+endif
+
+ifneq (,$(filter mbedtls_sha1,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_SHA1_C=1
+endif
+
+ifneq (,$(filter mbedtls_sha224,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_SHA224_C=1
+endif
+
+ifneq (,$(filter mbedtls_sha256,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_SHA256_C=1
+endif
+
+ifneq (,$(filter mbedtls_x509,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_X509_USE_C=1
+endif
+
+ifneq (,$(filter mbedtls_x509_crt_parse,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_X509_CRT_PARSE_C=1
+endif
+
+ifneq (,$(filter mbedtls_x509_crl_parse,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_X509_CRL_PARSE_C=1
+endif
+
+ifneq (,$(filter mbedtls_x509_csr_parse,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_X509_CSR_PARSE_C=1
+endif
+
+ifneq (,$(filter mbedtls_x509_create,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_X509_CREATE_C=1
+endif
+
+ifneq (,$(filter mbedtls_x509_crt_write,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_X509_CRT_WRITE_C=1
+endif
+
+ifneq (,$(filter mbedtls_x509_csr_write,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_X509_CSR_WRITE_C=1
 endif
