@@ -2,9 +2,10 @@ include ../Makefile.tests_common
 
 USEPKG += mbedtls
 USEMODULE += mbedtls_entropy
+USEMODULE += mbedtls_x509 mbedtls_ecp mbedtls_rsa_pkcs1_v15
 
 # Increase stack size of main thread.
-CFLAGS += -DTHREAD_STACKSIZE_MAIN=THREAD_STACKSIZE_LARGE
+CFLAGS += -DTHREAD_STACKSIZE_MAIN=2*THREAD_STACKSIZE_LARGE
 
 # You can disable single entropy source to be used with the entropy module
 # DISABLE_MODULE += mbedtls_entropy_source_hwrng

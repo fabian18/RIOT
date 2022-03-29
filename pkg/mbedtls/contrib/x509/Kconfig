@@ -1,0 +1,53 @@
+# Copyright (c) 2022 Otto-von-Guericke-Universität Magdeburg
+#
+# This file is subject to the terms and conditions of the GNU Lesser
+# General Public License v2.1. See the file LICENSE in the top level
+# directory for more details.
+
+menuconfig KCONFIG_USEMODULE_MBEDTLS_X509
+    bool "Configure mbed TLS X.509 module"
+    help
+        Configure mbed TLS X.509 module using Kconfig.
+
+if KCONFIG_USEMODULE_MBEDTLS_X509
+
+config MBEDTLS_X509
+    bool "X.509 core for using certificates"
+    default y
+    select MBEDTLS_ASN1_PARSE_C
+    select MBEDTLS_BIGNUM_C
+    select MBEDTLS_OID_C
+    select MBEDTLS_PK_PARSE_C
+    select MBEDTLS_PK_C
+
+if MBEDTLS_X509
+
+config MBEDTLS_X509_CRT_PARSE_C
+    bool "X.509 certificate parsing"
+
+config MBEDTLS_X509_CRL_PARSE_C
+    bool "X.509 Certificate Revocation List (CRL) parsing"
+
+config MBEDTLS_X509_CSR_PARSE_C
+    bool "X.509 Certificate Signing Request (CSR) parsing"
+
+endif # MBEDTLS_X509
+
+config MBEDTLS_X509_CREATE_C
+    bool "X.509 core for creating certificates"
+    select MBEDTLS_ASN1_PARSE_C
+    select MBEDTLS_BIGNUM_C
+    select MBEDTLS_PK_WRITE_C
+    select MBEDTLS_PK_C
+
+if MBEDTLS_X509_CREATE_C
+
+config MBEDTLS_X509_CRT_WRITE_C
+    bool "X.509 certificate creation"
+
+config MBEDTLS_X509_CSR_WRITE_C
+    bool "X.509 Certificate Signing Requests (CSR) creation"
+
+endif # MBEDTLS_X509_CREATE_C
+
+endif # KCONFIG_USEMODULE_MBEDTLS_X509

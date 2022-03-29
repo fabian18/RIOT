@@ -23,6 +23,8 @@
 
 #include "mbedtls/sha256.h"
 #include "mbedtls/entropy.h"
+#include "mbedtls/ecp.h"
+#include "mbedtls/rsa.h"
 
 #include "entropy_mbedtls_riot.h"
 
@@ -32,6 +34,12 @@ int main(void)
 
     /* Execute built-in tests SHA-2xx tests */
     mbedtls_sha256_self_test(1);
+
+    /* Execute built-in Elliptic Curves tests */
+    mbedtls_ecp_self_test(1);
+
+    /* Execute built-in RSA tests */
+    mbedtls_rsa_self_test(1);
 
     bool adc_noise_single_entropy = false;
     /* NOTE, the following express needs adjustment when further entropy
