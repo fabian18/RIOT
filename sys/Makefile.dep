@@ -230,6 +230,22 @@ ifneq (,$(filter ipv6_hdr,$(USEMODULE)))
   USEMODULE += ipv6_addr
 endif
 
+ifneq (,$(filter ipv6_cga,$(USEMODULE)))
+  USEMODULE += ipv6_addr
+  ifneq (,$(filter ipv6_cga_crypto_mbedtls,$(USEMODULE)))
+    USEPKG += mbedtls
+    USEMODULE += mbedtls_sha1
+  else
+    USEMODULE += hashes
+  endif
+  ifneq (,$(filter ipv6_cga_random_mbedtls,$(USEMODULE)))
+    USEPKG += mbedtls
+    USEMODULE += mbedtls_random
+  else
+    USEMODULE += random
+  endif
+endif
+
 ifneq (,$(filter ieee802154_submac,$(USEMODULE)))
   USEMODULE += xtimer
   USEMODULE += random
