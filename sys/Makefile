@@ -92,6 +92,9 @@ endif
 ifneq (,$(filter ipv6_addr,$(USEMODULE)))
   DIRS += net/network_layer/ipv6/addr
 endif
+ifneq (,$(filter ipv6_cga,$(USEMODULE)))
+  DIRS += net/network_layer/ipv6/cga
+endif
 ifneq (,$(filter ipv6_hdr,$(USEMODULE)))
   DIRS += net/network_layer/ipv6/hdr
 endif
