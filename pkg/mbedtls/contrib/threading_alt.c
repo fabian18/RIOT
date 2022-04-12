@@ -21,6 +21,8 @@
 #include <string.h>
 
 #include "threading_alt.h"
+#include "entropy_mbedtls_riot.h"
+#include "random_mbedtls_riot.h"
 
 #if IS_ACTIVE(MBEDTLS_THREADING_ALT)
 #include "mbedtls/threading.h"
@@ -47,12 +49,21 @@ int mbedtls_platform_mutex_unlock(mbedtls_threading_mutex_t *mutex)
     return 0;
 }
 
+#endif /* MBEDTLS_THREADING_ALT */
+
 void auto_init_mbedtls(void)
 {
+#if IS_ACTIVE(MBEDTLS_THREADING_ALT)
     /* Configure mbedTLS to use RIOT specific threading functions. */
     mbedtls_threading_set_alt( mbedtls_platform_mutex_init,
                                mbedtls_platform_mutex_free,
                                mbedtls_platform_mutex_lock,
                                mbedtls_platform_mutex_unlock );
+#endif
+#if IS_USED(MODULE_MBEDTLS_ENTROPY)
+    entropy_mbedtls_riot_init();
+#if IS_USED(MODULE_MBEDTLS_RANDOM)
+    random_ctr_drbg_mbedtls_riot_init();
+#endif
+#endif
 }
-#endif /* MBEDTLS_THREADING_ALT */

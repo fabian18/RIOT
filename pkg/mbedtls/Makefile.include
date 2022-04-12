@@ -26,6 +26,11 @@ ifneq (,$(filter entropy_source_adc_noise,$(USEMODULE)))
   endif
 endif
 
+NO_PSEUDOMODULES += mbedtls_random
+ifneq (,$(filter mbedtls_random,$(USEMODULE)))
+  DIRS += $(RIOTPKG)/mbedtls/contrib/random
+endif
+
 # mirror mbedtls options as in mbedtls_config.h
 
 ifneq (,$(filter mbedtls_pkcs1_v15,$(USEMODULE)))
@@ -38,6 +43,10 @@ endif
 
 ifneq (,$(filter mbedtls_x509_rsassa_pss_support,$(USEMODULE)))
   CFLAGS += -DCONFIG_MBEDTLS_X509_RSASSA_PSS_SUPPORT=1
+endif
+
+ifneq (,$(filter mbedtls_aes,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_AES_C=1
 endif
 
 ifneq (,$(filter mbedtls_asn1_parse,$(USEMODULE)))
@@ -54,6 +63,10 @@ endif
 
 ifneq (,$(filter mbedtls_bignum,$(USEMODULE)))
   CFLAGS += -DCONFIG_MBEDTLS_BIGNUM_C=1
+endif
+
+ifneq (,$(filter mbedtls_ctr_drbg,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_CTR_DRBG_C=1
 endif
 
 ifneq (,$(filter mbedtls_ecdsa,$(USEMODULE)))

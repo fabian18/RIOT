@@ -23,6 +23,7 @@
 
 #include "mbedtls/sha256.h"
 #include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecp.h"
 #include "mbedtls/rsa.h"
 
@@ -31,6 +32,9 @@
 int main(void)
 {
     puts("mbedtls test\n");
+
+    /* Execute built-in CTR DRBG tests */
+    mbedtls_ctr_drbg_self_test(1);
 
     /* Execute built-in tests SHA-2xx tests */
     mbedtls_sha256_self_test(1);

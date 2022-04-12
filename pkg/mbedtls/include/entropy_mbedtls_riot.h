@@ -22,6 +22,8 @@
 #ifndef ENTROPY_MBEDTLS_RIOT_H
 #define ENTROPY_MBEDTLS_RIOT_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -69,6 +69,7 @@ config MBEDTLS_THREADING_ALT
         This to allows your own alternate threading implementation.
 
 rsource "contrib/entropy/Kconfig"
+rsource "contrib/random/Kconfig"
 rsource "contrib/x509/Kconfig"
 rsource "contrib/crypto/Kconfig"
 
