@@ -2,6 +2,7 @@ include ../Makefile.tests_common
 
 USEPKG += mbedtls
 USEMODULE += mbedtls_entropy
+USEMODULE += mbedtls_random
 USEMODULE += mbedtls_x509 mbedtls_ecp mbedtls_rsa_pkcs1_v15
 
 # Increase stack size of main thread.

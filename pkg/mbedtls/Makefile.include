@@ -11,6 +11,12 @@ PSEUDOMODULES += mbedtls_%
 NO_PSEUDOMODULES += mbedtls_contrib
 ifneq (,$(filter mbedtls_contrib,$(USEMODULE)))
   DIRS += $(RIOTPKG)/mbedtls/contrib
+  ifneq (,$(filter mbedtls_aes,$(USEMODULE)))
+# build with -fstack-usage shows large stack usage of
+# build/pkg/mbedtls/library/aes.c:376:13:aes_gen_tables	2112	static
+# which is called from auto_init_mbedtls()
+    CFLAGS += -DTHREAD_STACKSIZE_MAIN=2*THREAD_STACKSIZE_LARGE
+  endif
 endif
 
 NO_PSEUDOMODULES += mbedtls_entropy
@@ -24,6 +30,11 @@ ifneq (,$(filter entropy_source_adc_noise,$(USEMODULE)))
     CFLAGS += -DCONFIG_ENTROPY_SOURCE_ADC_COND=0
     CFLAGS += -DCONFIG_ENTROPY_SOURCE_ADC_HEALTH_TEST=1
   endif
+endif
+
+NO_PSEUDOMODULES += mbedtls_random
+ifneq (,$(filter mbedtls_random,$(USEMODULE)))
+  DIRS += $(RIOTPKG)/mbedtls/contrib/random
 endif
 
 # mirror mbedtls options as in mbedtls_config.h
@@ -40,6 +51,10 @@ ifneq (,$(filter mbedtls_x509_rsassa_pss_support,$(USEMODULE)))
   CFLAGS += -DCONFIG_MBEDTLS_X509_RSASSA_PSS_SUPPORT=1
 endif
 
+ifneq (,$(filter mbedtls_aes,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_AES_C=1
+endif
+
 ifneq (,$(filter mbedtls_asn1_parse,$(USEMODULE)))
   CFLAGS += -DCONFIG_MBEDTLS_ASN1_PARSE_C=1
 endif
@@ -54,6 +69,10 @@ endif
 
 ifneq (,$(filter mbedtls_bignum,$(USEMODULE)))
   CFLAGS += -DCONFIG_MBEDTLS_BIGNUM_C=1
+endif
+
+ifneq (,$(filter mbedtls_ctr_drbg,$(USEMODULE)))
+  CFLAGS += -DCONFIG_MBEDTLS_CTR_DRBG_C=1
 endif
 
 ifneq (,$(filter mbedtls_ecdsa,$(USEMODULE)))

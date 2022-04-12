@@ -20,6 +20,11 @@ ifneq (,$(filter mbedtls_entropy,$(USEMODULE)))
   endif
 endif
 
+ifneq (,$(filter mbedtls_random,$(USEMODULE)))
+  USEMODULE += mbedtls_entropy
+  USEMODULE += mbedtls_ctr_drbg
+endif
+
 # resolve dependencies according to the documentation in mbedtls_config.h
 
 ifneq (,$(filter mbedtls_rsa_pkcs1_v15,$(USEMODULE)))
@@ -31,6 +36,10 @@ ifneq (,$(filter mbedtls_rsa_pkcs1_v21,$(USEMODULE)))
   USEMODULE += mbedtls_pkcs1_v21
   USEMODULE += mbedtls_rsa
   USEMODULE += mbedtls_md
+endif
+
+ifneq (,$(filter mbedtls_ctr_drbg,$(USEMODULE)))
+  USEMODULE += mbedtls_aes
 endif
 
 ifneq (,$(filter mbedtls_ecdsa,$(USEMODULE)))

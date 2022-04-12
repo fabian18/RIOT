@@ -11,6 +11,9 @@ from testrunner import run
 
 
 def testfunc(child):
+    child.expect_exact('CTR_DRBG (PR = TRUE) : passed')
+    child.expect_exact('CTR_DRBG (PR = FALSE): passed')
+
     child.expect_exact('SHA-224 test #1: passed')
     child.expect_exact('SHA-224 test #2: passed')
     child.expect_exact('SHA-224 test #3: passed')
