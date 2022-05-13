@@ -131,6 +131,7 @@ PSEUDOMODULES += gnrc_netif_timestamp
 ##              will be removed after 2023.07 release.
 PSEUDOMODULES += gnrc_pktbuf_cmd
 ## @}
+PSEUDOMODULES += gnrc_trace_pktbuf_static
 PSEUDOMODULES += gnrc_netif_6lo
 PSEUDOMODULES += gnrc_netif_ipv6
 PSEUDOMODULES += gnrc_netif_mac
