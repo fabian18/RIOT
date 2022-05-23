@@ -22,6 +22,7 @@
 
 #include "evtimer_msg.h"
 #include "net/ipv6/addr.h"
+#include "net/ipv6/cga.h"
 #ifdef MODULE_GNRC_IPV6_NIB
 #include "net/gnrc/ipv6/nib/conf.h"
 #endif
@@ -29,6 +30,9 @@
 #include "net/gnrc/netif/conf.h"
 #ifdef MODULE_NETSTATS_IPV6
 #include "net/netstats.h"
+#endif
+#if IS_USED(MODULE_GNRC_SEND)
+#include "net/gnrc/send.h"
 #endif
 
 #ifdef __cplusplus
@@ -71,11 +75,77 @@ extern "C" {
 /** @} */
 
 /**
+ * @brief   Flags to enable/disable an address privacy extension
+ */
+typedef uint8_t ipv6_aac_priv_flags_t;
+
+
+/**
+ * @name    Address privacy extension flags @ref ipv6_aac_priv_flags_t
+ * @{
+ */
+/**
+ * @brief   No privacy
+ */
+#define GNRC_NETIF_IPV6_AAC_FLAG_PRIV_NONE                  (0U)
+/**
+ * @brief   Enable SLAAC privacy extension
+ */
+#define GNRC_NETIF_IPV6_AAC_FLAG_PRIV_SLAAC                 (1U)
+/**
+ * @brief   Enable AAC of CGA
+ */
+#define GNRC_NETIF_IPV6_AAC_FLAG_PRIV_CGA                   (2U)
+/** @} */
+
+/**
+ * @brief   Data type to decode which address privacy extension is used
+ */
+typedef uint8_t ipv6_addr_priv_t;
+
+/**
+ * @name    Values to be used as @ref ipv6_addr_priv_t
+ * @{
+ */
+/**
+ * @brief   Hardware identifier is used
+ */
+#define GNRC_NETIF_IPV6_ADDR_PRIV_NONE                      (0U)
+/**
+ * @brief   SLAAC privacy extension is used
+ */
+#define GNRC_NETIF_IPV6_ADDR_PRIV_SLAAC                     (1U)
+/**
+ * @brief   Address is a Cryptographically Generated Address
+ */
+#define GNRC_NETIF_IPV6_ADDR_PRIV_CGA                       (2U)
+/** @} */
+
+/**
+ * @brief   Forward declaration of @ref gnrc_netif_ipv6_t struct
+ */
+struct gnrc_netif_ipv6;
+
+/**
+ * @brief
+ */
+typedef struct {
+    /**
+     * @brief CGA parameters
+     */
+    ipv6_cga_parameters_t params[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+    /**
+     * @brief   Address index associated with parameters
+     */
+    int addr_idx[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+} gnrc_ipv6_cga_ctx_t;
+
+/**
  * @brief   IPv6 component for @ref gnrc_netif_t
  *
  * @note only available with @ref net_gnrc_ipv6.
  */
-typedef struct {
+typedef struct gnrc_netif_ipv6 {
     /**
      * @brief   Flags for gnrc_netif_t::ipv6_addrs
      *
@@ -84,6 +154,11 @@ typedef struct {
      * @note    Only available with module @ref net_gnrc_ipv6 "gnrc_ipv6".
      */
     uint8_t addrs_flags[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+
+    /**
+     * @brief   IPv6 address privacy extension
+     */
+    ipv6_addr_priv_t addrs_priv[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
 
     /**
      * @brief   IPv6 unicast and anycast addresses of the interface
@@ -250,12 +325,44 @@ typedef struct {
     uint8_t aac_mode;
 
     /**
+     * @brief   IPv6 private auto-address configuration extension flags
+     */
+    ipv6_aac_priv_flags_t aac_priv;
+
+    /**
      * @brief   Maximum transmission unit (MTU) for IPv6 packets
      *
      * @note    Only available with module @ref net_gnrc_ipv6 "gnrc_ipv6".
      */
     uint16_t mtu;
+#if IS_USED(MODULE_IPV6_CGA)
+    /**
+     * @brief   CGA cryptographic context to save for the interface
+     *
+     * @note    Only available with module @ref net_ipv6_cga "ipv6_cga".
+     */
+    gnrc_ipv6_cga_ctx_t cga_ctx;
+#endif /* MODULE_IPV6_CGA */
+#if IS_USED(MODULE_GNRC_SEND)
+    gnrc_send_ctx_t send_ctx;
+#endif
 } gnrc_netif_ipv6_t;
+
+/**
+ * @brief   Accessor function to be used rather that `netif->cga_ctx`
+ *
+ * @param[in]   netif   GNRC IPv6 interface component
+ *
+ * @return      `netif->cga_ctx` or NULL if not supported
+ */
+static inline gnrc_ipv6_cga_ctx_t *gnrc_netif_ipv6_get_cga_ctx(gnrc_netif_ipv6_t *netif)
+{
+#if IS_USED(MODULE_IPV6_CGA)
+    return &netif->cga_ctx;
+#endif
+    (void)netif;
+    return NULL;
+}
 
 #ifdef __cplusplus
 }

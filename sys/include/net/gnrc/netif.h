@@ -132,7 +132,7 @@ typedef struct gnrc_netif_ops gnrc_netif_ops_t;
 /**
  * @brief   Representation of a network interface
  */
-typedef struct {
+typedef struct gnrc_netif {
     netif_t netif;                          /**< network interface descriptor */
     const gnrc_netif_ops_t *ops;            /**< Operations of the network interface */
     netdev_t *dev;                          /**< Network device of the network interface */

@@ -127,7 +127,8 @@ uint8_t _handle_aro(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
 void _handle_rereg_address(const ipv6_addr_t *addr);
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C) || defined(DOXYGEN)
-_nib_abr_entry_t *_handle_abro(const sixlowpan_nd_opt_abr_t *abro);
+_nib_abr_entry_t *_handle_abro(const icmpv6_hdr_t *icmpv6,
+                               const sixlowpan_nd_opt_abr_t *abro);
 uint32_t _handle_6co(const icmpv6_hdr_t *icmpv6,
                      const sixlowpan_nd_opt_6ctx_t *sixco,
                      _nib_abr_entry_t *abr);
@@ -143,7 +144,7 @@ uint32_t _handle_6co(const icmpv6_hdr_t *icmpv6,
 #define _get_next_rs_interval(netif)                (NDP_RS_MS_INTERVAL)
 #define _handle_rereg_address(netif)                (void)netif
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C) || defined(DOXYGEN)
-#define _handle_abro(abro)                          (NULL)
+#define _handle_abro(icmpv6, abro)                  (NULL)
 #define _handle_6co(icmpv6, sixco, abr)             (UINT32_MAX)
 #else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C || defined(DOXYGEN) */
 #define _handle_6co(icmpv6, sixco)                  (UINT32_MAX)

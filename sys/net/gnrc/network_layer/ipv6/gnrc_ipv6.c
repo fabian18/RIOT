@@ -49,7 +49,7 @@
 
 #define _MAX_L2_ADDR_LEN    (8U)
 
-static char _stack[GNRC_IPV6_STACK_SIZE + DEBUG_EXTRA_STACKSIZE];
+static char _stack[GNRC_IPV6_STACK_SIZE + DEBUG_EXTRA_STACKSIZE + GNRC_SEND_EXTRA_STACK_SIZE];
 
 #ifdef MODULE_FIB
 /**
@@ -241,6 +241,10 @@ static void *_event_loop(void *args)
             case GNRC_IPV6_NIB_REREG_ADDRESS:
             case GNRC_IPV6_NIB_DAD:
             case GNRC_IPV6_NIB_VALID_ADDR:
+#if IS_USED(MODULE_GNRC_SEND)
+            case GNRC_IPV6_NIB_SEND_CP_SOL:
+            case GNRC_IPV6_NIB_SEND_CP_ADV:
+#endif
                 DEBUG("ipv6: NIB timer event received\n");
                 gnrc_ipv6_nib_handle_timer_event(msg.content.ptr, msg.type);
                 break;
@@ -363,20 +367,29 @@ static int _fill_ipv6_hdr(gnrc_netif_t *netif, gnrc_pktsnip_t *ipv6)
         }
     }
 
+    gnrc_pktsnip_t *icmpv6 = gnrc_pktsnip_search_type(ipv6, GNRC_NETTYPE_ICMPV6);
+    icmpv6_hdr_t *icmpv6_hdr = icmpv6 ? icmpv6->data : NULL;
     if (ipv6_addr_is_unspecified(&hdr->src)) {
         if (ipv6_addr_is_loopback(&hdr->dst)) {
             ipv6_addr_set_loopback(&hdr->src);
         }
-        else {
-            ipv6_addr_t *src = gnrc_netif_ipv6_addr_best_src(netif, &hdr->dst,
-                                                             false);
-
-            if (src != NULL) {
-                DEBUG("ipv6: set packet source to %s\n",
-                      ipv6_addr_to_str(addr_str, src, sizeof(addr_str)));
-                memcpy(&hdr->src, src, sizeof(ipv6_addr_t));
+        else if (!icmpv6_hdr ||
+                 (icmpv6_hdr->type != ICMPV6_RTR_SOL &&
+                  icmpv6_hdr->type != ICMPV6_NBR_SOL)) {
+            ipv6_addr_t *src = gnrc_netif_ipv6_addr_best_src(netif, &hdr->dst, false);
+            if (!src) {
+                /**
+                 * Unspecified source is intended for some NDP message types.
+                 * If the source address for those type is set to unspecified,
+                 * we want to keep it unspecified, and not rely on the case that
+                 * there is currently no address assigned for that interface.
+                 * For all other message types, an unspecified source is not allowed.
+                 */
+                return -EADDRNOTAVAIL;
             }
-            /* Otherwise leave unspecified */
+            DEBUG("ipv6: set packet source to %s\n",
+                  ipv6_addr_to_str(addr_str, src, sizeof(addr_str)));
+            memcpy(&hdr->src, src, sizeof(ipv6_addr_t));
         }
     }
     else {
@@ -390,14 +403,7 @@ static int _fill_ipv6_hdr(gnrc_netif_t *netif, gnrc_pktsnip_t *ipv6)
         gnrc_netif_release(netif);
         if (invalid_src) {
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
-            gnrc_pktsnip_t *icmpv6 = gnrc_pktsnip_search_type(ipv6,
-                                                              GNRC_NETTYPE_ICMPV6);
-            icmpv6_hdr_t *icmpv6_hdr;
-
-            if (icmpv6 != NULL) {
-                icmpv6_hdr = icmpv6->data;
-            }
-            if ((icmpv6 == NULL) ||
+            if (!icmpv6_hdr||
                 ((icmpv6_hdr->type != ICMPV6_RTR_SOL) &&
                  (icmpv6_hdr->type != ICMPV6_NBR_SOL))) {
                 DEBUG("ipv6: preset packet source address %s is invalid\n",

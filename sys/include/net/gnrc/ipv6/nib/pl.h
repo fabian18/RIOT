@@ -44,6 +44,11 @@ typedef struct {
                                  valid */
     uint32_t pref_until;    /**< timestamp (in ms) until which the prefix is
                                  preferred */
+    void *bootstrap;        /**< */
+    struct {
+        uint8_t addrconf    :1; /**< Prefix is used for auto address configuration */
+        uint8_t onlink      :1; /**< Prefix is on-link */
+    } flags;                    /**< Prefix flags */
 } gnrc_ipv6_nib_pl_t;
 
 /**
@@ -76,7 +81,8 @@ typedef struct {
  */
 int gnrc_ipv6_nib_pl_set(unsigned iface,
                          const ipv6_addr_t *pfx, unsigned pfx_len,
-                         uint32_t valid_ltime, uint32_t pref_ltime);
+                         uint32_t valid_ltime, uint32_t pref_ltime,
+                         void *bootstrap);
 
 /**
  * @brief   Deletes prefix from NIB

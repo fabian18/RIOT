@@ -29,6 +29,7 @@
 #include "net/gnrc/ipv6/nib/ft.h"
 #include "net/gnrc/ipv6/nib/nc.h"
 #include "net/gnrc/ipv6/nib/pl.h"
+#include "net/gnrc/ipv6/nib/send.h"
 
 #include "net/icmpv6.h"
 #include "net/ipv6/addr.h"
@@ -233,6 +234,16 @@ extern "C" {
  * @note    Only handled with @ref CONFIG_GNRC_IPV6_NIB_DNS != 0
  */
 #define GNRC_IPV6_NIB_RDNSS_TIMEOUT         (0x4fd3U)
+
+/**
+ * @brief   Triggers a Certificate Path Solicitation retransmission
+ */
+#define GNRC_IPV6_NIB_SEND_CP_SOL           (0x4fd4U)
+
+/**
+ * @brief   Triggers a Certificate Path Advertisement transmission of one component
+ */
+#define GNRC_IPV6_NIB_SEND_CP_ADV           (0x4fd5U)
 /** @} */
 
 /**
@@ -302,6 +313,12 @@ void gnrc_ipv6_nib_init(void);
  * @param[in,out] netif The interface to be managed by the NIB
  */
 void gnrc_ipv6_nib_init_iface(gnrc_netif_t *netif);
+
+/**
+ * @brief
+ */
+void gnrc_ipv6_nib_start_aac(gnrc_netif_t *netif,
+                             const ipv6_addr_t *pfx, uint8_t pfx_len);
 
 /**
  * @brief   Gets link-layer address of next hop to a destination address

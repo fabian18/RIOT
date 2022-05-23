@@ -280,6 +280,24 @@ ifneq (,$(filter gnrc_ndp,$(USEMODULE)))
   USEMODULE += gnrc_netif
 endif
 
+ifneq (,$(filter gnrc_send,$(USEMODULE)))
+  DEFAULT_MODULE += auto_init_gnrc_send
+  USEMODULE += gnrc_ndp
+  USEMODULE += gnrc_ipv6_nib_send
+  USEMODULE += ipv6_cga
+  USEMODULE += vfs_default
+  USEMODULE += vfs_util
+  USEPKG += mbedtls
+  USEMODULE += mbedtls_contrib
+  USEMODULE += mbedtls_random
+  USEMODULE += mbedtls_x509_crt_parse
+  USEMODULE += mbedtls_ecp
+  USEMODULE += mbedtls_ecdsa
+  USEMODULE += mbedtls_sha256
+  USEMODULE += mbedtls_sha1
+  USEPKG += libbase58
+endif
+
 ifneq (,$(filter gnrc_icmpv6_echo,$(USEMODULE)))
   USEMODULE += gnrc_icmpv6
   USEMODULE += gnrc_ipv6_hdr

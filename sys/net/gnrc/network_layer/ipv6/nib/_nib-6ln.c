@@ -43,7 +43,10 @@ static bool _is_iface_eui64(gnrc_netif_t *netif, const eui64_t *eui64)
 bool _resolve_addr_from_ipv6(const ipv6_addr_t *dst, gnrc_netif_t *netif,
                              gnrc_ipv6_nib_nc_t *nce)
 {
-    bool res = (netif != NULL) && gnrc_netif_is_6ln(netif) &&
+    /* If any IPv6 privacy extension is used, we cannot derive the L2 address from the IP address */
+    bool res = !IS_USED(MODULE_IPV6_CGA) &&
+               (netif != NULL) &&
+               gnrc_netif_is_6ln(netif) &&
                ipv6_addr_is_link_local(dst);
 
     if (res) {
@@ -238,7 +241,8 @@ void _handle_rereg_address(const ipv6_addr_t *addr)
 }
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
-_nib_abr_entry_t *_handle_abro(const sixlowpan_nd_opt_abr_t *abro)
+_nib_abr_entry_t *_handle_abro(const icmpv6_hdr_t *icmpv6,
+                               const sixlowpan_nd_opt_abr_t *abro)
 {
     _nib_abr_entry_t *abr = NULL;
 
@@ -246,8 +250,18 @@ _nib_abr_entry_t *_handle_abro(const sixlowpan_nd_opt_abr_t *abro)
         /* ignore silently */
         return NULL;
     }
-    abr = _nib_abr_add(&abro->braddr);
+    int sec = gnrc_send_remove_status((const void **)&icmpv6);
+    abr = _nib_abr_add(&abro->braddr,
+                       GNRC_SEND_SECURED(sec) ? _ABR_SECURED : 0);
     if (abr != NULL) {
+        if (IS_USED(GNRC_MODULE_SEND)) {
+            if (sec != GNRC_SEND_STATUS_OK && abr->flags & _ABR_SECURED) {
+                return NULL; /* don´t update secure entry from unsecured message */
+            }
+            if (sec == GNRC_SEND_STATUS_OK) {
+                abr->flags |= _ABR_SECURED; /* ABR is now secured */
+            }
+        }
         uint32_t abro_version = sixlowpan_nd_opt_abr_get_version(abro);
         uint16_t ltime = byteorder_ntohs(abro->ltime);
         /* correct for default value */

@@ -1692,8 +1692,9 @@ void gnrc_sixlowpan_iphc_send(gnrc_pktsnip_t *pkt, void *ctx, unsigned page)
     if (IS_USED(MODULE_GNRC_SIXLOWPAN_FRAG_MINFWD)) {
         dst = ipv6_hdr->dst;    /* copying original destination address */
     }
-
+DEBUG("oh shit...\n");
     if ((tmp = _iphc_encode(pkt, pkt->data, netif))) {
+DEBUG("ach ne doch nicht\n");
         if (IS_USED(MODULE_GNRC_SIXLOWPAN_FRAG_MINFWD) && (ctx != NULL) &&
             (gnrc_sixlowpan_frag_minfwd_frag_iphc(tmp, orig_datagram_size, &dst,
                                                   ctx) == 0)) {

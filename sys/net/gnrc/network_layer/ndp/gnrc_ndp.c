@@ -25,8 +25,9 @@
 #include "net/gnrc/sixlowpan/nd.h"
 #endif
 #include "net/ndp.h"
-
+#include "net/send.h"
 #include "net/gnrc/ndp.h"
+#include "net/gnrc/send.h"
 
 #include "timex.h"
 
@@ -115,10 +116,10 @@ gnrc_pktsnip_t *gnrc_ndp_rtr_adv_build(uint8_t cur_hl, uint8_t flags,
     return pkt;
 }
 
-static inline size_t _ceil8(uint8_t length)
+static inline size_t _ceil8(size_t length)
 {
     /* NDP options use units of 8 byte for their length field, so round up */
-    return (length + 7U) & 0xf8U;
+    return (length + 7U) & ~((size_t)0x7);
 }
 
 gnrc_pktsnip_t *gnrc_ndp_opt_build(uint8_t type, size_t size,
@@ -290,12 +291,11 @@ void gnrc_ndp_nbr_sol_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
     gnrc_netif_acquire(netif);
     do {    /* XXX hidden goto */
         /* check if there is a fitting source address to target */
-        if (src == NULL) {
+        if (!src) {
             src = gnrc_netif_ipv6_addr_best_src(netif, tgt, false);
         }
-
         /* add SL2AO based on interface and source address */
-        if ((src != NULL) && !ipv6_addr_is_unspecified(src)) {
+        if (src && !ipv6_addr_is_unspecified(src)) {
             l2src_len = _get_l2src(netif, l2src);
 
             if (l2src_len > 0) {
@@ -309,6 +309,22 @@ void gnrc_ndp_nbr_sol_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
                 pkt = hdr;
             }
         }
+        if (IS_USED(MODULE_GNRC_SEND)) {
+            if (!(hdr = gnrc_send_nonce_build(NULL, GNRC_SEND_NONCE_SIZE, pkt))) {
+                break;
+            }
+            gnrc_send_nonce_get(gnrc_send_opt_nonce_get_nonce((ndp_opt_nonce_t *)hdr->data));
+            pkt = hdr;
+            if (src) {
+                const ipv6_addr_t *addr = ipv6_addr_is_unspecified(src) ? tgt : src;
+                if (gnrc_netif_ipv6_addr_is_cga(netif, addr)) {
+                    if (!(hdr = gnrc_send_cga_params_build(addr, netif, pkt))) {
+                        break;
+                    }
+                    pkt = hdr;
+                }
+            }
+        }
         /* add neighbor solicitation header */
         hdr = gnrc_ndp_nbr_sol_build(tgt, pkt);
         if (hdr == NULL) {
@@ -316,6 +332,13 @@ void gnrc_ndp_nbr_sol_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
             break;
         }
         pkt = hdr;
+        if (IS_USED(MODULE_GNRC_SEND) && src &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_signature_build(pkt, netif, src, dst))) {
+                break;
+            }
+            pkt = gnrc_pkt_append(pkt, hdr);
+        }
         /* add remaining headers */
         hdr = _build_headers(netif, src, dst, pkt);
         if (hdr == NULL) {
@@ -356,9 +379,14 @@ void gnrc_ndp_nbr_adv_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
     gnrc_netif_acquire(netif);
     do {    /* XXX: hidden goto */
         int tgt_idx;
+        const ipv6_addr_t *src;
 
         if ((tgt_idx = gnrc_netif_ipv6_addr_idx(netif, tgt)) < 0) {
             DEBUG("ndp: tgt not assigned to interface. Abort sending\n");
+            break;
+        }
+        if (!(src = gnrc_netif_ipv6_addr_best_src(netif, dst, true))) {
+            DEBUG("ndp: no VALID link-local source address found for NA\n");
             break;
         }
         if (gnrc_netif_is_rtr(netif) && gnrc_netif_is_rtr_adv(netif)) {
@@ -404,6 +432,13 @@ void gnrc_ndp_nbr_adv_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
                 }
             }
         }
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_cga_params_build(src, netif, pkt))) {
+                break;
+            }
+            pkt = hdr;
+        }
         /* add neighbor advertisement header */
         hdr = gnrc_ndp_nbr_adv_build(tgt, adv_flags, pkt);
         if (hdr == NULL) {
@@ -411,8 +446,15 @@ void gnrc_ndp_nbr_adv_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
             break;
         }
         pkt = hdr;
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_signature_build(pkt, netif, src, dst))) {
+                break;
+            }
+            pkt = gnrc_pkt_append(pkt, hdr);
+        }
         /* add remaining headers */
-        hdr = _build_headers(netif, NULL, &real_dst, pkt);
+        hdr = _build_headers(netif, src, &real_dst, pkt);
         if (hdr == NULL) {
             DEBUG("ndp: error adding lower-layer headers.\n");
             break;
@@ -420,8 +462,8 @@ void gnrc_ndp_nbr_adv_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
         else {
             pkt = hdr;
             if (gnrc_netapi_dispatch_send(GNRC_NETTYPE_NDP,
-                                                       GNRC_NETREG_DEMUX_CTX_ALL,
-                                                       pkt) == 0) {
+                                          GNRC_NETREG_DEMUX_CTX_ALL,
+                                          pkt) == 0) {
                 DEBUG("ndp: unable to send neighbor advertisement\n");
                 break;
             }
@@ -446,8 +488,7 @@ void gnrc_ndp_rtr_sol_send(gnrc_netif_t *netif, const ipv6_addr_t *dst)
           ipv6_addr_to_str(addr_str, dst, sizeof(addr_str)));
     gnrc_netif_acquire(netif);
     do {    /* XXX: hidden goto */
-        ipv6_addr_t *src = NULL;
-
+        const ipv6_addr_t *src = NULL;
         /* add SL2AO => check if there is a fitting source address to target */
         if ((src = gnrc_netif_ipv6_addr_best_src(netif, dst, false)) != NULL) {
             uint8_t l2src[8];
@@ -461,6 +502,23 @@ void gnrc_ndp_rtr_sol_send(gnrc_netif_t *netif, const ipv6_addr_t *dst)
                 }
             }
         }
+        else {
+            src = &ipv6_addr_unspecified;
+        }
+        if (IS_USED(MODULE_GNRC_SEND)) {
+            if (!(hdr = gnrc_send_nonce_build(NULL, GNRC_SEND_NONCE_SIZE, pkt))) {
+                break;
+            }
+            gnrc_send_nonce_get(gnrc_send_opt_nonce_get_nonce((ndp_opt_nonce_t *)hdr->data));
+            pkt = hdr;
+            if (!ipv6_addr_is_unspecified(src) &&
+                gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+                if (!(hdr = gnrc_send_cga_params_build(src, netif, pkt))) {
+                    break;
+                }
+                pkt = hdr;
+            }
+        }
         /* add router solicitation header */
         hdr = gnrc_ndp_rtr_sol_build(pkt);
         if (hdr == NULL) {
@@ -468,6 +526,14 @@ void gnrc_ndp_rtr_sol_send(gnrc_netif_t *netif, const ipv6_addr_t *dst)
             break;
         }
         pkt = hdr;
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            !ipv6_addr_is_unspecified(src) &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_signature_build(pkt, netif, src, dst))) {
+                break;
+            }
+            pkt = gnrc_pkt_append(pkt, hdr);
+        }
         /* add remaining headers */
         hdr = _build_headers(netif, src, dst, pkt);
         if (hdr == NULL) {
@@ -516,36 +582,37 @@ void gnrc_ndp_rtr_adv_send(gnrc_netif_t *netif, const ipv6_addr_t *src,
             }
             pkt = hdr;
         }
-        if (src == NULL) {
-            /* get address from source selection algorithm.
-             * Only link local addresses may be used (RFC 4861 section 4.1) */
-            src = gnrc_netif_ipv6_addr_best_src(netif, dst, true);
-
-            if (src == NULL) {
-                DEBUG("ndp rtr: no VALID source address found for RA\n");
+        /* get address from source selection algorithm.
+         * Only link local addresses may be used (RFC 4861 section 4.1) */
+        if (!src && !(src = gnrc_netif_ipv6_addr_best_src(netif, dst, true))) {
+            DEBUG("ndp rtr: no VALID source address found for RA\n");
+            break;
+        }
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_cga_params_build(src, netif, pkt))) {
                 break;
             }
+            pkt = hdr;
         }
         /* add SL2A for source address */
-        if (src != NULL) {
-            DEBUG(" - SL2A\n");
-            uint8_t l2src[8];
-            size_t l2src_len;
-            /* optimization note: MAY also be omitted to facilitate in-bound load balancing over
-             * replicated interfaces.
-             * source: https://tools.ietf.org/html/rfc4861#section-6.2.3 */
-            l2src_len = _get_l2src(netif, l2src);
-            if (l2src_len > 0) {
-                /* add source address link-layer address option */
-                hdr = gnrc_ndp_opt_sl2a_build(l2src, l2src_len, pkt);
+        DEBUG(" - SL2A\n");
+        uint8_t l2src[8];
+        size_t l2src_len;
+        /* optimization note: MAY also be omitted to facilitate in-bound load balancing over
+            * replicated interfaces.
+            * source: https://tools.ietf.org/html/rfc4861#section-6.2.3 */
+        l2src_len = _get_l2src(netif, l2src);
+        if (l2src_len > 0) {
+            /* add source address link-layer address option */
+            hdr = gnrc_ndp_opt_sl2a_build(l2src, l2src_len, pkt);
 
-                if (hdr == NULL) {
-                    DEBUG("ndp: error allocating Source Link-layer address "
-                          "option.\n");
-                    break;
-                }
-                pkt = hdr;
+            if (hdr == NULL) {
+                DEBUG("ndp: error allocating Source Link-layer address "
+                        "option.\n");
+                break;
             }
+            pkt = hdr;
         }
         if (netif->flags & GNRC_NETIF_FLAGS_IPV6_ADV_CUR_HL) {
             cur_hl = netif->cur_hl;
@@ -582,6 +649,13 @@ void gnrc_ndp_rtr_adv_send(gnrc_netif_t *netif, const ipv6_addr_t *src,
             break;
         }
         pkt = hdr;
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_signature_build(pkt, netif, src, dst))) {
+                break;
+            }
+            pkt = gnrc_pkt_append(pkt, hdr);
+        }
         hdr = _build_headers(netif, src, dst, pkt);
         if (hdr == NULL) {
             DEBUG("ndp: error adding lower-layer headers.\n");

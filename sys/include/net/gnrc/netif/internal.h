@@ -22,6 +22,7 @@
 #define NET_GNRC_NETIF_INTERNAL_H
 
 #include <kernel_defines.h>
+#include <assert.h>
 
 #include "net/gnrc/netif.h"
 #include "net/l2util.h"
@@ -86,6 +87,7 @@ void gnrc_netif_release(gnrc_netif_t *netif);
  *                        list (valid and preferred lifetime will be set to
  *                        infinite, but can be changed using
  *                        @ref gnrc_ipv6_nib_pl_set()).
+ * @param[in] priv      address privacy extension
  *
  *
  * @note    Only available with @ref net_gnrc_ipv6 "gnrc_ipv6".
@@ -96,7 +98,8 @@ void gnrc_netif_release(gnrc_netif_t *netif);
  */
 int gnrc_netif_ipv6_addr_add_internal(gnrc_netif_t *netif,
                                       const ipv6_addr_t *addr,
-                                      unsigned pfx_len, uint8_t flags);
+                                      unsigned pfx_len, uint8_t flags,
+                                      ipv6_addr_priv_t priv);
 
 /**
  * @brief   Removes an IPv6 address from the interface
@@ -158,6 +161,18 @@ static inline uint8_t gnrc_netif_ipv6_addr_dad_trans(const gnrc_netif_t *netif,
                                                      int idx)
 {
     return netif->ipv6.addrs_flags[idx] & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE;
+}
+
+/**
+ * @brief   
+ */
+static inline bool gnrc_netif_ipv6_addr_is_cga(const gnrc_netif_t *netif,
+                                               const ipv6_addr_t *addr)
+{
+    return IS_USED(MODULE_IPV6_CGA) &&
+           addr >= netif->ipv6.addrs &&
+           addr < netif->ipv6.addrs + ARRAY_SIZE(netif->ipv6.addrs) &&
+           netif->ipv6.addrs_priv[addr - netif->ipv6.addrs] & GNRC_NETIF_IPV6_ADDR_PRIV_CGA;
 }
 
 /**
@@ -712,6 +727,13 @@ static inline int gnrc_netif_ipv6_group_to_l2_group(gnrc_netif_t *netif,
 }
 
 /**
+ * @brief
+ */
+typedef void (*gnrc_ipv6_aac_bootstrap_t)(gnrc_netif_t *netif,
+                                          const ipv6_addr_t *addr,
+                                          uint8_t pfx_len);
+
+/**
  * @brief   Configures a prefix on a network interface.
  *
  *          If the interface is a 6LoWPAN interface, this will also
@@ -732,7 +754,8 @@ static inline int gnrc_netif_ipv6_group_to_l2_group(gnrc_netif_t *netif,
  */
 int gnrc_netif_ipv6_add_prefix(gnrc_netif_t *netif,
                                const ipv6_addr_t *pfx, uint8_t pfx_len,
-                               uint32_t valid, uint32_t pref);
+                               uint32_t valid, uint32_t pref,
+                               gnrc_ipv6_aac_bootstrap_t bootstrap);
 #else   /* IS_USED(MODULE_GNRC_NETIF_IPV6) || defined(DOXYGEN) */
 #define gnrc_netif_ipv6_init_mtu(netif)                             (void)netif
 #define gnrc_netif_ipv6_iid_from_addr(netif, addr, addr_len, iid)   (-ENOTSUP)

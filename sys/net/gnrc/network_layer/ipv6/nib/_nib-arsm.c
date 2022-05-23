@@ -18,6 +18,7 @@
 
 #include "evtimer.h"
 #include "net/gnrc/ndp.h"
+#include "net/gnrc/send.h"
 #include "net/gnrc/ipv6/nib.h"
 #include "net/gnrc/netif/internal.h"
 #include "net/gnrc/netreg.h"
@@ -94,32 +95,40 @@ void _handle_sl2ao(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                    const icmpv6_hdr_t *icmpv6, const ndp_opt_t *sl2ao)
 {
     assert(netif != NULL);
-    _nib_onl_entry_t *nce = _nib_onl_nc_get(&ipv6->src, netif->pid);
-    int l2addr_len;
-
-    l2addr_len = gnrc_netif_ndp_addr_len_from_l2ao(netif, sl2ao);
+    int sec = gnrc_send_remove_status((const void **)&icmpv6);
+    int l2addr_len = gnrc_netif_ndp_addr_len_from_l2ao(netif, sl2ao);
     if (l2addr_len < 0) {
         DEBUG("nib: Unexpected SL2AO length. Ignoring SL2AO\n");
         return;
     }
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ARSM)
-    if ((nce != NULL) &&
-        ((nce->l2addr_len != l2addr_len) ||
-         (memcmp(nce->l2addr, sl2ao + 1, nce->l2addr_len) != 0)) &&
-        /* a 6LR MUST NOT modify an existing NCE based on an SL2AO in an RS
-         * see https://tools.ietf.org/html/rfc6775#section-6.3 */
-        !_rtr_sol_on_6lr(netif, icmpv6)) {
-        DEBUG("nib: L2 address differs. Setting STALE\n");
-        evtimer_del(&_nib_evtimer, &nce->nud_timeout.event);
-        _set_nud_state(netif, nce, GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE);
+    _nib_onl_entry_t *nce = _nib_onl_nc_get(&ipv6->src, netif->pid);
+    if (nce) {
+        if (IS_USED(MODULE_GNRC_SEND)) {
+            if ((nce->info & GNRC_IPV6_NIB_NC_INFO_SECURED) && sec != GNRC_SEND_STATUS_OK) {
+                DEBUG("nib: don´t update secure NCE from unsecured message from %s\n",
+                    ipv6_addr_to_str(addr_str, &ipv6->src, sizeof(addr_str)));
+                return;
+            }
+        }
+        if (IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ARSM)) {
+            /* a 6LR MUST NOT modify an existing NCE based on an SL2AO in an RS
+            * see https://tools.ietf.org/html/rfc6775#section-6.3 */
+            if (!_rtr_sol_on_6lr(netif, icmpv6)) {
+                if (((nce->l2addr_len != l2addr_len) || memcmp(nce->l2addr, sl2ao + 1, nce->l2addr_len))) {
+                    DEBUG("nib: L2 address differs. Setting STALE\n");
+                    evtimer_del(&_nib_evtimer, &nce->nud_timeout.event);
+                    _set_nud_state(netif, nce, GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE);
+                }
+            }
+        }
     }
-#endif  /* CONFIG_GNRC_IPV6_NIB_ARSM */
-    if (nce == NULL) {
+    else {
         DEBUG("nib: Creating NCE for (ipv6 = %s, iface = %u, nud_state = STALE)\n",
               ipv6_addr_to_str(addr_str, &ipv6->src, sizeof(addr_str)),
               netif->pid);
         nce = _nib_nc_add(&ipv6->src, netif->pid,
-                          GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE);
+                          GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE,
+                          GNRC_SEND_SECURED(sec) ? GNRC_IPV6_NIB_NC_INFO_SECURED : 0);
         if (nce != NULL) {
             if (icmpv6->type == ICMPV6_NBR_SOL) {
                 nce->info &= ~GNRC_IPV6_NIB_NC_INFO_IS_ROUTER;
@@ -139,7 +148,20 @@ void _handle_sl2ao(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
         }
     }
     /* not else to include NCE created in nce == NULL branch */
-    if ((nce != NULL) && (nce->mode & _NC)) {
+    if (nce) {
+        assert(nce->mode & _NC);
+        if (IS_USED(MODULE_GNRC_SEND)) {
+            if ((nce->info & GNRC_IPV6_NIB_NC_INFO_SECURED) && sec != GNRC_SEND_STATUS_OK) {
+                DEBUG("nib: don´t update secure NCE from unsecured message from %s\n",
+                      ipv6_addr_to_str(addr_str, &nce->ipv6, sizeof(addr_str)));
+                return;
+            }
+            if (sec == GNRC_SEND_STATUS_OK) {
+                DEBUG("nib: set NCE %s secured\n",
+                      ipv6_addr_to_str(addr_str, &nce->ipv6, sizeof(addr_str)));
+                nce->info |= GNRC_IPV6_NIB_NC_INFO_SECURED; /* NC is now secured */
+            }
+        }
         if (icmpv6->type == ICMPV6_RTR_ADV) {
             DEBUG("nib: %s%%%u is a router\n",
                   ipv6_addr_to_str(addr_str, &nce->ipv6, sizeof(addr_str)),

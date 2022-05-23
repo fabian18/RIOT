@@ -1,0 +1,85 @@
+#ifndef GNRC_SEND_CONF_H
+#define GNRC_SEND_CONF_H
+
+#include "vfs_default.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef CONFIG_GNRC_SEND_CRT_VFS_SEND_ROOT
+#define CONFIG_GNRC_SEND_CRT_VFS_SEND_ROOT  VFS_DEFAULT_DATA"/send"
+#endif
+
+#ifndef CONFIG_GNRC_SEND_CRT_BUF_SIZE
+#define CONFIG_GNRC_SEND_CRT_BUF_SIZE       1024u
+#endif
+
+#ifndef CONFIG_GNRC_SEND_CRT_CHAIN_MAX
+#define CONFIG_GNRC_SEND_CRT_CHAIN_MAX      2u
+#endif
+
+#ifndef CONFIG_GNRC_SEND_PK_BUF_SIZE
+#define CONFIG_GNRC_SEND_PK_BUF_SIZE        128u
+#endif
+
+#ifndef CONFIG_GNRC_SEND_KEY_BUF_SIZE
+#define CONFIG_GNRC_SEND_KEY_BUF_SIZE       128u
+#endif
+
+#ifndef CONFIG_GNRC_SEND_TA_BUF_SIZE
+#define CONFIG_GNRC_SEND_TA_BUF_SIZE        512u
+#endif
+
+#ifndef CONFIG_GNRC_SEND_TA_NUMOF
+#define CONFIG_GNRC_SEND_TA_NUMOF           1u
+#endif
+
+#ifndef CONFIG_GNRC_SEND_CP_NUMOF
+#define CONFIG_GNRC_SEND_CP_NUMOF           4u
+#endif
+
+#ifndef CONFIG_GNRC_SEND_CP_SELF_VFS_NAME
+#define CONFIG_GNRC_SEND_CP_SELF_VFS_NAME   "self"
+#endif
+
+#ifndef CONFIG_GNRC_SEND_PK_VFS_NAME
+#define CONFIG_GNRC_SEND_PK_VFS_NAME        "pubkey.der"
+#endif
+
+#ifndef CONFIG_GNRC_SEND_KEY_VFS_NAME
+#define CONFIG_GNRC_SEND_KEY_VFS_NAME       "key.der"
+#endif
+
+#ifndef CONFIG_GNRC_SEND_TA_ROOT
+#define CONFIG_GNRC_SEND_TA_ROOT            CONFIG_GNRC_SEND_CRT_VFS_SEND_ROOT"/ta"
+#endif
+
+#ifndef CONFIG_GNRC_SEND_CP_ROOT
+#define CONFIG_GNRC_SEND_CP_ROOT             CONFIG_GNRC_SEND_CRT_VFS_SEND_ROOT"/cp"
+#endif
+
+#ifndef CONFIG_GNRC_SEND_CGA_SEC
+#define CONFIG_GNRC_SEND_CGA_SEC            IPV6_CGA_SEC_DEFAULT
+#endif
+
+#ifndef CONFIG_GNRC_SEND_ECDSA_CURVE
+#define CONFIG_GNRC_SEND_ECDSA_CURVE        secp256r1
+#endif
+
+#ifndef CONFIG_GNRC_SEND_NONCE_CACHE_NUMOF_EXP
+#define CONFIG_GNRC_SEND_NONCE_CACHE_NUMOF_EXP  (3u)
+#endif
+
+#ifndef CONFIG_GNRC_SEND_CPS_CACHE_NUMOF_EXP
+#define CONFIG_GNRC_SEND_CPS_CACHE_NUMOF_EXP    (3u)
+#endif
+
+#ifndef CONFIG_GNRC_SEND_CPA_CACHE_NUMOF_EXP
+#define CONFIG_GNRC_SEND_CPA_CACHE_NUMOF_EXP    (3u)
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+#endif

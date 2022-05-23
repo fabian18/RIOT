@@ -101,6 +101,10 @@ void gnrc_icmpv6_demux(gnrc_netif_t *netif, gnrc_pktsnip_t *pkt)
         case ICMPV6_REDIRECT:
         case ICMPV6_DAR:
         case ICMPV6_DAC:
+#if IS_USED(MODULE_GNRC_SEND)
+        case ICMPV6_CP_SOL:
+        case ICMPV6_CP_ADV:
+#endif
             DEBUG("icmpv6: NDP message received. Handle with gnrc_ipv6_nib\n");
             gnrc_ipv6_nib_handle_pkt(netif, ipv6->data, hdr, icmpv6->size);
             break;

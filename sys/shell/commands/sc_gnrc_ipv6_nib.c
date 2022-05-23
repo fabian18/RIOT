@@ -29,6 +29,9 @@ static int _nib_route(int argc, char **argv);
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
 static int _nib_abr(int argc, char **argv);
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
+#if IS_USED(MODULE_GNRC_SEND)
+static int _nib_send(int argc, char **argv);
+#endif
 
 /* TODO: updated tests/gnrc_dhcpv6_client to no longer abuse this shell command
  * and add static qualifier */
@@ -54,6 +57,11 @@ int _gnrc_ipv6_nib(int argc, char **argv)
         res = _nib_abr(argc, argv);
     }
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
+#if IS_USED(MODULE_GNRC_SEND)
+    else if (strcmp(argv[1], "send") == 0) {
+        res = _nib_send(argc, argv);
+    }
+#endif
     else {
         _usage(argv);
     }
@@ -64,11 +72,14 @@ SHELL_COMMAND(nib, "Configure neighbor information base", _gnrc_ipv6_nib);
 
 static void _usage(char **argv)
 {
+    printf("usage: %s {neigh|prefix|route"
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
-    printf("usage: %s {neigh|prefix|route|abr|help} ...\n", argv[0]);
-#else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
-    printf("usage: %s {neigh|prefix|route|help} ...\n", argv[0]);
-#endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
+            "|abr"
+#endif
+#if IS_USED(MODULE_GNRC_SEND)
+            "|send"
+#endif
+            "|help} ...\n", argv[0]);
 }
 
 static void _usage_nib_neigh(char **argv)
@@ -215,7 +226,7 @@ static int _nib_prefix(int argc, char **argv)
                          UINT32_MAX - 1 :
                          ltime_ms * MS_PER_SEC;
         }
-        gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len, valid_ltime, pref_ltime);
+        gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len, valid_ltime, pref_ltime, NULL);
     }
     else if ((argc > 4) && (strcmp(argv[2], "del") == 0)) {
         ipv6_addr_t pfx;
@@ -373,5 +384,45 @@ static int _nib_abr(int argc, char **argv)
     return 0;
 }
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
+
+#if IS_USED(MODULE_GNRC_SEND)
+static void _usage_nib_send(char **argv)
+{
+    printf("usage: %s %s [enable|disable] <iface>\n", argv[0], argv[1]);
+}
+
+static int _nib_send(int argc, char **argv)
+{
+    if (argc < 4) {
+        _usage_nib_send(argv);
+        return 1;
+    }
+    bool en;
+    if (!strcmp(argv[2], "enable")) {
+        en = true;
+    }
+    else if (!strcmp(argv[2], "disable")) {
+        en = false;
+    }
+    else {
+        _usage_nib_send(argv);
+        return 1;
+    }
+    unsigned iface = atoi(argv[3]);
+    gnrc_netif_t *netif;
+    if (!(netif = _get_iface(iface))) {
+        printf("Interface %u does not exist\n", iface);
+        return 1;
+    }
+    if (en && gnrc_ipv6_nib_send_enable(netif)) {
+        printf("Could not enable SEND on interface %u\n", iface);
+        return 1;
+    }
+    else {
+        gnrc_ipv6_nib_send_disable(netif);
+    }
+    return 0;
+}
+#endif
 
 /** @} */

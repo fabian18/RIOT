@@ -34,7 +34,7 @@ int gnrc_ipv6_nib_nc_set(const ipv6_addr_t *ipv6, unsigned iface,
     assert(l2addr_len <= CONFIG_GNRC_IPV6_NIB_L2ADDR_MAX_LEN);
     assert((iface > KERNEL_PID_UNDEF) && (iface <= KERNEL_PID_LAST));
     _nib_acquire();
-    node = _nib_nc_add(ipv6, iface, GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNMANAGED);
+    node = _nib_nc_add(ipv6, iface, GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNMANAGED, 0);
     if (node == NULL) {
         _nib_release();
         return -ENOMEM;
