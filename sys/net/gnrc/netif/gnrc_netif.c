@@ -52,7 +52,6 @@
 #define ENABLE_DEBUG 0
 #include "debug.h"
 
-static void _update_l2addr_from_dev(gnrc_netif_t *netif);
 static void _check_netdev_capabilities(netdev_t *dev);
 static void *_gnrc_netif_thread(void *args);
 static void _event_cb(netdev_t *dev, netdev_event_t event);
@@ -462,7 +461,7 @@ int gnrc_netif_set_from_netdev(gnrc_netif_t *netif,
                 case NETOPT_ADDRESS_LONG:
                 case NETOPT_ADDR_LEN:
                 case NETOPT_SRC_LEN:
-                    _update_l2addr_from_dev(netif);
+                    gnrc_netif_update_l2addr_from_dev(netif);
                     break;
                 case NETOPT_IEEE802154_PHY:
                     gnrc_netif_ipv6_init_mtu(netif);
@@ -1439,7 +1438,7 @@ bool gnrc_netif_ipv6_wait_for_global_address(gnrc_netif_t *netif,
 #endif  /* IS_USED(MODULE_GNRC_NETIF_BUS) */
 #endif  /* IS_USED(MODULE_GNRC_NETIF_IPV6) */
 
-static void _update_l2addr_from_dev(gnrc_netif_t *netif)
+void gnrc_netif_update_l2addr_from_dev(gnrc_netif_t *netif)
 {
     netdev_t *dev = netif->dev;
     int res;
@@ -1471,7 +1470,7 @@ static void _init_from_device(gnrc_netif_t *netif)
     assert(res == sizeof(tmp));
     netif->device_type = (uint8_t)tmp;
     gnrc_netif_ipv6_init_mtu(netif);
-    _update_l2addr_from_dev(netif);
+    gnrc_netif_update_l2addr_from_dev(netif);
 }
 
 static void _check_netdev_capabilities(netdev_t *dev)
@@ -1502,7 +1501,7 @@ static void _test_options(gnrc_netif_t *netif)
     (void)dummy_opt;
     (void)tmp64;
 #if (GNRC_NETIF_L2ADDR_MAXLEN > 0)
-    /* check if address was set in _update_l2addr_from_dev()
+    /* check if address was set in gnrc_netif_update_l2addr_from_dev()
      * (NETOPT_DEVICE_TYPE already tested in _configure_netdev()) and
      * if MTU and max. fragment size was set properly by
      * gnrc_netif_ipv6_init_mtu()

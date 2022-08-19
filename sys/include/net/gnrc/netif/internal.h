@@ -547,6 +547,14 @@ static inline int gnrc_netif_get_eui64(gnrc_netif_t *netif, eui64_t *eui64)
 }
 
 /**
+ * @brief   Update the L2 address exposed in @p netif from the internal
+ *          device configuration
+ *
+ * @param[in] netif Interface to be updated
+ */
+void gnrc_netif_update_l2addr_from_dev(gnrc_netif_t *netif);
+
+/**
  * @brief   Initializes an interface as 6LN according to RFC 6775 and according
  *          to its gnrc_netif_t::device_type
  *
