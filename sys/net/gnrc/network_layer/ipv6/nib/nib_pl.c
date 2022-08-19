@@ -139,6 +139,8 @@ bool gnrc_ipv6_nib_pl_iter(unsigned iface, void **state,
             entry->iface = _nib_onl_get_if(node);
             entry->valid_until = dst->valid_until;
             entry->pref_until = dst->pref_until;
+            entry->flags.addrconf = !!(dst->flags & _PFX_SLAAC);
+            entry->flags.onlink = !!(dst->flags & _PFX_ON_LINK);
             break;
         }
     }

@@ -44,6 +44,10 @@ typedef struct {
                                  valid */
     uint32_t pref_until;    /**< timestamp (in ms) until which the prefix is
                                  preferred */
+   struct {
+        uint8_t addrconf    :1; /**< Prefix is used for auto address configuration */
+        uint8_t onlink      :1; /**< Prefix is on-link */
+    } flags;
 } gnrc_ipv6_nib_pl_t;
 
 /**

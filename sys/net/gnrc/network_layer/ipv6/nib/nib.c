@@ -126,6 +126,33 @@ static void _add_static_lladdr(gnrc_netif_t *netif)
 #endif
 }
 
+static void _drop_addrs(gnrc_netif_t *netif)
+{
+    for (unsigned i = 0; i < ARRAY_SIZE(netif->ipv6.addrs); i++) {
+        _evtimer_del(&netif->ipv6.addrs_timers[i]);
+        gnrc_netif_ipv6_addr_remove_internal(netif, &netif->ipv6.addrs[i]);
+    }
+}
+
+static void _reconf_addrs(gnrc_netif_t *netif)
+{
+    gnrc_ipv6_nib_pl_t entry = {
+        .iface = netif->pid,
+        .pfx_len = 64,
+        .pref_until = UINT32_MAX,
+        .valid_until = UINT32_MAX,
+        .flags.addrconf = 1,
+        .flags.onlink = 1,
+    };
+    memcpy(entry.pfx.u8, &ipv6_addr_link_local_prefix, sizeof(entry.pfx.u8));
+    void *state = NULL;
+    do {
+        if (entry.flags.addrconf) {
+            _auto_configure_addr(netif, &entry.pfx, entry.pfx_len);
+        }
+    } while (gnrc_ipv6_nib_pl_iter(netif->pid, &state, &entry));
+}
+
 void gnrc_ipv6_nib_iface_up(gnrc_netif_t *netif)
 {
     assert(netif != NULL);
@@ -137,7 +164,7 @@ void gnrc_ipv6_nib_iface_up(gnrc_netif_t *netif)
 #endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
     netif->ipv6.na_sent = 0;
     gnrc_netif_update_l2addr_from_dev(netif);
-    _auto_configure_addr(netif, &ipv6_addr_link_local_prefix, 64U);
+    _reconf_addrs(netif);
     if (!(gnrc_netif_is_rtr_adv(netif)) ||
         (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif))) {
         uint32_t next_rs_time = random_uint32_range(0, NDP_MAX_RS_MS_DELAY);
@@ -177,6 +204,7 @@ void gnrc_ipv6_nib_iface_down(gnrc_netif_t *netif, bool send_final_ra)
 #else
     (void)send_final_ra;
 #endif
+    _drop_addrs(netif);
 
     gnrc_netif_release(netif);
 }
