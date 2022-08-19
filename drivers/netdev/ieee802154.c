@@ -33,7 +33,6 @@ void netdev_ieee802154_reset(netdev_ieee802154_t *dev)
 {
     /* Only the least significant byte of the random value is used */
     dev->seq = random_uint32();
-    dev->flags = 0;
 
     /* set default protocol */
 #ifdef MODULE_GNRC_SIXLOWPAN
