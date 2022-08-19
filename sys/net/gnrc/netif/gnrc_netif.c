@@ -1617,24 +1617,22 @@ int gnrc_netif_default_init(gnrc_netif_t *netif)
     /* register the event callback with the device driver */
     dev->event_callback = _event_cb;
     dev->context = netif;
+    netif->cur_hl = CONFIG_GNRC_NETIF_DEFAULT_HL;
+    _init_from_device(netif);
+#if IS_USED(MODULE_GNRC_SIXLOWPAN_FRAG_SFR)
+    gnrc_sixlowpan_frag_sfr_init_iface(netif);
+#endif
+#if IS_USED(MODULE_GNRC_IPV6_NIB)
+    gnrc_ipv6_nib_init_iface(netif);
+#endif
     int res = dev->driver->init(dev);
     if (res < 0) {
         return res;
     }
     netif_register(&netif->netif);
     _check_netdev_capabilities(dev);
-    _init_from_device(netif);
 #ifdef DEVELHELP
     _test_options(netif);
-#endif
-#if IS_USED(MODULE_GNRC_SIXLOWPAN_FRAG_SFR)
-    gnrc_sixlowpan_frag_sfr_init_iface(netif);
-#endif
-    netif->cur_hl = CONFIG_GNRC_NETIF_DEFAULT_HL;
-#ifdef MODULE_GNRC_IPV6_NIB
-    gnrc_ipv6_nib_init_iface(netif);
-#endif
-#if DEVELHELP
     assert(options_tested);
 #endif
     return 0;
