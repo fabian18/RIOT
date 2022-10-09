@@ -21,11 +21,13 @@
  *
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <inttypes.h>
 
 #include "assert.h"
 #include "atomic_utils.h"
+#include "irq.h"
 #include "rmutex.h"
 #include "thread.h"
 
@@ -34,6 +36,7 @@
 
 static int _lock(rmutex_t *rmutex, int trylock)
 {
+    assert(!irq_is_in());
     kernel_pid_t owner;
 
     /* try to lock the mutex */
@@ -107,10 +110,10 @@ static int _lock(rmutex_t *rmutex, int trylock)
     /* ensure that owner is written atomically, since others need a consistent value */
     atomic_store_kernel_pid(&rmutex->owner, thread_getpid());
 
-    DEBUG("rmutex %" PRIi16 " : increasing refs\n", thread_getpid());
-
     /* increase the refcount */
-    rmutex->refcount++;
+    uint16_t refs = atomic_fetch_add_u16(&rmutex->refcount, 1);
+    assert(refs < UINT16_MAX);
+    DEBUG("rmutex %" PRIi16 " : increasing %"PRIu16" refs\n", thread_getpid(), refs);
 
     return 1;
 }
@@ -129,15 +132,14 @@ void rmutex_unlock(rmutex_t *rmutex)
 {
     /* ensure that owner is read atomically, since I need a consistent value */
     assert(atomic_load_kernel_pid(&rmutex->owner) == thread_getpid());
-    assert(rmutex->refcount > 0);
-
-    DEBUG("rmutex %" PRIi16 " : decrementing refs refs\n", thread_getpid());
 
     /* decrement refcount */
-    rmutex->refcount--;
+    uint16_t refs = atomic_fetch_sub_u16(&rmutex->refcount, 1);
+    DEBUG("rmutex %" PRIi16 " : decrementing %"PRIu16" refs\n", thread_getpid(), refs);
+    assert(refs > 0);
 
     /* check if I should still hold the mutex */
-    if (rmutex->refcount == 0) {
+    if (refs == 1) {
         /* if not release the mutex */
 
         DEBUG("rmutex %" PRIi16 " : resetting owner\n", thread_getpid());

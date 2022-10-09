@@ -48,7 +48,7 @@ typedef struct rmutex_t {
      * @brief   Number of locks owned by the thread owner
      * @internal
      */
-    uint16_t refcount;
+    volatile uint16_t refcount;
 
     /**
      * @brief   Owner thread of the mutex.
