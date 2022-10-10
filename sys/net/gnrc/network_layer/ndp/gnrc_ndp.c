@@ -115,10 +115,11 @@ gnrc_pktsnip_t *gnrc_ndp_rtr_adv_build(uint8_t cur_hl, uint8_t flags,
     return pkt;
 }
 
-static inline size_t _ceil8(uint8_t length)
+static inline size_t _ceil8(size_t length)
 {
+    assert(length <= SIZE_MAX - 7);
     /* NDP options use units of 8 byte for their length field, so round up */
-    return (length + 7U) & 0xf8U;
+    return (length + 7U) & ~((size_t)0x7);
 }
 
 gnrc_pktsnip_t *gnrc_ndp_opt_build(uint8_t type, size_t size,
