@@ -918,21 +918,17 @@ static void _handle_rtr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
         dhcpv6_client_set_conf_mode(DHCPV6_CLIENT_CONF_MODE_STATELESS);
     }
 #endif /* MODULE_DHCPV6_CLIENT */
-
     /* stop sending router solicitations
      * see https://tools.ietf.org/html/rfc4861#section-6.3.7 */
     _evtimer_del(&netif->ipv6.search_rtr);
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
     if (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif)) {
-        if (IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)) {
-            _set_rtr_adv(netif);
-        }
         /* but re-fetch information from router in time */
         _evtimer_add(netif, GNRC_IPV6_NIB_SEARCH_RTR,
                      &netif->ipv6.search_rtr, (next_timeout >> 2) * 3);
         /* i.e. 3/4 of the time before the earliest expires */
     }
-#endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
+#endif
 }
 
 static inline size_t _get_l2src(const gnrc_netif_t *netif, uint8_t *l2src)
@@ -1646,6 +1642,19 @@ static inline bool _multihop_p6c(gnrc_netif_t *netif, _nib_abr_entry_t *abr)
 #define _multihop_p6c(netif, abr)   (false)
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
 
+static void _pio_prefix_bootstrap(gnrc_netif_ipv6_t *netif,
+                                  const ipv6_addr_t *addr, uint8_t pfx_len)
+{
+    (void)addr; (void)pfx_len;
+    gnrc_netif_t *base = container_of(netif, gnrc_netif_t, ipv6);
+    (void)base;
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
+    if (gnrc_netif_is_6lr(base)) {
+        _set_rtr_adv(base);
+    }
+#endif
+}
+
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
 static uint32_t _handle_pio(gnrc_netif_t *netif, const icmpv6_hdr_t *icmpv6,
                             const ndp_opt_pi_t *pio, _nib_abr_entry_t *abr)
@@ -1713,6 +1722,7 @@ static uint32_t _handle_pio(gnrc_netif_t *netif, const icmpv6_hdr_t *icmpv6,
             if (pio->flags & NDP_OPT_PI_FLAGS_A) {
                 pfx->flags |= _PFX_AAC;
             }
+            pfx->bootstrap = _pio_prefix_bootstrap;
         }
     }
     if (pio->flags & NDP_OPT_PI_FLAGS_A) {

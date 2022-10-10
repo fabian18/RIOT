@@ -22,6 +22,7 @@
 
 #include "_nib-6ln.h"
 #include "_nib-6lr.h"
+#include "_nib-aac.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
@@ -117,14 +118,11 @@ uint8_t _handle_aro(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                           "Scheduling re-registration in %" PRIu32 "ms\n",
                           ipv6_addr_to_str(addr_str, &ipv6->dst,
                                            sizeof(addr_str)), rereg_time);
-                    netif->ipv6.addrs_flags[idx] &= ~GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK;
-                    netif->ipv6.addrs_flags[idx] |= GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID;
+                    _handle_valid_addr(&netif->ipv6.addrs[idx]);
                     _evtimer_add(&netif->ipv6.addrs[idx],
                                  GNRC_IPV6_NIB_REREG_ADDRESS,
                                  &netif->ipv6.addrs_timers[idx],
                                  rereg_time);
-                    gnrc_netif_ipv6_bus_post(netif, GNRC_IPV6_EVENT_ADDR_VALID,
-                                  &netif->ipv6.addrs[idx]);
                     break;
                 }
                 case SIXLOWPAN_ND_STATUS_DUP:
