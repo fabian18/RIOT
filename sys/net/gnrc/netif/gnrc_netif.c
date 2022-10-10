@@ -1109,6 +1109,14 @@ static int _create_candidate_set(const gnrc_netif_t *netif,
  * state */
 #define RULE_3_PTS          (1)
 
+#if IS_ACTIVE(CONFIG_GNRC_NETIF_IPV6_ADDRS_SELECT_PREF_NON_TEMP)
+/* number of "points" assigned to a source address candidate if it is a
+   temporary address (any privacy extension) */
+#define RULE_7_PTS          (-1)
+#else
+#define RULE_7_PTS          (1)
+#endif
+
 /**
  * @brief   Caps the match at a source addresses prefix length
  *
@@ -1234,8 +1242,11 @@ static ipv6_addr_t *_src_addr_selection(gnrc_netif_t *netif,
 
         /* Rule 7: Prefer temporary addresses.
          * Temporary addresses are currently not supported by gnrc.
-         * TODO: update as soon as gnrc supports temporary addresses
          */
+        if (netif->ipv6.addrs_priv[i] != GNRC_NETIF_IPV6_ADDR_PRIV_NONE) {
+            DEBUG("prefer temporary address\n");
+            winner_set[i] += RULE_7_PTS;
+        }
 
         if (winner_set[i] > max_pts) {
             idx = i;

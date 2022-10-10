@@ -206,6 +206,14 @@ extern "C" {
 #endif
 #endif
 
+#ifndef CONFIG_GNRC_NETIF_IPV6_ADDRS_SELECT_PREF_NON_TEMP
+/**
+ * @brief   Allows an application to reverse the preference,
+ *          to select a temporaray source address.
+ */
+#define CONFIG_GNRC_NETIF_IPV6_ADDRS_SELECT_PREF_NON_TEMP   0
+#endif
+
 #ifdef __cplusplus
 }
 #endif
