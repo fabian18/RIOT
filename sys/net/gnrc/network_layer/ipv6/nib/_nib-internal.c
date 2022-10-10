@@ -297,6 +297,10 @@ static inline int _get_l2addr_from_ipv6(const gnrc_netif_t *netif,
                                         const _nib_onl_entry_t *node,
                                         gnrc_ipv6_nib_nc_t *nce)
 {
+    if (IS_USED(MODULE_IPV6_CGA)) {
+        /* If private addresses are used, a L2 address cannot be derieved from an IPv6 address. */
+        return -ENOTSUP;
+    }
     int res = gnrc_netif_ipv6_iid_to_addr(netif,
                                           (eui64_t *)&node->ipv6.u64[1],
                                           nce->l2addr);

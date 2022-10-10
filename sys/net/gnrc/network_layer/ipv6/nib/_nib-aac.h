@@ -32,6 +32,24 @@
 extern "C" {
 #endif
 
+/**
+ * @brief   Generate a CGA from @p pfx, assign it to @p netif, and start the DAD process
+ *
+ * @param[in, out] netif   Interface to which to assign the generated address
+ * @param[in]      pfx     IPv6 Prefix to generate the address from
+ * @param[in]      pfx_len Prefix length in bits
+ */
+void _auto_configure_cga(gnrc_netif_t *netif,
+                         const ipv6_addr_t *pfx, uint8_t pfx_len);
+/**
+ * @brief   Should be called if the DAD process of @p address failed to attempt
+ *          generate a new address and restart the DAD process
+ *
+ * @param[in, out] netif   Interface to which to assign the generated address
+ * @param[in]      address Address for which DAD failed
+ */
+void _auto_reconfigure_cga(gnrc_netif_t *netif, const ipv6_addr_t *address);
+
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN) || IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC) || defined(DOXYGEN)
 /**
  * @brief   Auto-configures an address from a given prefix

@@ -1596,6 +1596,18 @@ static void _test_options(gnrc_netif_t *netif)
 }
 #endif /* DEVELHELP */
 
+static void _cga_ctx_init(gnrc_netif_t *netif)
+{
+    (void)netif;
+#if IS_USED(MODULE_IPV6_CGA)
+    gnrc_ipv6_cga_ctx_t *ctx = gnrc_netif_ipv6_get_cga_ctx(&netif->ipv6);
+    memset(ctx, 0, sizeof(*ctx));
+    for (int i = 0; i < (int)ARRAY_SIZE(ctx->addr_idx); i++) {
+        ctx->addr_idx[i] = -1;
+    }
+#endif
+}
+
 int gnrc_netif_default_init(gnrc_netif_t *netif)
 {
     netdev_t *dev = netif->dev;
@@ -1609,6 +1621,7 @@ int gnrc_netif_default_init(gnrc_netif_t *netif)
     netif_register(&netif->netif);
     _check_netdev_capabilities(dev);
     _init_from_device(netif);
+    _cga_ctx_init(netif);
 #ifdef DEVELHELP
     _test_options(netif);
 #endif

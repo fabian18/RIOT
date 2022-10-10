@@ -43,7 +43,10 @@ static bool _is_iface_eui64(gnrc_netif_t *netif, const eui64_t *eui64)
 bool _resolve_addr_from_ipv6(const ipv6_addr_t *dst, gnrc_netif_t *netif,
                              gnrc_ipv6_nib_nc_t *nce)
 {
-    bool res = (netif != NULL) && gnrc_netif_is_6ln(netif) &&
+    /* If any IPv6 privacy extension is used, we cannot derive the L2 address from the IP address */
+    bool res = !IS_USED(MODULE_IPV6_CGA) &&
+               (netif != NULL) &&
+               gnrc_netif_is_6ln(netif) &&
                ipv6_addr_is_link_local(dst);
 
     if (res) {

@@ -219,7 +219,7 @@ void gnrc_ipv6_nib_start_aac(gnrc_netif_t *netif, const ipv6_addr_t *pfx, uint8_
     gnrc_netif_acquire(netif);
     if (IS_USED(MODULE_IPV6_CGA) &&
         (netif->ipv6.aac_priv & GNRC_NETIF_IPV6_AAC_FLAG_PRIV_CGA)) {
-        /* TODO */
+        _auto_configure_cga(netif, pfx, pfx_len);
     }
     else if(netif->ipv6.aac_priv & GNRC_NETIF_IPV6_AAC_FLAG_PRIV_SLAAC) {
         /* TODO */
@@ -1031,7 +1031,7 @@ static void _handle_nbr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
           ipv6_addr_to_str(addr_str, &ipv6->src, sizeof(addr_str)));
     DEBUG("     - Destination address: %s\n",
           ipv6_addr_to_str(addr_str, &ipv6->dst, sizeof(addr_str)));
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC)
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC) || IS_USED(MODULE_IPV6_CGA)
     gnrc_netif_t *tgt_netif = gnrc_netif_get_by_ipv6_addr(&nbr_sol->tgt);
 
     if (tgt_netif != NULL) {
@@ -1063,7 +1063,7 @@ static void _handle_nbr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                 _remove_tentative_addr(tgt_netif, &nbr_sol->tgt);
             }
             else if (priv == GNRC_NETIF_IPV6_ADDR_PRIV_CGA) {
-                /* TODO */
+                _auto_reconfigure_cga(tgt_netif, &nbr_sol->tgt);
             }
             return;
         }
@@ -1191,7 +1191,7 @@ static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
           (nbr_adv->flags & NDP_NBR_ADV_FLAGS_R) ? 'R' : '-',
           (nbr_adv->flags & NDP_NBR_ADV_FLAGS_S) ? 'S' : '-',
           (nbr_adv->flags & NDP_NBR_ADV_FLAGS_O) ? 'O' : '-');
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC)
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC) || IS_USED(MODULE_IPV6_CGA)
     gnrc_netif_t *tgt_netif = gnrc_netif_get_by_ipv6_addr(&nbr_adv->tgt);
 
     if (tgt_netif != NULL) {
@@ -1218,7 +1218,7 @@ static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                 _remove_tentative_addr(tgt_netif, &nbr_adv->tgt);
             }
             else if (priv == GNRC_NETIF_IPV6_ADDR_PRIV_CGA) {
-                /* TODO */
+                _auto_reconfigure_cga(tgt_netif, &nbr_adv->tgt);
             }
             return;
         }
@@ -1633,9 +1633,6 @@ static uint32_t _handle_pio(gnrc_netif_t *netif, const icmpv6_hdr_t *icmpv6,
     DEBUG("     - Preferred lifetime: %" PRIu32 "\n",
           byteorder_ntohl(pio->pref_ltime));
 
-    if (pio->flags & NDP_OPT_PI_FLAGS_A) {
-        _auto_configure_addr(netif, &pio->prefix, pio->prefix_len);
-    }
     if ((pio->flags & NDP_OPT_PI_FLAGS_L) || _multihop_p6c(netif, abr)) {
         _nib_offl_entry_t *pfx;
 
@@ -1673,10 +1670,12 @@ static uint32_t _handle_pio(gnrc_netif_t *netif, const icmpv6_hdr_t *icmpv6,
             if (pio->flags & NDP_OPT_PI_FLAGS_A) {
                 pfx->flags |= _PFX_AAC;
             }
-            return _min(pref_ltime, valid_ltime);
         }
     }
-    return UINT32_MAX;
+    if (pio->flags & NDP_OPT_PI_FLAGS_A) {
+        gnrc_ipv6_nib_start_aac(netif, &pio->prefix, pio->prefix_len);
+    }
+    return _min(pref_ltime, valid_ltime);
 }
 
 static const char *_prio_string(uint8_t prio)

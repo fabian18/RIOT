@@ -102,6 +102,22 @@ extern "C" {
 #define GNRC_NETIF_IPV6_RTR_ADDR   (0)
 #endif
 
+#if IS_USED(MODULE_IPV6_CGA) || defined(DOXYGEN)
+/**
+ * @brief   Additional number of reserved addresses, if CGAs are used
+ *
+ * The default value reserves one more address.
+ *
+ * Every interface should be able to configure a link-local and a global CGA,
+ * and 6LowPAN interfaces additionally keep a hardware link-local address.
+ */
+#ifndef CONFIG_GNRC_NETIF_IPV6_CGA_NUMOF
+#define CONFIG_GNRC_NETIF_IPV6_CGA_NUMOF    (1)
+#endif
+#else
+#define CONFIG_GNRC_NETIF_IPV6_CGA_NUMOF    (0)
+#endif
+
 /**
  * @brief   Maximum number of unicast and anycast addresses per interface
  *
@@ -114,7 +130,8 @@ extern "C" {
  */
 #ifndef CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF
 #define CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF    (2 + \
-                                               DHCPV6_CLIENT_ADDRS_NUMOF)
+                                               DHCPV6_CLIENT_ADDRS_NUMOF + \
+                                               CONFIG_GNRC_NETIF_IPV6_CGA_NUMOF)
 #endif
 
 /**

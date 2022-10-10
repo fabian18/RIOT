@@ -165,6 +165,25 @@ static inline uint8_t gnrc_netif_ipv6_addr_dad_trans(const gnrc_netif_t *netif,
 }
 
 /**
+ * @brief   Check if @p addr is a Cryptographically Generated Address of @p netif
+ *
+ *          You cannot distinguish a CGA from an ordinary address, just by the 128 address bits.
+ *
+ * @pre     The address pointer @p addr must point into the address array of @p netif.
+ *
+ * @retval  true, if @p addr is a CGA assigned to @p netif
+ * @retval  false, if @p addr is not a CGA assigned to @p netif
+ */
+static inline bool gnrc_netif_ipv6_addr_is_cga(const gnrc_netif_t *netif,
+                                               const ipv6_addr_t *addr)
+{
+    return IS_USED(MODULE_IPV6_CGA) &&
+           addr >= netif->ipv6.addrs &&
+           addr < netif->ipv6.addrs + ARRAY_SIZE(netif->ipv6.addrs) &&
+           (netif->ipv6.addrs_priv[addr - netif->ipv6.addrs] & GNRC_NETIF_IPV6_ADDR_PRIV_CGA);
+}
+
+/**
  * @brief   Check if @p addr is a non private address of @p netif
  *
  * @pre     The address pointer @p addr must point into the address array of @p netif.

@@ -22,6 +22,7 @@
 
 #include "evtimer_msg.h"
 #include "net/ipv6/addr.h"
+#include "net/ipv6/cga.h"
 #ifdef MODULE_GNRC_IPV6_NIB
 #include "net/gnrc/ipv6/nib/conf.h"
 #endif
@@ -131,6 +132,22 @@ struct gnrc_netif_ipv6;
 typedef void (*gnrc_ipv6_aac_bootstrap_t)(struct gnrc_netif_ipv6 *netif,
                                           const ipv6_addr_t *addr,
                                           uint8_t pfx_len);
+
+/**
+ * @brief   Internal CGA context to correlate CGA parameters with addresses
+ * @internal
+ */
+typedef struct {
+    /**
+     * @brief CGA parameters
+     */
+    ipv6_cga_parameters_t params[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+    /**
+     * @brief   Address index associated with parameters
+     */
+    int addr_idx[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+} gnrc_ipv6_cga_ctx_t;
+
 /**
  * @brief   IPv6 component for @ref gnrc_netif_t
  *
@@ -326,7 +343,31 @@ typedef struct gnrc_netif_ipv6 {
      * @note    Only available with module @ref net_gnrc_ipv6 "gnrc_ipv6".
      */
     uint16_t mtu;
+#if IS_USED(MODULE_IPV6_CGA)
+    /**
+     * @brief   CGA cryptographic context to save for the interface
+     *
+     * @note    Only available with module @ref net_ipv6_cga "ipv6_cga".
+     */
+    gnrc_ipv6_cga_ctx_t cga_ctx;
+#endif /* MODULE_IPV6_CGA */
 } gnrc_netif_ipv6_t;
+
+/**
+ * @brief   Accessor function to be used rather that `netif->cga_ctx`
+ *
+ * @param[in]   netif   GNRC IPv6 interface component
+ *
+ * @return      `netif->cga_ctx` or NULL if not supported
+ */
+static inline gnrc_ipv6_cga_ctx_t *gnrc_netif_ipv6_get_cga_ctx(gnrc_netif_ipv6_t *netif)
+{
+#if IS_USED(MODULE_IPV6_CGA)
+    return &netif->cga_ctx;
+#endif
+    (void)netif;
+    return NULL;
+}
 
 #ifdef __cplusplus
 }

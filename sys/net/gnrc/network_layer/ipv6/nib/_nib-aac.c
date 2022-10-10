@@ -28,6 +28,15 @@
 #define ENABLE_DEBUG 0
 #include "debug.h"
 
+/* In practice, CGAs are only used with SEND */
+static inline int _cga_generate(ipv6_addr_t *pfx,
+                                ipv6_cga_parameters_t *params,
+                                gnrc_netif_ipv6_t *netif)
+{
+    (void)pfx; (void)params; (void)netif;
+    return -1;
+}
+
 static inline void _call_bootstrap(gnrc_netif_t *netif, const ipv6_addr_t *addr)
 {
     if (!ipv6_addr_is_link_local(addr) && gnrc_netif_is_6lbr(netif)) {
@@ -189,6 +198,111 @@ void _remove_tentative_addr(gnrc_netif_t *netif, const ipv6_addr_t *addr)
     }
 }
 #endif
+
+void _auto_configure_cga(gnrc_netif_t *netif,
+                         const ipv6_addr_t *pfx, uint8_t pfx_len)
+{
+    (void)netif; (void)pfx; (void)pfx_len;
+#if IS_USED(MODULE_IPV6_CGA)
+    ipv6_cga_parameters_t *params = NULL;
+    ipv6_addr_t addr = IPV6_ADDR_UNSPECIFIED;
+    int idx, p_idx;
+    uint8_t flags = gnrc_netif_is_6lbr(netif)
+                    ? GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID
+                    : GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE;
+    ipv6_addr_init_prefix(&addr, pfx, pfx_len);
+    gnrc_ipv6_cga_ctx_t *cga_ctx = gnrc_netif_ipv6_get_cga_ctx(&netif->ipv6);
+
+    gnrc_netif_acquire(netif);
+    for (int i = 0; i < (int)ARRAY_SIZE(netif->ipv6.addrs); i++) {
+        if (ipv6_addr_match_prefix(&netif->ipv6.addrs[i], pfx) >= pfx_len &&
+            netif->ipv6.addrs_priv[i] == GNRC_NETIF_IPV6_ADDR_PRIV_CGA) {
+            gnrc_netif_release(netif);
+            return;
+        }
+    }
+    for (p_idx = 0; p_idx < (int)ARRAY_SIZE(cga_ctx->addr_idx); p_idx++) {
+        if (cga_ctx->addr_idx[p_idx] < 0) {
+            params = &cga_ctx->params[p_idx];
+            break;
+        }
+    }
+    if (!params || _cga_generate(&addr, params, &netif->ipv6)) {
+        gnrc_netif_release(netif);
+        return;
+    }
+    if ((idx = gnrc_netif_ipv6_addr_idx(netif, &addr)) < 0) {
+        DEBUG("nib: add CGA based on %s/%u automatically to interface %u\n",
+              ipv6_addr_to_str(addr_str, pfx, sizeof(addr_str)), pfx_len, netif->pid);
+        if ((idx = gnrc_netif_ipv6_addr_add_internal(netif, &addr, pfx_len, flags,
+                                                    GNRC_NETIF_IPV6_ADDR_PRIV_CGA)) < 0) {
+            memset(params, 0, sizeof(*params));
+            gnrc_netif_release(netif);
+            return;
+        }
+        cga_ctx->addr_idx[p_idx] = idx;
+        if ((netif->ipv6.addrs_flags[idx] & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK)
+            != GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID) {
+            if (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif)) {
+                _handle_rereg_address(&netif->ipv6.addrs[idx]);
+            }
+        }
+        else {
+            _handle_valid_addr(&netif->ipv6.addrs[idx]);
+        }
+    }
+    gnrc_netif_release(netif);
+#endif
+}
+
+void _auto_reconfigure_cga(gnrc_netif_t *netif, const ipv6_addr_t *address)
+{
+    (void)netif; (void)address;
+#if IS_USED(MODULE_IPV6_CGA)
+    ipv6_addr_t addr = *address;
+    int idx, p_idx;
+    gnrc_ipv6_cga_ctx_t *cga_ctx = gnrc_netif_ipv6_get_cga_ctx(&netif->ipv6);
+
+    gnrc_netif_acquire(netif);
+    if ((idx = gnrc_netif_ipv6_addr_idx(netif, &addr)) < 0 ||
+        netif->ipv6.addrs_priv[idx] != GNRC_NETIF_IPV6_ADDR_PRIV_CGA) {
+        gnrc_netif_release(netif);
+        return;
+    }
+    if (gnrc_netif_ipv6_addr_dad_trans(netif, idx) <= 0) {
+        gnrc_netif_release(netif);
+        return;
+    }
+    for (p_idx = 0; p_idx < (int)ARRAY_SIZE(cga_ctx->params); p_idx++) {
+        if ((idx = cga_ctx->addr_idx[p_idx]) >= 0 &&
+            !memcmp(address, &netif->ipv6.addrs[idx], sizeof(*address))) {
+            break;
+        }
+    }
+    if (p_idx >= (int)ARRAY_SIZE(cga_ctx->params)) {
+        gnrc_netif_release(netif);
+        return;
+    }
+    cga_ctx->params[p_idx].collision_count++;
+    if (_cga_generate(&addr, &cga_ctx->params[p_idx], &netif->ipv6)) {
+        memset(&cga_ctx->params[p_idx], 0, sizeof(cga_ctx->params[p_idx]));
+        cga_ctx->addr_idx[p_idx] = -1;
+        gnrc_netif_release(netif);
+        return;
+    }
+    gnrc_netif_ipv6_addr_remove_internal(netif, &addr);
+    if ((idx = gnrc_netif_ipv6_addr_add_internal(netif, &addr, 64,
+                                                 GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE,
+                                                 GNRC_NETIF_IPV6_ADDR_PRIV_CGA)) < 0) {
+        memset(&cga_ctx->params[p_idx], 0, sizeof(cga_ctx->params[p_idx]));
+        cga_ctx->addr_idx[p_idx] = -1;
+        gnrc_netif_release(netif);
+        return;
+    }
+    cga_ctx->addr_idx[p_idx] = idx;
+    gnrc_netif_release(netif);
+#endif
+}
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC) || IS_USED(MODULE_IPV6_CGA)
 static int _get_netif_state(gnrc_netif_t **netif, const ipv6_addr_t *addr)
