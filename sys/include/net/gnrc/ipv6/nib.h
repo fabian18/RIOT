@@ -334,6 +334,16 @@ void gnrc_ipv6_nib_iface_up(gnrc_netif_t *netif);
 void gnrc_ipv6_nib_iface_down(gnrc_netif_t *netif, bool send_final_ra);
 
 /**
+ * @brief   Start the Automatic Address Configuration procedure
+ *
+ * @param[in, out] netif        Interface on which to configure an address
+ * @param[in]      pfx          IPv6 prefix
+ * @param[in]      pfx_len      Prefix length in bits
+ */
+void gnrc_ipv6_nib_start_aac(gnrc_netif_t *netif,
+                             const ipv6_addr_t *pfx, uint8_t pfx_len);
+
+/**
  * @brief   Gets link-layer address of next hop to a destination address
  *
  * @pre `(dst != NULL) && (nce != NULL)`

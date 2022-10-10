@@ -338,7 +338,8 @@ int gnrc_netif_set_from_netdev(gnrc_netif_t *netif,
                 /* acquire locks a recursive mutex so we are safe calling this
                  * public function */
                 res = gnrc_netif_ipv6_addr_add_internal(netif, opt->data,
-                                                        pfx_len, flags);
+                                                        pfx_len, flags,
+                                                        GNRC_NETIF_IPV6_ADDR_PRIV_NONE);
                 if (res >= 0) {
                     res = sizeof(ipv6_addr_t);
                 }
@@ -593,7 +594,8 @@ static ipv6_addr_t *_src_addr_selection(gnrc_netif_t *netif,
 
 int gnrc_netif_ipv6_addr_add_internal(gnrc_netif_t *netif,
                                       const ipv6_addr_t *addr,
-                                      unsigned pfx_len, uint8_t flags)
+                                      unsigned pfx_len, uint8_t flags,
+                                      ipv6_addr_priv_t priv)
 {
     unsigned idx = UINT_MAX;
 
@@ -602,12 +604,7 @@ int gnrc_netif_ipv6_addr_add_internal(gnrc_netif_t *netif,
              ipv6_addr_is_loopback(addr)));
     assert((pfx_len > 0) && (pfx_len <= 128));
     gnrc_netif_acquire(netif);
-    if ((flags & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK) ==
-        GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE) {
-        /* set to first retransmission */
-        flags &= ~GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE;
-        flags |= 0x1;
-    }
+    flags &= GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK;
     for (unsigned i = 0; i < CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF; i++) {
         if (ipv6_addr_equal(&netif->ipv6.addrs[i], addr)) {
             gnrc_netif_release(netif);
@@ -648,6 +645,7 @@ int gnrc_netif_ipv6_addr_add_internal(gnrc_netif_t *netif,
     }
 #endif /* CONFIG_GNRC_IPV6_NIB_ARSM */
     netif->ipv6.addrs_flags[idx] = flags;
+    netif->ipv6.addrs_priv[idx] = priv;
     memcpy(&netif->ipv6.addrs[idx], addr, sizeof(netif->ipv6.addrs[idx]));
 #ifdef MODULE_GNRC_IPV6_NIB
     if (_get_state(netif, idx) == GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID) {
@@ -662,7 +660,7 @@ int gnrc_netif_ipv6_addr_add_internal(gnrc_netif_t *netif,
         }
         if (!in_pl) {
             gnrc_ipv6_nib_pl_set(netif->pid, addr, pfx_len,
-                                 UINT32_MAX, UINT32_MAX);
+                                 UINT32_MAX, UINT32_MAX, NULL);
         }
 
         gnrc_netif_ipv6_bus_post(netif, GNRC_IPV6_EVENT_ADDR_VALID, &netif->ipv6.addrs[idx]);
@@ -1275,32 +1273,11 @@ static ipv6_addr_t *_src_addr_selection(gnrc_netif_t *netif,
 
 int gnrc_netif_ipv6_add_prefix(gnrc_netif_t *netif,
                                const ipv6_addr_t *pfx, uint8_t pfx_len,
-                               uint32_t valid, uint32_t pref)
+                               uint32_t valid, uint32_t pref,
+                               gnrc_ipv6_aac_bootstrap_t bootstrap)
 {
     int res;
-    eui64_t iid;
-    ipv6_addr_t addr = {0};
-
     assert(netif != NULL);
-    DEBUG("gnrc_netif: (re-)configure prefix %s/%d\n",
-          ipv6_addr_to_str(addr_str, pfx, sizeof(addr_str)), pfx_len);
-    if (gnrc_netapi_get(netif->pid, NETOPT_IPV6_IID, 0, &iid,
-                        sizeof(eui64_t)) >= 0) {
-        ipv6_addr_set_aiid(&addr, iid.uint8);
-    }
-    else {
-        LOG_WARNING("gnrc_netif: cannot get IID of netif %u\n", netif->pid);
-        return -ENODEV;
-    }
-    ipv6_addr_init_prefix(&addr, pfx, pfx_len);
-
-    /* add address as valid */
-    res = gnrc_netif_ipv6_addr_add_internal(netif, &addr, pfx_len,
-                                           GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID);
-    if (res < 0) {
-        goto out;
-    }
-
     /* update lifetime */
     if (valid < UINT32_MAX) { /* UINT32_MAX means infinite lifetime */
         /* the valid lifetime is given in seconds, but the NIB's timers work
@@ -1314,8 +1291,9 @@ int gnrc_netif_ipv6_add_prefix(gnrc_netif_t *netif,
         pref = (pref > (UINT32_MAX / MS_PER_SEC))
              ? (UINT32_MAX - 1) : pref * MS_PER_SEC;
     }
-    gnrc_ipv6_nib_pl_set(netif->pid, pfx, pfx_len, valid, pref);
-
+    if ((res = gnrc_ipv6_nib_pl_set(netif->pid, pfx, pfx_len, valid, pref, bootstrap)) < 0) {
+        return res;
+    }
     /* configure 6LoWPAN specific options */
     if (IS_USED(MODULE_GNRC_IPV6_NIB) &&
         IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LBR) &&
@@ -1329,12 +1307,9 @@ int gnrc_netif_ipv6_add_prefix(gnrc_netif_t *netif,
                        ipv6_addr_to_str(addr_str, pfx, sizeof(addr_str)), pfx_len);
             }
         }
-
-        (void)gnrc_ipv6_nib_abr_add(&addr);
     }
-
-out:
-    return res;
+    gnrc_ipv6_nib_start_aac(netif, pfx, pfx_len);
+    return 0;
 }
 
 #if IS_USED(MODULE_GNRC_NETIF_BUS)

@@ -71,11 +71,72 @@ extern "C" {
 /** @} */
 
 /**
+ * @brief   Flags to enable/disable an address privacy extension
+ */
+typedef uint8_t ipv6_aac_priv_flags_t;
+
+/**
+ * @name    Address privacy extension flags @ref ipv6_aac_priv_flags_t
+ * @{
+ */
+/**
+ * @brief   No privacy
+ */
+#define GNRC_NETIF_IPV6_AAC_FLAG_PRIV_NONE                  (0U)
+/**
+ * @brief   Enable SLAAC privacy extension
+ */
+#define GNRC_NETIF_IPV6_AAC_FLAG_PRIV_SLAAC                 (1U)
+/**
+ * @brief   Enable AAC of CGA
+ */
+#define GNRC_NETIF_IPV6_AAC_FLAG_PRIV_CGA                   (2U)
+/** @} */
+
+/**
+ * @brief   Data type to decode which address privacy extension is used
+ */
+typedef uint8_t ipv6_addr_priv_t;
+
+/**
+ * @name    Values to be used as @ref ipv6_addr_priv_t
+ * @{
+ */
+/**
+ * @brief   Hardware identifier is used
+ */
+#define GNRC_NETIF_IPV6_ADDR_PRIV_NONE                      (0U)
+/**
+ * @brief   SLAAC privacy extension is used
+ */
+#define GNRC_NETIF_IPV6_ADDR_PRIV_SLAAC                     (1U)
+/**
+ * @brief   Address is a Cryptographically Generated Address
+ */
+#define GNRC_NETIF_IPV6_ADDR_PRIV_CGA                       (2U)
+/** @} */
+
+/**
+ * @brief   Forward declaration of @ref gnrc_netif_ipv6_t struct
+ */
+struct gnrc_netif_ipv6;
+
+/**
+ * @brief   AAC bootstrapping function type, to be called on successful DAD
+ *
+ * @param[in]   netif   Interface on which @p add was added successfully
+ * @param[in]   addr    IPv6 address
+ * @param[in]   pfx_len Prefix length in bits
+ */
+typedef void (*gnrc_ipv6_aac_bootstrap_t)(struct gnrc_netif_ipv6 *netif,
+                                          const ipv6_addr_t *addr,
+                                          uint8_t pfx_len);
+/**
  * @brief   IPv6 component for @ref gnrc_netif_t
  *
  * @note only available with @ref net_gnrc_ipv6.
  */
-typedef struct {
+typedef struct gnrc_netif_ipv6 {
     /**
      * @brief   Flags for gnrc_netif_t::ipv6_addrs
      *
@@ -84,6 +145,11 @@ typedef struct {
      * @note    Only available with module @ref net_gnrc_ipv6 "gnrc_ipv6".
      */
     uint8_t addrs_flags[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+
+    /**
+     * @brief   IPv6 address privacy extension
+     */
+    ipv6_addr_priv_t addrs_priv[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
 
     /**
      * @brief   IPv6 unicast and anycast addresses of the interface
@@ -248,6 +314,11 @@ typedef struct {
      * @note    Only available with module @ref net_gnrc_ipv6 "gnrc_ipv6"
      */
     uint8_t aac_mode;
+
+    /**
+     * @brief   IPv6 private auto-address configuration extension flags
+     */
+    ipv6_aac_priv_flags_t aac_priv;
 
     /**
      * @brief   Maximum transmission unit (MTU) for IPv6 packets

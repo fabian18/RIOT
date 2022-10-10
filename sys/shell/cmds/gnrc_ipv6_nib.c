@@ -215,7 +215,7 @@ static int _nib_prefix(int argc, char **argv)
                          UINT32_MAX - 1 :
                          ltime_ms * MS_PER_SEC;
         }
-        gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len, valid_ltime, pref_ltime);
+        gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len, valid_ltime, pref_ltime, NULL);
     }
     else if ((argc > 4) && (strcmp(argv[2], "del") == 0)) {
         ipv6_addr_t pfx;

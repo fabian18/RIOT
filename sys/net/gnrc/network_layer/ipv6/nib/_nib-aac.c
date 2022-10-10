@@ -23,9 +23,30 @@
 
 #include "_nib-6ln.h"
 #include "_nib-arsm.h"
+#include "_nib-aac.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
+
+static inline void _call_bootstrap(gnrc_netif_t *netif, const ipv6_addr_t *addr)
+{
+    if (!ipv6_addr_is_link_local(addr) && gnrc_netif_is_6lbr(netif)) {
+        (void)gnrc_ipv6_nib_abr_add(addr);
+    }
+    gnrc_ipv6_aac_bootstrap_t bootstrap = NULL;
+    uint8_t pfx_len = 0;
+    gnrc_ipv6_nib_pl_t ple;
+    void *state = NULL;
+    while (gnrc_ipv6_nib_pl_iter(netif->pid, &state, &ple)) {
+        if (ple.pfx_len >= pfx_len && ipv6_addr_match_prefix(addr, &ple.pfx) >= ple.pfx_len) {
+            bootstrap = ple.bootstrap;
+            pfx_len = ple.pfx_len;
+        }
+    }
+    if (bootstrap) {
+        bootstrap(&netif->ipv6, addr, pfx_len);
+    }
+}
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN) || IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC)
 static char addr_str[IPV6_ADDR_MAX_STR_LEN];
@@ -35,7 +56,11 @@ void _auto_configure_addr(gnrc_netif_t *netif, const ipv6_addr_t *pfx,
 {
     ipv6_addr_t addr = IPV6_ADDR_UNSPECIFIED;
     int idx;
-    uint8_t flags = GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE;
+    gnrc_netif_acquire(netif);
+    uint8_t flags = (gnrc_netif_is_6ln(netif) && ipv6_addr_is_link_local(pfx)) ||
+                    gnrc_netif_is_6lbr(netif)
+                    ? GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID
+                    : GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE;
 
 #if !IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC)
     if (!gnrc_netif_is_6ln(netif)) {
@@ -43,56 +68,43 @@ void _auto_configure_addr(gnrc_netif_t *netif, const ipv6_addr_t *pfx,
                          "for interface %u.\n"
                     "    Use CONFIG_GNRC_IPV6_NIB_SLAAC=1 to activate.\n",
                     netif->pid);
+        gnrc_netif_release(netif);
         return;
     }
 #endif
     if (!(netif->flags & GNRC_NETIF_FLAGS_HAS_L2ADDR)) {
         DEBUG("nib: interface %i has no link-layer addresses\n", netif->pid);
+        gnrc_netif_release(netif);
         return;
     }
     DEBUG("nib: add address based on %s/%u automatically to interface %u\n",
           ipv6_addr_to_str(addr_str, pfx, sizeof(addr_str)),
           pfx_len, netif->pid);
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
-    bool new_address = false;
-#endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
     if (gnrc_netif_ipv6_get_iid(netif, (eui64_t *)&addr.u64[1]) < 0) {
         DEBUG("nib: Can't get IID on interface %u\n", netif->pid);
+        gnrc_netif_release(netif);
         return;
     }
     ipv6_addr_init_prefix(&addr, pfx, pfx_len);
     if ((idx = gnrc_netif_ipv6_addr_idx(netif, &addr)) < 0) {
-        if ((idx = gnrc_netif_ipv6_addr_add_internal(netif, &addr, pfx_len,
-                                                     flags)) < 0) {
+        if ((idx = gnrc_netif_ipv6_addr_add_internal(netif, &addr, pfx_len, flags,
+                                                     GNRC_NETIF_IPV6_ADDR_PRIV_NONE)) < 0) {
             DEBUG("nib: Can't add link-local address on interface %u\n",
                   netif->pid);
+            gnrc_netif_release(netif);
             return;
         }
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
-        new_address = true;
-#endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
+        if ((netif->ipv6.addrs_flags[idx] & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK)
+            != GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID) {
+            if (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif)) {
+                _handle_rereg_address(&netif->ipv6.addrs[idx]);
+            }
+        }
+        else {
+            _handle_valid_addr(&netif->ipv6.addrs[idx]);
+        }
     }
-
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
-    /* mark link-local addresses as valid on 6LN */
-    if (gnrc_netif_is_6ln(netif) && ipv6_addr_is_link_local(pfx)) {
-        /* don't do this beforehand or risk a deadlock:
-         *  - gnrc_netif_ipv6_addr_add_internal() adds VALID (i.e. manually configured
-         *    addresses to the prefix list locking the NIB's mutex which is already
-         *    locked here) */
-        netif->ipv6.addrs_flags[idx] &= ~GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK;
-        netif->ipv6.addrs_flags[idx] |= GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID;
-        gnrc_netif_ipv6_bus_post(netif, GNRC_IPV6_EVENT_ADDR_VALID, &netif->ipv6.addrs[idx]);
-    }
-#endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
-    if (new_address && gnrc_netif_is_6ln(netif) &&
-        !gnrc_netif_is_6lbr(netif)) {
-        _handle_rereg_address(&netif->ipv6.addrs[idx]);
-    }
-#else   /* CONFIG_GNRC_IPV6_NIB_6LN */
-    (void)idx;
-#endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
+    gnrc_netif_release(netif);
 }
 #endif  /* CONFIG_GNRC_IPV6_NIB_6LN || CONFIG_GNRC_IPV6_NIB_SLAAC */
 
@@ -176,7 +188,9 @@ void _remove_tentative_addr(gnrc_netif_t *netif, const ipv6_addr_t *addr)
         }
     }
 }
+#endif
 
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC) || IS_USED(MODULE_IPV6_CGA)
 static int _get_netif_state(gnrc_netif_t **netif, const ipv6_addr_t *addr)
 {
     *netif = gnrc_netif_get_by_ipv6_addr(addr);
@@ -197,7 +211,13 @@ void _handle_dad(const ipv6_addr_t *addr)
     gnrc_netif_t *netif = NULL;
     int idx = _get_netif_state(&netif, addr);
     if (idx >= 0) {
+        uint8_t dad = gnrc_netif_ipv6_addr_dad_trans(netif, idx);
+        if (dad == GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE) {
+            netif->ipv6.addrs_flags[idx] &= ~GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE;
+        }
         ipv6_addr_set_solicited_nodes(&sol_nodes, addr);
+        DEBUG("nib: DAD %s\n", ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
+        netif->ipv6.addrs_flags[idx]++;
         _snd_ns(addr, netif, &ipv6_addr_unspecified, &sol_nodes);
         _evtimer_add((void *)&netif->ipv6.addrs[idx],
                      GNRC_IPV6_NIB_VALID_ADDR,
@@ -224,12 +244,10 @@ void _handle_valid_addr(const ipv6_addr_t *addr)
         gnrc_netif_ipv6_bus_post(netif, GNRC_IPV6_EVENT_ADDR_VALID, &netif->ipv6.addrs[idx]);
     }
     if (netif != NULL) {
+        _call_bootstrap(netif, addr);
         /* was acquired in `_get_netif_state()` */
         gnrc_netif_release(netif);
     }
 }
-#else  /* CONFIG_GNRC_IPV6_NIB_SLAAC */
-typedef int dont_be_pedantic;
-#endif /* CONFIG_GNRC_IPV6_NIB_SLAAC */
-
+#endif
 /** @} */

@@ -20,6 +20,7 @@
 
 #include "net/gnrc/ipv6/nib/pl.h"
 #include "net/gnrc/netif/internal.h"
+#include "net/gnrc/netif/ipv6.h"
 #include "timex.h"
 #include "evtimer.h"
 
@@ -28,8 +29,10 @@
 
 int gnrc_ipv6_nib_pl_set(unsigned iface,
                          const ipv6_addr_t *pfx, unsigned pfx_len,
-                         uint32_t valid_ltime, uint32_t pref_ltime)
+                         uint32_t valid_ltime, uint32_t pref_ltime,
+                         gnrc_ipv6_aac_bootstrap_t bootstrap)
 {
+    (void)bootstrap;
     _nib_offl_entry_t *dst;
     ipv6_addr_t tmp = IPV6_ADDR_UNSPECIFIED;
 
@@ -72,7 +75,8 @@ int gnrc_ipv6_nib_pl_set(unsigned iface,
 
     /* Auto-configuration only works if the prefix is more than a single address */
     if ((netif->ipv6.aac_mode & GNRC_NETIF_AAC_AUTO) && (pfx_len < 128)) {
-        dst->flags |= _PFX_SLAAC;
+        dst->flags |= _PFX_AAC;
+        dst->bootstrap = bootstrap;
     }
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LBR) && IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
     if (gnrc_netif_is_6lbr(netif)) {
@@ -139,6 +143,9 @@ bool gnrc_ipv6_nib_pl_iter(unsigned iface, void **state,
             entry->iface = _nib_onl_get_if(node);
             entry->valid_until = dst->valid_until;
             entry->pref_until = dst->pref_until;
+            entry->bootstrap = dst->bootstrap;
+            entry->flags.addrconf = !!(dst->flags & _PFX_AAC);
+            entry->flags.onlink = !!(dst->flags & _PFX_ON_LINK);
             break;
         }
     }

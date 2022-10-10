@@ -54,10 +54,20 @@ static void set_interface_roles(void)
              "interface.\n", gnrc_border_interface, gnrc_wireless_interface);
 }
 
+static void _prefix_bootstrap(gnrc_netif_ipv6_t *netif,
+                              const ipv6_addr_t *addr, uint8_t pfx_len)
+{
+    (void)addr; (void)pfx_len;
+    gnrc_netif_t *base = container_of(netif, gnrc_netif_t, ipv6);
+    /* start advertising subnet obtained via UHCP */
+    gnrc_ipv6_nib_change_rtr_adv_iface(base, true);
+    /* configure this router as RPL root */
+    gnrc_rpl_configure_root(base, addr);
+}
+
 void uhcp_handle_prefix(uint8_t *prefix, uint8_t prefix_len, uint16_t lifetime,
                         uint8_t *src, uhcp_iface_t iface)
 {
-    int idx;
     gnrc_netif_t *wireless;
     (void)src;
 
@@ -74,14 +84,8 @@ void uhcp_handle_prefix(uint8_t *prefix, uint8_t prefix_len, uint16_t lifetime,
     }
 
     wireless = gnrc_netif_get_by_pid(gnrc_wireless_interface);
-    idx = gnrc_netif_ipv6_add_prefix(wireless, (ipv6_addr_t *)prefix, prefix_len,
-                                     lifetime, lifetime);
-    if (idx >= 0) {
-        /* start advertising subnet obtained via UHCP */
-        gnrc_ipv6_nib_change_rtr_adv_iface(wireless, true);
-        /* configure this router as RPL root */
-        gnrc_rpl_configure_root(wireless, &wireless->ipv6.addrs[idx]);
-    }
+    gnrc_netif_ipv6_add_prefix(wireless, (ipv6_addr_t *)prefix, prefix_len,
+                               lifetime, lifetime, _prefix_bootstrap);
 }
 
 extern void uhcp_client(uhcp_iface_t iface);

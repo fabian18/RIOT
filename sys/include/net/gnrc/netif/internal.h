@@ -21,11 +21,13 @@
 #ifndef NET_GNRC_NETIF_INTERNAL_H
 #define NET_GNRC_NETIF_INTERNAL_H
 
-#include "modules.h"
+#include <assert.h>
 
+#include "modules.h"
 #include "net/gnrc/netif.h"
 #include "net/l2util.h"
 #include "net/netopt.h"
+#include "net/gnrc/netif/ipv6.h"
 
 #ifdef MODULE_GNRC_IPV6_NIB
 #include "net/gnrc/ipv6/nib/conf.h"
@@ -86,6 +88,7 @@ void gnrc_netif_release(gnrc_netif_t *netif);
  *                        list (valid and preferred lifetime will be set to
  *                        infinite, but can be changed using
  *                        @ref gnrc_ipv6_nib_pl_set()).
+ * @param[in] priv      address privacy extension
  *
  *
  * @note    Only available with @ref net_gnrc_ipv6 "gnrc_ipv6".
@@ -96,7 +99,8 @@ void gnrc_netif_release(gnrc_netif_t *netif);
  */
 int gnrc_netif_ipv6_addr_add_internal(gnrc_netif_t *netif,
                                       const ipv6_addr_t *addr,
-                                      unsigned pfx_len, uint8_t flags);
+                                      unsigned pfx_len, uint8_t flags,
+                                      ipv6_addr_priv_t priv);
 
 /**
  * @brief   Removes an IPv6 address from the interface
@@ -158,6 +162,22 @@ static inline uint8_t gnrc_netif_ipv6_addr_dad_trans(const gnrc_netif_t *netif,
                                                      int idx)
 {
     return netif->ipv6.addrs_flags[idx] & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE;
+}
+
+/**
+ * @brief   Check if @p addr is a non private address of @p netif
+ *
+ * @pre     The address pointer @p addr must point into the address array of @p netif.
+ *
+ * @retval  true, if @p addr is a private address assigned to @p netif
+ * @retval  false, if @p addr is not a private address assigned to @p netif
+ */
+static inline bool gnrc_netif_ipv6_addr_is_private(const gnrc_netif_t *netif,
+                                                   const ipv6_addr_t *addr)
+{
+    return addr >= netif->ipv6.addrs &&
+           addr < netif->ipv6.addrs + ARRAY_SIZE(netif->ipv6.addrs) &&
+           (netif->ipv6.addrs_priv[addr - netif->ipv6.addrs] != GNRC_NETIF_IPV6_ADDR_PRIV_NONE);
 }
 
 /**
@@ -732,7 +752,8 @@ static inline int gnrc_netif_ipv6_group_to_l2_group(gnrc_netif_t *netif,
  */
 int gnrc_netif_ipv6_add_prefix(gnrc_netif_t *netif,
                                const ipv6_addr_t *pfx, uint8_t pfx_len,
-                               uint32_t valid, uint32_t pref);
+                               uint32_t valid, uint32_t pref,
+                               gnrc_ipv6_aac_bootstrap_t bootstrap);
 #else   /* IS_USED(MODULE_GNRC_NETIF_IPV6) || defined(DOXYGEN) */
 #define gnrc_netif_ipv6_init_mtu(netif)                             (void)netif
 #define gnrc_netif_ipv6_iid_from_addr(netif, addr, addr_len, iid)   (-ENOTSUP)

@@ -27,6 +27,7 @@
 #include "evtimer.h"
 #endif
 #include "net/ipv6/addr.h"
+#include "net/gnrc/netif/ipv6.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +45,11 @@ typedef struct {
                                  valid */
     uint32_t pref_until;    /**< timestamp (in ms) until which the prefix is
                                  preferred */
+    gnrc_ipv6_aac_bootstrap_t bootstrap; /**< AAC bootstrapping function */
+    struct {
+        uint8_t addrconf    :1; /**< Prefix is used for auto address configuration */
+        uint8_t onlink      :1; /**< Prefix is on-link */
+    } flags;                    /**< Prefix flags */
 } gnrc_ipv6_nib_pl_t;
 
 /**
@@ -67,6 +73,8 @@ typedef struct {
  *                          changing to another address without service
  *                          disruption should use deprecated addresses. May not
  *                          be greater then @p valid_ltime.
+ * @param[in] bootstrap     AAC bootstrapping function, called if an address
+ *                          was configured successfully from @p pfx
  *
  * @return  0, on success.
  * @return  -EINVAL, if @p pfx was fe80::` or multicast,
@@ -76,7 +84,8 @@ typedef struct {
  */
 int gnrc_ipv6_nib_pl_set(unsigned iface,
                          const ipv6_addr_t *pfx, unsigned pfx_len,
-                         uint32_t valid_ltime, uint32_t pref_ltime);
+                         uint32_t valid_ltime, uint32_t pref_ltime,
+                         gnrc_ipv6_aac_bootstrap_t bootstrap);
 
 /**
  * @brief   Deletes prefix from NIB

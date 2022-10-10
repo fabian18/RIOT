@@ -31,14 +31,13 @@
 #include "net/eui64.h"
 #include "kernel_defines.h"
 #include "net/ipv6/addr.h"
-#ifdef MODULE_GNRC_IPV6
 #include "net/gnrc/ipv6.h"
-#endif
 #include "net/gnrc/ipv6/nib/ft.h"
 #include "net/gnrc/ipv6/nib/nc.h"
 #include "net/gnrc/ipv6/nib/conf.h"
 #include "net/gnrc/pktqueue.h"
 #include "net/gnrc/sixlowpan/ctx.h"
+#include "net/gnrc/netif/ipv6.h"
 #include "net/ndp.h"
 #include "random.h"
 #include "timex.h"
@@ -69,7 +68,7 @@ extern "C" {
  * @{
  */
 #define _PFX_ON_LINK    (0x0001)
-#define _PFX_SLAAC      (0x0002)
+#define _PFX_AAC        (0x0002)
 /** @} */
 
 /**
@@ -218,6 +217,7 @@ typedef struct {
                                      valid (UINT32_MAX means forever) */
     uint32_t pref_until;        /**< timestamp (in ms) until which the prefix
                                      preferred (UINT32_MAX means forever) */
+    gnrc_ipv6_aac_bootstrap_t bootstrap; /**< AAC bootstrapping function */
 } _nib_offl_entry_t;
 
 /**

@@ -78,18 +78,24 @@ unsigned dhcpv6_client_get_duid_l2(unsigned iface, dhcpv6_duid_l2_t *duid)
     return (uint8_t)res + sizeof(dhcpv6_duid_l2_t);
 }
 
+static void _prefix_bootstrap(gnrc_netif_ipv6_t *netif,
+                              const ipv6_addr_t *addr, uint8_t pfx_len)
+{
+    (void)addr; (void)pfx_len;
+    gnrc_netif_t *base = container_of(netif, gnrc_netif_t, ipv6);
+    /* start advertising subnet obtained via DHCPv6 */
+    gnrc_ipv6_nib_change_rtr_adv_iface(base, true);
+    /* configure this router as RPL root */
+    gnrc_rpl_configure_root(base, addr);
+}
+
 void dhcpv6_client_conf_prefix(unsigned iface, const ipv6_addr_t *pfx,
                                unsigned pfx_len, uint32_t valid,
                                uint32_t pref)
 {
     gnrc_netif_t *netif = gnrc_netif_get_by_pid(iface);
-    int idx = gnrc_netif_ipv6_add_prefix(netif, pfx, pfx_len, valid, pref);
-    if ((idx >= 0) && (pfx_len != IPV6_ADDR_BIT_LEN)) {
-        /* start advertising subnet obtained via DHCPv6 */
-        gnrc_ipv6_nib_change_rtr_adv_iface(netif, true);
-        /* configure this router as RPL root */
-        gnrc_rpl_configure_root(netif, &netif->ipv6.addrs[idx]);
-    }
+    gnrc_netif_ipv6_add_prefix(netif, pfx, pfx_len, valid, pref,
+                               _prefix_bootstrap);
 }
 
 bool dhcpv6_client_check_ia_na(unsigned iface)

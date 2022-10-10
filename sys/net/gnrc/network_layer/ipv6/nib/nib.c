@@ -19,6 +19,7 @@
 #include <kernel_defines.h>
 
 #include "log.h"
+#include "net/gnrc/netif/ipv6.h"
 #include "net/ipv6/addr.h"
 #include "net/gnrc/icmpv6/error.h"
 #include "net/gnrc/nettype.h"
@@ -42,7 +43,7 @@
 #include "_nib-router.h"
 #include "_nib-6ln.h"
 #include "_nib-6lr.h"
-#include "_nib-slaac.h"
+#include "_nib-aac.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
@@ -197,6 +198,7 @@ void gnrc_ipv6_nib_init_iface(gnrc_netif_t *netif)
     /* TODO: set differently dependent on CONFIG_GNRC_IPV6_NIB_SLAAC if
      * alternatives exist */
     netif->ipv6.aac_mode |= GNRC_NETIF_AAC_AUTO;
+    netif->ipv6.aac_priv = GNRC_NETIF_IPV6_ADDR_PRIV_NONE;
 #endif  /* CONFIG_GNRC_IPV6_NIB_SLAAC || CONFIG_GNRC_IPV6_NIB_6LN */
     _init_iface_router(netif);
     gnrc_netif_init_6ln(netif);
@@ -209,6 +211,22 @@ void gnrc_ipv6_nib_init_iface(gnrc_netif_t *netif)
     }
     _add_static_lladdr(netif);
 
+    gnrc_netif_release(netif);
+}
+
+void gnrc_ipv6_nib_start_aac(gnrc_netif_t *netif, const ipv6_addr_t *pfx, uint8_t pfx_len)
+{
+    gnrc_netif_acquire(netif);
+    if (IS_USED(MODULE_IPV6_CGA) &&
+        (netif->ipv6.aac_priv & GNRC_NETIF_IPV6_AAC_FLAG_PRIV_CGA)) {
+        /* TODO */
+    }
+    else if(netif->ipv6.aac_priv & GNRC_NETIF_IPV6_AAC_FLAG_PRIV_SLAAC) {
+        /* TODO */
+    }
+    else {
+        _auto_configure_addr(netif, pfx, pfx_len);
+    }
     gnrc_netif_release(netif);
 }
 
@@ -1039,8 +1057,14 @@ static void _handle_nbr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                         &tgt_netif->ipv6.addrs_timers[idx].event);
             /* _remove_tentative_addr() context switches to `tgt_netif->pid` so
              * release `tgt_netif`. We are done here anyway. */
+            ipv6_addr_priv_t priv = tgt_netif->ipv6.addrs_priv[idx];
             gnrc_netif_release(tgt_netif);
-            _remove_tentative_addr(tgt_netif, &nbr_sol->tgt);
+            if (priv == GNRC_NETIF_IPV6_ADDR_PRIV_NONE) {
+                _remove_tentative_addr(tgt_netif, &nbr_sol->tgt);
+            }
+            else if (priv == GNRC_NETIF_IPV6_ADDR_PRIV_CGA) {
+                /* TODO */
+            }
             return;
         }
         gnrc_netif_release(tgt_netif);
@@ -1188,8 +1212,14 @@ static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                         &tgt_netif->ipv6.addrs_timers[idx].event);
             /* _remove_tentative_addr() context switches to `tgt_netif->pid` so
              * release `tgt_netif`. We are done here anyway. */
+            ipv6_addr_priv_t priv = tgt_netif->ipv6.addrs_priv[idx];
             gnrc_netif_release(tgt_netif);
-            _remove_tentative_addr(tgt_netif, &nbr_adv->tgt);
+            if (priv == GNRC_NETIF_IPV6_ADDR_PRIV_NONE) {
+                _remove_tentative_addr(tgt_netif, &nbr_adv->tgt);
+            }
+            else if (priv == GNRC_NETIF_IPV6_ADDR_PRIV_CGA) {
+                /* TODO */
+            }
             return;
         }
         /* else case beyond scope of RFC4862:
@@ -1641,7 +1671,7 @@ static uint32_t _handle_pio(gnrc_netif_t *netif, const icmpv6_hdr_t *icmpv6,
                 pfx->flags |= _PFX_ON_LINK;
             }
             if (pio->flags & NDP_OPT_PI_FLAGS_A) {
-                pfx->flags |= _PFX_SLAAC;
+                pfx->flags |= _PFX_AAC;
             }
             return _min(pref_ltime, valid_ltime);
         }

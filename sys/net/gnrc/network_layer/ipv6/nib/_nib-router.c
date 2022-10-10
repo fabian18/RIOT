@@ -124,7 +124,7 @@ static gnrc_pktsnip_t *_offl_to_pio(_nib_offl_entry_t *offl,
     if ((offl->flags & _PFX_ON_LINK) && !gnrc_netif_is_6ln(netif)) {
         flags |= NDP_OPT_PI_FLAGS_L;
     }
-    if (offl->flags & _PFX_SLAAC) {
+    if (offl->flags & _PFX_AAC) {
         flags |= NDP_OPT_PI_FLAGS_A;
     }
     pio = gnrc_ndp_opt_pi_build(&offl->pfx, offl->pfx_len, valid_ltime,

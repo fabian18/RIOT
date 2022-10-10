@@ -505,7 +505,7 @@ _nib_offl_entry_t *_nib_offl_alloc(const ipv6_addr_t *next_hop, unsigned iface,
     if (dst != NULL) {
         DEBUG("  using %p\n", (void *)dst);
         dst->next_hop = _nib_onl_alloc(next_hop, iface);
-
+        dst->bootstrap = NULL;
         if (dst->next_hop == NULL) {
             memset(dst, 0, sizeof(_nib_offl_entry_t));
             return NULL;
