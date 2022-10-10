@@ -741,7 +741,20 @@ _nib_offl_entry_t *_nib_pl_add(unsigned iface,
                                const ipv6_addr_t *pfx,
                                unsigned pfx_len,
                                uint32_t valid_ltime,
-                               uint32_t pref_ltime);
+                               uint32_t pref_ltime,
+                               uint16_t cflags);
+
+/**
+ * @brief   Get a prefix list entry from the prefix list which matches
+ *          prefix @p pfx and length @p pfx_len
+ *
+ * @param[in] pfx           IPv6 prefix
+ * @param[in] pfx_len       Length of @p pfx in bits
+ *
+ * @retval  The corresponding prefix list entry, if existing
+ * @retval  NULL, if no corresponding prefix list entry exists
+ */
+_nib_offl_entry_t *_nib_pl_get(const ipv6_addr_t *pfx, unsigned pfx_len);
 
 /**
  * @brief   Removes a prefix list entry

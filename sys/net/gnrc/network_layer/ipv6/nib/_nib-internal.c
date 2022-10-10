@@ -928,6 +928,20 @@ _nib_offl_entry_t *_nib_pl_add(unsigned iface,
     return dst;
 }
 
+_nib_offl_entry_t *_nib_pl_get(const ipv6_addr_t *pfx, unsigned pfx_len)
+{
+    _nib_offl_entry_t *offl = NULL;
+
+    while ((offl = _nib_offl_iter(offl))) {
+        if ((offl->mode & _PL) &&
+            (offl->pfx_len == pfx_len) &&
+            (ipv6_addr_match_prefix(&offl->pfx, pfx) >= pfx_len)) {
+            break;
+        }
+    }
+    return offl;
+}
+
 static void _override_node(const ipv6_addr_t *addr, unsigned iface,
                            _nib_onl_entry_t *node)
 {
