@@ -140,19 +140,64 @@ extern "C" {
 #define NDP_OPT_RDNSS_MIN_LEN       (3U)
 
 /**
+ * @name    Configuration of router constants
+ * @{
+ */
+#ifndef CONFIG_NDP_MAX_INIT_RA_INTERVAL
+#define CONFIG_NDP_MAX_INIT_RA_INTERVAL         (16000U)   /**< MAX_INITIAL_RTR_ADVERT_INTERVAL (in ms) */
+#endif
+#ifndef CONFIG_NDP_MAX_INIT_RA_NUMOF
+#define CONFIG_NDP_MAX_INIT_RA_NUMOF            (3U)       /**< MAX_INITIAL_RTR_ADVERTISEMENT */
+#endif
+#ifndef CONFIG_NDP_MAX_FIN_RA_NUMOF
+#define CONFIG_NDP_MAX_FIN_RA_NUMOF             (3U)       /**< MAX_FINAL_RTR_ADVERTISEMENT */
+#endif
+#ifndef CONFIG_NDP_MIN_MS_DELAY_BETWEEN_RAS
+#define CONFIG_NDP_MIN_MS_DELAY_BETWEEN_RAS     (3000U)    /**< MIN_DELAY_BETWEEN_RAS (in ms) */
+#endif
+#ifndef CONFIG_NDP_MAX_RA_DELAY
+#define CONFIG_NDP_MAX_RA_DELAY                 (500U)     /**< MAX_RA_DELAY_TIME (in ms) */
+#endif
+#ifndef CONFIG_NDP_MAX_RA_INTERVAL_MS
+#define CONFIG_NDP_MAX_RA_INTERVAL_MS           (600000U)  /**< default of MaxRtrAdvInterval (in ms) */
+#endif
+#ifndef CONFIG_NDP_MIN_RA_INTERVAL_MS
+#define CONFIG_NDP_MIN_RA_INTERVAL_MS           (198000U)  /**< default of MinRtrAdvInterval (in ms) */
+#endif
+#ifndef CONFIG_NDP_RTR_LTIME_SEC
+#define CONFIG_NDP_RTR_LTIME_SEC                (1800U)    /**< default of AdvDefaultLifetime (in sec) */
+#endif
+/** @} */
+
+/**
  * @{
  * @name    Router constants
  * @see     [RFC 4861, section 6.2.1](https://tools.ietf.org/html/rfc4861#section-6.2.1)
  * @see     [RFC 4861, section 10](https://tools.ietf.org/html/rfc4861#section-10)
  */
-#define NDP_MAX_INIT_RA_INTERVAL        (16000U)   /**< MAX_INITIAL_RTR_ADVERT_INTERVAL (in ms) */
-#define NDP_MAX_INIT_RA_NUMOF           (3U)       /**< MAX_INITIAL_RTR_ADVERTISEMENT */
-#define NDP_MAX_FIN_RA_NUMOF            (3U)       /**< MAX_FINAL_RTR_ADVERTISEMENT */
-#define NDP_MIN_MS_DELAY_BETWEEN_RAS    (3000U)    /**< MIN_DELAY_BETWEEN_RAS (in ms) */
-#define NDP_MAX_RA_DELAY                (500U)     /**< MAX_RA_DELAY_TIME (in ms) */
-#define NDP_MAX_RA_INTERVAL_MS          (600000U)  /**< default of MaxRtrAdvInterval (in ms) */
-#define NDP_MIN_RA_INTERVAL_MS          (198000U)  /**< default of MinRtrAdvInterval (in ms) */
-#define NDP_RTR_LTIME_SEC               (1800U)    /**< default of AdvDefaultLifetime (in sec) */
+#define NDP_MAX_INIT_RA_INTERVAL        CONFIG_NDP_MAX_INIT_RA_INTERVAL     /**< @ref CONFIG_NDP_MAX_INIT_RA_INTERVAL */
+#define NDP_MAX_INIT_RA_NUMOF           CONFIG_NDP_MAX_INIT_RA_NUMOF        /**< @ref CONFIG_NDP_MAX_INIT_RA_NUMOF */
+#define NDP_MAX_FIN_RA_NUMOF            CONFIG_NDP_MAX_FIN_RA_NUMOF         /**< @ref CONFIG_NDP_MAX_FIN_RA_NUMOF */
+#define NDP_MIN_MS_DELAY_BETWEEN_RAS    CONFIG_NDP_MIN_MS_DELAY_BETWEEN_RAS /**< @ref CONFIG_NDP_MIN_MS_DELAY_BETWEEN_RAS */
+#define NDP_MAX_RA_DELAY                CONFIG_NDP_MAX_RA_DELAY             /**< @ref CONFIG_NDP_MAX_RA_DELAY */
+#define NDP_MAX_RA_INTERVAL_MS          CONFIG_NDP_MAX_RA_INTERVAL_MS       /**< @ref CONFIG_NDP_MAX_RA_INTERVAL_MS */
+#define NDP_MIN_RA_INTERVAL_MS          CONFIG_NDP_MIN_RA_INTERVAL_MS       /**< @ref CONFIG_NDP_MIN_RA_INTERVAL_MS */
+#define NDP_RTR_LTIME_SEC               CONFIG_NDP_RTR_LTIME_SEC            /**< @ref CONFIG_NDP_RTR_LTIME_SEC */
+/** @} */
+
+/**
+ * @name    Configuration of host constants
+ * @{
+ */
+#ifndef CONFIG_NDP_MAX_RS_MS_DELAY
+#define CONFIG_NDP_MAX_RS_MS_DELAY      (1000U)     /**< MAX_RTR_SOLICITATION_DELAY (in ms) */
+#endif
+#ifndef CONFIG_NDP_RS_MS_INTERVAL
+#define CONFIG_NDP_RS_MS_INTERVAL       (4000U)     /**< RTR_SOLICITATION_INTERVAL (in ms) */
+#endif
+#ifndef CONFIG_NDP_MAX_RS_NUMOF
+#define CONFIG_NDP_MAX_RS_NUMOF         (3U)        /**< MAX_RTR_SOLICITATIONS */
+#endif
 /** @} */
 
 /**
@@ -160,9 +205,51 @@ extern "C" {
  * @name    Host constants
  * @see     [RFC 4861, section 10](https://tools.ietf.org/html/rfc4861#section-10)
  */
-#define NDP_MAX_RS_MS_DELAY         (1000U)     /**< MAX_RTR_SOLICITATION_DELAY (in ms) */
-#define NDP_RS_MS_INTERVAL          (4000U)     /**< RTR_SOLICITATION_INTERVAL (in ms) */
-#define NDP_MAX_RS_NUMOF            (3U)        /**< MAX_RTR_SOLICITATIONS */
+#define NDP_MAX_RS_MS_DELAY         CONFIG_NDP_MAX_RS_MS_DELAY  /**< @ref CONFIG_NDP_MAX_RS_MS_DELAY */
+#define NDP_RS_MS_INTERVAL          CONFIG_NDP_RS_MS_INTERVAL   /**< @ref CONFIG_NDP_RS_MS_INTERVAL */
+#define NDP_MAX_RS_NUMOF            CONFIG_NDP_MAX_RS_NUMOF     /**< @ref CONFIG_NDP_MAX_RS_NUMOF */
+/** @} */
+
+/**
+ *  @name   Configuration of node constants
+ *  @{
+ */
+#ifndef CONFIG_NDP_MAX_MC_SOL_NUMOF
+#define CONFIG_NDP_MAX_MC_SOL_NUMOF         (3U)        /**< MAX_MULTICAST_SOLICIT */
+#endif
+#ifndef CONFIG_NDP_MAX_UC_SOL_NUMOF
+#define CONFIG_NDP_MAX_UC_SOL_NUMOF         (3U)        /**< MAX_UNICAST_SOLICIT */
+#endif
+#ifndef CONFIG_NDP_DAD_TRANSMIT_NUMOF
+#define CONFIG_NDP_DAD_TRANSMIT_NUMOF       (1U)        /**< */
+#endif
+#ifndef CONFIG_NDP_MAX_ANYCAST_MS_DELAY
+#define CONFIG_NDP_MAX_ANYCAST_MS_DELAY     (1000U)     /**< MAX_ANYCAST_DELAY_TIME (in ms) */
+#endif
+#ifndef CONFIG_NDP_MAX_NA_NUMOF
+#define CONFIG_NDP_MAX_NA_NUMOF             (3U)        /**< MAX_NEIGHBOR_ADVERTISEMENT */
+#endif
+#ifndef CONFIG_NDP_REACH_MS
+#define CONFIG_NDP_REACH_MS                 (30000U)    /**< REACHABLE_TIME (in ms) */
+#endif
+#ifndef CONFIG_NDP_RETRANS_TIMER_MS
+#define CONFIG_NDP_RETRANS_TIMER_MS         (1000U)     /**< RETRANS_TIMER (in ms) */
+#endif
+#ifndef CONFIG_NDP_MAX_RETRANS_TIMER_MS
+#define CONFIG_NDP_MAX_RETRANS_TIMER_MS     (60000U)    /**< */
+#endif
+#ifndef CONFIG_NDP_MAX_NS_NUMOF
+#define CONFIG_NDP_MAX_NS_NUMOF             (17U)       /**< */
+#endif
+#ifndef CONFIG_NDP_DELAY_FIRST_PROBE_MS
+#define CONFIG_NDP_DELAY_FIRST_PROBE_MS     (5000U)     /**< DELAY_FIRST_PROBE_TIME (in ms) */
+#endif
+#ifndef CONFIG_NDP_MIN_RANDOM_FACTOR
+#define CONFIG_NDP_MIN_RANDOM_FACTOR        (500U)      /**< MIN_RANDOM_FACTOR (x 1000) */
+#endif
+#ifndef CONFIG_NDP_MAX_RANDOM_FACTOR
+#define CONFIG_NDP_MAX_RANDOM_FACTOR        (1500U)     /**< MAX_RANDOM_FACTOR (x 1000) */
+#endif
 /** @} */
 
 /**
@@ -170,8 +257,8 @@ extern "C" {
  * @see     [RFC 4861, section 10](https://tools.ietf.org/html/rfc4861#section-10)
  * @{
  */
-#define NDP_MAX_MC_SOL_NUMOF        (3U)        /**< MAX_MULTICAST_SOLICIT */
-#define NDP_MAX_UC_SOL_NUMOF        (3U)        /**< MAX_UNICAST_SOLICIT */
+#define NDP_MAX_MC_SOL_NUMOF        CONFIG_NDP_MAX_MC_SOL_NUMOF     /**< @ref CONFIG_NDP_MAX_MC_SOL_NUMOF */
+#define NDP_MAX_UC_SOL_NUMOF        CONFIG_NDP_MAX_UC_SOL_NUMOF     /**< @ref CONFIG_NDP_MAX_UC_SOL_NUMOF  */
 
 /**
  * @brief   Default for DupAddrDetectTransmits
@@ -180,17 +267,17 @@ extern "C" {
  *          @ref GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE restricts it to
  *          that number.
  */
-#define NDP_DAD_TRANSMIT_NUMOF      (1U)
-#define NDP_MAX_ANYCAST_MS_DELAY    (1000U)     /**< MAX_ANYCAST_DELAY_TIME (in ms) */
-#define NDP_MAX_NA_NUMOF            (3U)        /**< MAX_NEIGHBOR_ADVERTISEMENT */
-#define NDP_REACH_MS                (30000U)    /**< REACHABLE_TIME (in ms) */
-#define NDP_RETRANS_TIMER_MS        (1000U)     /**< RETRANS_TIMER (in ms) */
+#define NDP_DAD_TRANSMIT_NUMOF      CONFIG_NDP_DAD_TRANSMIT_NUMOF   /**< @ref CONFIG_NDP_DAD_TRANSMIT_NUMOF */
+#define NDP_MAX_ANYCAST_MS_DELAY    CONFIG_NDP_MAX_ANYCAST_MS_DELAY /**< @ref CONFIG_NDP_MAX_ANYCAST_MS_DELAY */
+#define NDP_MAX_NA_NUMOF            CONFIG_NDP_MAX_NA_NUMOF         /**< @ref CONFIG_NDP_MAX_NA_NUMOF */
+#define NDP_REACH_MS                CONFIG_NDP_REACH_MS             /**< @ref CONFIG_NDP_REACH_MS */
+#define NDP_RETRANS_TIMER_MS        CONFIG_NDP_RETRANS_TIMER_MS     /**< @ref CONFIG_NDP_RETRANS_TIMER_MS */
 /**
  * @brief   MAX_RETRANS_TIMER (in ms)
  *
  * @see     [RFC 7048](https://tools.ietf.org/html/rfc7048)
  */
-#define NDP_MAX_RETRANS_TIMER_MS    (60000U)
+#define NDP_MAX_RETRANS_TIMER_MS    CONFIG_NDP_MAX_RETRANS_TIMER_MS /**< @ref CONFIG_NDP_MAX_RETRANS_TIMER_MS */
 
 /**
  * @brief   Maximum retransmission of neighbor solicitations when UNREACHABLE
@@ -199,10 +286,10 @@ extern "C" {
  * @ref NDP_MAX_RETRANS_TIMER_MS, even if the random factor is 0.5 and the
  * retransmission time is 1ms.
  */
-#define NDP_MAX_NS_NUMOF            (17U)
-#define NDP_DELAY_FIRST_PROBE_MS    (5000U)     /**< DELAY_FIRST_PROBE_TIME (in ms) */
-#define NDP_MIN_RANDOM_FACTOR       (500U)      /**< MIN_RANDOM_FACTOR (x 1000) */
-#define NDP_MAX_RANDOM_FACTOR       (1500U)     /**< MAX_RANDOM_FACTOR (x 1000) */
+#define NDP_MAX_NS_NUMOF            CONFIG_NDP_MAX_NS_NUMOF         /**< @ref CONFIG_NDP_MAX_NS_NUMOF */
+#define NDP_DELAY_FIRST_PROBE_MS    CONFIG_NDP_DELAY_FIRST_PROBE_MS /**< @ref CONFIG_NDP_DELAY_FIRST_PROBE_MS */
+#define NDP_MIN_RANDOM_FACTOR       CONFIG_NDP_MIN_RANDOM_FACTOR    /**< @ref CONFIG_NDP_MIN_RANDOM_FACTOR */
+#define NDP_MAX_RANDOM_FACTOR       CONFIG_NDP_MAX_RANDOM_FACTOR    /**< @ref CONFIG_NDP_MAX_RANDOM_FACTOR */
 /** @} */
 
 /**
