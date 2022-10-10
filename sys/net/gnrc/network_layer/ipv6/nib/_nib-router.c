@@ -35,8 +35,15 @@
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
 static char addr_str[IPV6_ADDR_MAX_STR_LEN];
 
+typedef struct _rtr_adv_params {
+    bool final;
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
+    _nib_abr_entry_t *abr;
+#endif
+} _rtr_adv_params_t;
+
 static void _snd_ra(gnrc_netif_t *netif, const ipv6_addr_t *dst,
-                    bool final, _nib_abr_entry_t *abr);
+                    const _rtr_adv_params_t *ra_params);
 
 void _handle_reply_rs(_nib_onl_entry_t *host)
 {
@@ -86,17 +93,16 @@ void _handle_snd_mc_ra(gnrc_netif_t *netif)
 
 void _snd_rtr_advs(gnrc_netif_t *netif, const ipv6_addr_t *dst, bool final)
 {
+    _rtr_adv_params_t ra_params = { .final = final };
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
-    _nib_abr_entry_t *abr = NULL;
-
     DEBUG("nib: Send router advertisements for each border router:\n");
-    while ((abr = _nib_abr_iter(abr))) {
-        DEBUG("    - %s\n", ipv6_addr_to_str(addr_str, &abr->addr,
+    while ((ra_params.abr = _nib_abr_iter(ra_params.abr))) {
+        DEBUG("    - %s\n", ipv6_addr_to_str(addr_str, &ra_params.abr->addr,
                                              sizeof(addr_str)));
-        _snd_ra(netif, dst, final, abr);
+        _snd_ra(netif, dst, &ra_params);
     }
 #else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
-    _snd_ra(netif, dst, final, NULL);
+    _snd_ra(netif, dst, &ra_params);
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
 }
 
@@ -145,8 +151,9 @@ static inline uint16_t _nib_abr_entry_valid_offset(const _nib_abr_entry_t *abr)
 #endif
 
 static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
-                                       _nib_abr_entry_t *abr)
+                                       const _rtr_adv_params_t *params)
 {
+    (void)params;
     gnrc_pktsnip_t *ext_opts = NULL;
     _nib_offl_entry_t *pfx = NULL;
     unsigned id = netif->pid;
@@ -166,7 +173,7 @@ static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
             /* gnrc_ndp_opt_rdnss_build() only returns NULL when pktbuf is full
              * in this configuration */
             DEBUG("nib: No space left in packet buffer. Not adding RDNSSO\n");
-            return NULL;
+            goto release;
         }
         ext_opts = rdnsso;
     }
@@ -178,23 +185,23 @@ static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
 #ifdef MODULE_GNRC_SIXLOWPAN_CTX
     for (int i = 0; i < GNRC_SIXLOWPAN_CTX_SIZE; i++) {
         gnrc_sixlowpan_ctx_t *ctx;
-        if (bf_isset(abr->ctxs, i) &&
+        if (bf_isset(params->abr->ctxs, i) &&
             ((ctx = gnrc_sixlowpan_ctx_lookup_id(i)) != NULL)) {
             gnrc_pktsnip_t *sixco = gnrc_sixlowpan_nd_opt_6ctx_build(
                                             ctx->prefix_len, ctx->flags_id,
                                             ctx->ltime, &ctx->prefix, ext_opts);
             if (sixco == NULL) {
                 DEBUG("nib: No space left in packet buffer. Not adding 6LO\n");
-                return NULL;
+                goto release;
             }
             ext_opts = sixco;
         }
     }
 #endif  /* MODULE_GNRC_SIXLOWPAN_CTX */
-    while ((pfx = _nib_abr_iter_pfx(abr, pfx))) {
+    while ((pfx = _nib_abr_iter_pfx(params->abr, pfx))) {
         if (_nib_onl_get_if(pfx->next_hop) == id) {
             if ((ext_opts = _offl_to_pio(pfx, ext_opts)) == NULL) {
-                return NULL;
+                goto release;
             }
         }
     }
@@ -202,32 +209,35 @@ static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
         ltime_min = 0U;
 
         /* update valid time */
-        abr->valid_until_ms = evtimer_now_msec() + (
+        params->abr->valid_until_ms = evtimer_now_msec() + (
             SIXLOWPAN_ND_OPT_ABR_LTIME_DEFAULT * MS_PER_SEC * SEC_PER_MIN
         );
     }
     else {
-        ltime_min = _nib_abr_entry_valid_offset(abr);
+        ltime_min = _nib_abr_entry_valid_offset(params->abr);
     }
     (void)ltime_min;    /* gnrc_sixlowpan_nd_opt_abr_build might evaluate to NOP */
-    abro = gnrc_sixlowpan_nd_opt_abr_build(abr->version, ltime_min, &abr->addr,
+    abro = gnrc_sixlowpan_nd_opt_abr_build(params->abr->version, ltime_min, &params->abr->addr,
                                            ext_opts);
     if (abro == NULL) {
         DEBUG("nib: No space left in packet buffer. Not adding ABRO\n");
-        return NULL;
+        goto release;
     }
     ext_opts = abro;
 #else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
-    (void)abr;
     while ((pfx = _nib_offl_iter(pfx))) {
         if ((pfx->mode & _PL) && (_nib_onl_get_if(pfx->next_hop) == id)) {
             if ((ext_opts = _offl_to_pio(pfx, ext_opts)) == NULL) {
-                return NULL;
+                goto release;
             }
         }
     }
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
     return ext_opts;
+
+release:
+    gnrc_pktbuf_release(ext_opts);
+    return NULL;
 }
 
 /* Sending a RA with ltime = 0 causes the router to be removed from the
@@ -303,17 +313,18 @@ void _snd_rtr_advs_drop_pfx(gnrc_netif_t *netif, const ipv6_addr_t *dst,
 }
 
 static void _snd_ra(gnrc_netif_t *netif, const ipv6_addr_t *dst,
-                    bool final, _nib_abr_entry_t *abr)
+                    const _rtr_adv_params_t *params)
 {
     gnrc_pktsnip_t *ext_opts = NULL;
 
-    if (final) {
+    if (params->final) {
         ext_opts = _build_final_ext_opts(netif);
-    } else {
-        ext_opts = _build_ext_opts(netif, abr);
+    }
+    else {
+        ext_opts = _build_ext_opts(netif, params);
     }
 
-    gnrc_ndp_rtr_adv_send(netif, NULL, dst, final, ext_opts);
+    gnrc_ndp_rtr_adv_send(netif, NULL, dst, params->final, ext_opts);
 }
 #else  /* CONFIG_GNRC_IPV6_NIB_ROUTER */
 typedef int dont_be_pedantic;
