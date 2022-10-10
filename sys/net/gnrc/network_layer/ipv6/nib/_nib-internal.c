@@ -152,7 +152,7 @@ static inline bool _is_gc(_nib_onl_entry_t *node)
 
 static inline _nib_onl_entry_t *_cache_out_onl_entry(const ipv6_addr_t *addr,
                                                      unsigned iface,
-                                                     uint16_t cstate)
+                                                     uint16_t cstate, uint16_t cflags)
 {
     /* Use clist as FIFO for caching */
     _nib_onl_entry_t *first = (_nib_onl_entry_t *)clist_lpop(&_next_removable);
@@ -176,9 +176,10 @@ static inline _nib_onl_entry_t *_cache_out_onl_entry(const ipv6_addr_t *addr,
             /* call _nib_nc_remove to remove timers from _evtimer */
             _nib_nc_remove(tmp);
             res = tmp;
+            res->info = 0;
             _override_node(addr, iface, res);
             /* cstate masked in _nib_nc_add() already */
-            res->info |= cstate;
+            res->info |= (cflags | cstate);
             res->mode = _NC;
         }
         /* requeue if not garbage collectible at the moment or queueing
@@ -198,23 +199,26 @@ static inline _nib_onl_entry_t *_cache_out_onl_entry(const ipv6_addr_t *addr,
 }
 
 _nib_onl_entry_t *_nib_nc_add(const ipv6_addr_t *addr, unsigned iface,
-                              uint16_t cstate)
+                              uint16_t cstate, uint16_t cflags)
 {
     assert(addr != NULL);
     cstate &= GNRC_IPV6_NIB_NC_INFO_NUD_STATE_MASK;
+    cflags &= ~(GNRC_IPV6_NIB_NC_INFO_AR_STATE_MASK |
+                GNRC_IPV6_NIB_NC_INFO_IFACE_MASK |
+                GNRC_IPV6_NIB_NC_INFO_IS_ROUTER |
+                GNRC_IPV6_NIB_NC_INFO_NUD_STATE_MASK);
     assert(cstate != GNRC_IPV6_NIB_NC_INFO_NUD_STATE_DELAY);
     assert(cstate != GNRC_IPV6_NIB_NC_INFO_NUD_STATE_PROBE);
     assert(cstate != GNRC_IPV6_NIB_NC_INFO_NUD_STATE_REACHABLE);
     _nib_onl_entry_t *node = _nib_onl_alloc(addr, iface);
     if (node == NULL) {
-        return _cache_out_onl_entry(addr, iface, cstate);
+        return _cache_out_onl_entry(addr, iface, cstate, cflags);
     }
     DEBUG("nib: Adding to neighbor cache (addr = %s, iface = %u)\n",
           ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)), iface);
     if (!(node->mode & _NC)) {
-        node->info &= ~GNRC_IPV6_NIB_NC_INFO_NUD_STATE_MASK;
-        /* masked above already */
-        node->info |= cstate;
+        node->info &= GNRC_IPV6_NIB_NC_INFO_IFACE_MASK;
+        node->info |= (cflags | cstate);
         node->mode |= _NC;
     }
     if (node->next == NULL) {
@@ -372,10 +376,15 @@ void _nib_nc_get(const _nib_onl_entry_t *node, gnrc_ipv6_nib_nc_t *nce)
 #endif  /* CONFIG_GNRC_IPV6_NIB_ARSM */
 }
 
-_nib_dr_entry_t *_nib_drl_add(const ipv6_addr_t *router_addr, unsigned iface)
+_nib_dr_entry_t *_nib_drl_add(const ipv6_addr_t *router_addr, unsigned iface,
+                              uint16_t cflags)
 {
     _nib_dr_entry_t *def_router = NULL, *remove = NULL;
     _nib_onl_entry_t *tmp_node;
+    cflags &= ~(GNRC_IPV6_NIB_NC_INFO_AR_STATE_MASK |
+                GNRC_IPV6_NIB_NC_INFO_IFACE_MASK |
+                GNRC_IPV6_NIB_NC_INFO_IS_ROUTER |
+                GNRC_IPV6_NIB_NC_INFO_NUD_STATE_MASK);
 
     DEBUG("nib: Allocating default router list entry "
           "(router_addr = %s, iface = %u)\n",
@@ -391,6 +400,7 @@ _nib_dr_entry_t *_nib_drl_add(const ipv6_addr_t *router_addr, unsigned iface)
             DEBUG("  %p is an exact match\n", (void *)tmp);
             if (!(tmp_node->mode & _DRL)) {
                 tmp_node->mode |= _DRL;
+                def_router->next_hop->info |= cflags;
             }
             return tmp;
         }
@@ -406,8 +416,15 @@ _nib_dr_entry_t *_nib_drl_add(const ipv6_addr_t *router_addr, unsigned iface)
                 in order to maintain robust connectivity for off-link destinations.
                 [RFC 4861](https://datatracker.ietf.org/doc/html/rfc4861#section-5.3)
             */
-            if (!remove && _node_unreachable(tmp_node)) {
+            if (_node_unreachable(tmp_node)) {
+                /* prefer unreachable noder for removel */
                 remove = tmp;
+            }
+            else if (IS_USED(MODULE_GNRC_SEND)) {
+                if (!remove && !_nib_onl_secured(tmp_node)) {
+                    /* remove unsecure router if no unreachable router will be found */
+                    remove = tmp;
+                }
             }
         }
     }
@@ -429,6 +446,7 @@ _nib_dr_entry_t *_nib_drl_add(const ipv6_addr_t *router_addr, unsigned iface)
     def_router->next_hop = tmp_node;
     _override_node(router_addr, iface, def_router->next_hop);
     def_router->next_hop->mode |= _DRL;
+    def_router->next_hop->info |= cflags;
     return def_router;
 }
 
@@ -477,7 +495,7 @@ _nib_dr_entry_t *_nib_drl_iter(const _nib_dr_entry_t *last)
 _nib_dr_entry_t *_nib_drl_get(const ipv6_addr_t *router_addr, unsigned iface)
 {
     assert((router_addr != NULL) || (iface != 0));
-    _nib_dr_entry_t *match = NULL;
+    _nib_dr_entry_t *match = NULL, *reachable = NULL;
     for (unsigned i = 0; i < CONFIG_GNRC_IPV6_NIB_DEFAULT_ROUTER_NUMOF; i++) {
         _nib_dr_entry_t *def_router = &_def_routers[i];
         _nib_onl_entry_t *node = def_router->next_hop;
@@ -493,24 +511,32 @@ _nib_dr_entry_t *_nib_drl_get(const ipv6_addr_t *router_addr, unsigned iface)
                 break;
             }
             if (!_node_unreachable(match->next_hop)) {
-                return match;
+                if ((!IS_USED(MODULE_GNRC_SEND) || _nib_onl_secured(match->next_hop))) {
+                    return match;
+                }
+                else {
+                    reachable = match;
+                }
             }
 
         }
     }
-    return match;
+    return reachable ? reachable : match;
 }
 
 _nib_dr_entry_t *_nib_drl_get_dr(void)
 {
-    /* if there is already a default router selected and
+    /* if there is already a secured default router selected and
      * its reachability is not suspect */
     if (_prime_def_router && !_node_unreachable(_prime_def_router->next_hop)) {
-        /* take it */
-        return _prime_def_router;
+        /* not used SEND or secured */
+        if (!IS_USED(MODULE_GNRC_SEND) || _nib_onl_secured(_prime_def_router->next_hop)) {
+            /* take it */
+            return _prime_def_router;
+        }
     }
     /* else search next reachable secured router starting at the current defaultr ruter */
-    _nib_dr_entry_t *ptr = _prime_def_router, *any = NULL;
+    _nib_dr_entry_t *ptr = _prime_def_router, *any = NULL, *reachable = NULL, *secured = NULL;
     do {
         if (!(ptr = _nib_drl_iter(ptr))) {
             continue; /* end of list */
@@ -518,11 +544,37 @@ _nib_dr_entry_t *_nib_drl_get_dr(void)
         if (!any) {
             any = ptr;
         }
+        _nib_dr_entry_t *tmp_reachable = NULL, *tmp_secured = NULL;
         if (!_node_unreachable(ptr->next_hop)) {
-            /* choose at least a (probably) reachable router */
+            tmp_reachable = ptr;
+            if (!reachable) {
+                /* first reachable router */
+                reachable = tmp_reachable;
+                if (!IS_USED(MODULE_GNRC_SEND)) {
+                    break; /* just reachable is sufficient */
+                }
+            }
+        }
+        if (_nib_onl_secured(ptr->next_hop)) {
+            tmp_secured = ptr;
+            if (!secured) {
+                /* first secured router */
+                secured = tmp_secured;
+            }
+        }
+        if (tmp_reachable && tmp_secured) {
+            /* choose first secured and reachable router */
             return (_prime_def_router = ptr);
         }
     } while (ptr != _prime_def_router);
+    if (secured) {
+        /* choose at least a secured router */
+        return (_prime_def_router = secured);
+    }
+    if (reachable) {
+        /* choose at least a reachable router */
+        return (_prime_def_router = reachable);
+    }
     /* choose next or keep current dr */
     return any ? (_prime_def_router = any) : _prime_def_router;
 }
@@ -787,7 +839,7 @@ void _nib_offl_remove_prefix(_nib_offl_entry_t *pfx)
 }
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
-_nib_abr_entry_t *_nib_abr_add(const ipv6_addr_t *addr)
+_nib_abr_entry_t *_nib_abr_add(const ipv6_addr_t *addr, _nib_abr_flags_t cflags)
 {
     _nib_abr_entry_t *abr = NULL;
 
@@ -808,6 +860,7 @@ _nib_abr_entry_t *_nib_abr_add(const ipv6_addr_t *addr)
     }
     if (abr != NULL) {
         DEBUG("  using %p\n", (void *)abr);
+        abr->flags = cflags;
         memcpy(&abr->addr, addr, sizeof(abr->addr));
     }
     else {
@@ -892,12 +945,23 @@ _nib_offl_entry_t *_nib_pl_add(unsigned iface,
                                const ipv6_addr_t *pfx,
                                unsigned pfx_len,
                                uint32_t valid_ltime,
-                               uint32_t pref_ltime)
+                               uint32_t pref_ltime,
+                               uint16_t cflags)
 {
-    _nib_offl_entry_t *dst = _nib_offl_add(NULL, iface, pfx, pfx_len, _PL);
+    _nib_offl_entry_t *dst = _nib_offl_add(NULL, iface, pfx, pfx_len, _PL, cflags);
 
     if (dst == NULL) {
         return NULL;
+    }
+    if (IS_USED(MODULE_GNRC_SEND)) {
+        if ((dst->flags & _PFX_SECURED) && !(cflags & _PFX_SECURED)) {
+            DEBUG("nib: Don´t update a secured prefix from an unsecured message\n");
+            return NULL;
+        }
+        if (cflags & _PFX_SECURED) {
+            DEBUG("nib: Setting PLE secured\n");
+            dst->flags |=_PFX_SECURED;
+        }
     }
     assert(valid_ltime >= pref_ltime);
     if ((valid_ltime != UINT32_MAX) || (pref_ltime != UINT32_MAX)) {

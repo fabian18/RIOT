@@ -47,8 +47,7 @@ int gnrc_ipv6_nib_pl_set(unsigned iface,
         return -EINVAL;
     }
     _nib_acquire();
-    dst = _nib_pl_add(iface, pfx, pfx_len, valid_ltime,
-                      pref_ltime);
+    dst = _nib_pl_add(iface, pfx, pfx_len, valid_ltime, pref_ltime, 0);
     if (dst == NULL) {
         _nib_release();
         return -ENOMEM;

@@ -34,6 +34,12 @@ static inline int _cga_generate(ipv6_addr_t *pfx,
                                 gnrc_netif_ipv6_t *netif)
 {
     (void)pfx; (void)params; (void)netif;
+#if IS_USED(MODULE_GNRC_SEND)
+    extern int gnrc_send_cga_generate(gnrc_netif_ipv6_t *netif,
+                                      ipv6_addr_t *dst,
+                                      ipv6_cga_parameters_t *params);
+    return gnrc_send_cga_generate(netif, pfx, params);
+#endif
     return -1;
 }
 

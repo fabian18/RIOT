@@ -23,6 +23,7 @@
 #include "kernel_defines.h"
 #include "net/ipv6/addr.h"
 
+const ipv6_addr_t ipv6_addr_mask = IPV6_ADDR_MASK;
 const ipv6_addr_t ipv6_addr_unspecified = IPV6_ADDR_UNSPECIFIED;
 const ipv6_addr_t ipv6_addr_loopback = IPV6_ADDR_LOOPBACK;
 const ipv6_addr_t ipv6_addr_link_local_prefix = IPV6_ADDR_LINK_LOCAL_PREFIX;

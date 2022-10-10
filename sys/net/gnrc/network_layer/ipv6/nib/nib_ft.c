@@ -49,7 +49,7 @@ int gnrc_ipv6_nib_ft_add(const ipv6_addr_t *dst, unsigned dst_len,
     if (is_default_route) {
         _nib_dr_entry_t *ptr;
 
-        ptr = _nib_drl_add(next_hop, iface);
+        ptr = _nib_drl_add(next_hop, iface, 0);
         if (ptr == NULL) {
             res = -ENOMEM;
         }

@@ -7,7 +7,7 @@
  */
 
 /**
- * @ingroup     ipv6_cga
+ * @ingroup     net_ipv6_cga
  * @{
  *
  * @file

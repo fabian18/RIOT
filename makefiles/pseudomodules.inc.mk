@@ -115,6 +115,7 @@ PSEUDOMODULES += gnrc_ipv6_nib_dns
 PSEUDOMODULES += gnrc_ipv6_nib_rio
 PSEUDOMODULES += gnrc_ipv6_nib_router
 PSEUDOMODULES += gnrc_ipv6_nib_rtr_adv_pio_cb
+PSEUDOMODULES += gnrc_ipv6_nib_send
 PSEUDOMODULES += gnrc_lorawan_1_1
 ## @defgroup net_gnrc_netdev_default  gnrc_netdev_default
 ## @ingroup net_gnrc_netif

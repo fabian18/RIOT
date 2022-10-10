@@ -24,11 +24,11 @@
 #include "net/gnrc/icmpv6.h"
 #include "net/gnrc/sixlowpan/ctx.h"
 #include "net/gnrc/sixlowpan/nd.h"
+#include "net/gnrc/send.h"
 #include "net/protnum.h"
 #include "thread.h"
 #include "utlist.h"
 
-#include "net/gnrc/ipv6/nib.h"
 #include "net/gnrc/netif/internal.h"
 #include "net/gnrc/ipv6/whitelist.h"
 #include "net/gnrc/ipv6/blacklist.h"
@@ -49,7 +49,11 @@
 
 #define _MAX_L2_ADDR_LEN    (8U)
 
-static char _stack[GNRC_IPV6_STACK_SIZE + DEBUG_EXTRA_STACKSIZE];
+static char _stack[GNRC_IPV6_STACK_SIZE + DEBUG_EXTRA_STACKSIZE
+#if IS_USED(MODULE_GNRC_SEND)
+                   + GNRC_SEND_EXTRA_STACKSIZE
+#endif
+];
 
 #ifdef MODULE_FIB
 /**
@@ -241,6 +245,10 @@ static void *_event_loop(void *args)
             case GNRC_IPV6_NIB_REREG_ADDRESS:
             case GNRC_IPV6_NIB_DAD:
             case GNRC_IPV6_NIB_VALID_ADDR:
+#if IS_USED(MODULE_GNRC_SEND)
+            case GNRC_IPV6_NIB_SEND_CP_SOL:
+            case GNRC_IPV6_NIB_SEND_CP_ADV:
+#endif
                 DEBUG("ipv6: NIB timer event received\n");
                 gnrc_ipv6_nib_handle_timer_event(msg.content.ptr, msg.type);
                 break;
@@ -377,7 +385,8 @@ static int _fill_ipv6_hdr(gnrc_netif_t *netif, gnrc_pktsnip_t *ipv6)
         }
         else if (!icmpv6_hdr ||
                  (icmpv6_hdr->type != ICMPV6_RTR_SOL &&
-                  icmpv6_hdr->type != ICMPV6_NBR_SOL)) {
+                  icmpv6_hdr->type != ICMPV6_NBR_SOL &&
+                  icmpv6_hdr->type != ICMPV6_CP_SOL)) {
             ipv6_addr_t *src = gnrc_netif_ipv6_addr_best_src(netif, &hdr->dst, false);
             if (!src) {
                 /**

@@ -56,6 +56,17 @@ extern "C" {
  */
 #define _ADDR_REG_STATUS_UNAVAIL        (255)
 
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C) || defined(DOXYGEN)
+/**
+ * @brief This constitutes an extra argument if
+          6LN multihop dissemination is used
+ */
+#define GNRC_IPV6_NIB_6LN_MULTIHOP_ARG(comma, a)    ,a
+#else
+#define GNRC_IPV6_NIB_6LN_MULTIHOP_ARG(...)
+#endif
+
+
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN) || defined(DOXYGEN)
 /**
  * @brief   Resolves address statically from destination address using reverse
@@ -130,15 +141,15 @@ uint8_t _handle_aro(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
  */
 void _handle_rereg_address(ipv6_addr_t *addr);
 
+uint32_t _handle_6co(const icmpv6_hdr_t *icmpv6,
+                     const sixlowpan_nd_opt_6ctx_t *sixco
+                     GNRC_IPV6_NIB_6LN_MULTIHOP_ARG(, _nib_abr_entry_t *abr));
+
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C) || defined(DOXYGEN)
-_nib_abr_entry_t *_handle_abro(const sixlowpan_nd_opt_abr_t *abro);
-uint32_t _handle_6co(const icmpv6_hdr_t *icmpv6,
-                     const sixlowpan_nd_opt_6ctx_t *sixco,
-                     _nib_abr_entry_t *abr);
-#else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C || defined(DOXYGEN) */
-uint32_t _handle_6co(const icmpv6_hdr_t *icmpv6,
-                     const sixlowpan_nd_opt_6ctx_t *sixco);
+_nib_abr_entry_t *_handle_abro(const icmpv6_hdr_t *icmpv6,
+                               const sixlowpan_nd_opt_abr_t *abro);
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C || defined(DOXYGEN) */
+
 #else   /* CONFIG_GNRC_IPV6_NIB_6LN || defined(DOXYGEN) */
 #define _resolve_addr_from_ipv6(dst, netif, nce)    (false)
 /* _handle_aro() doesn't make sense without 6LR so don't even use it
@@ -146,11 +157,9 @@ uint32_t _handle_6co(const icmpv6_hdr_t *icmpv6,
  */
 #define _get_next_rs_interval(netif)                (NDP_RS_MS_INTERVAL)
 #define _handle_rereg_address(addr)                 (void)addr
+#define _handle_6co(icmpv6, sixco, ...)             (UINT32_MAX)
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C) || defined(DOXYGEN)
-#define _handle_abro(abro)                          (NULL)
-#define _handle_6co(icmpv6, sixco, abr)             (UINT32_MAX)
-#else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C || defined(DOXYGEN) */
-#define _handle_6co(icmpv6, sixco)                  (UINT32_MAX)
+#define _handle_abro(icmpv6, abro)                  (NULL)
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C || defined(DOXYGEN) */
 #endif  /* CONFIG_GNRC_IPV6_NIB_6LN || defined(DOXYGEN) */
 

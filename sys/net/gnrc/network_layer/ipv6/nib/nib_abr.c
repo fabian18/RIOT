@@ -33,7 +33,7 @@ int gnrc_ipv6_nib_abr_add(const ipv6_addr_t *addr)
 
     assert(netif != NULL);
     _nib_acquire();
-    if ((abr = _nib_abr_add(addr)) == NULL) {
+    if ((abr = _nib_abr_add(addr, 0)) == NULL) {
         _nib_release();
         return -ENOMEM;
     }

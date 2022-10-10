@@ -17,6 +17,7 @@
 
 #include "kernel_defines.h"
 #include "net/gnrc/ipv6/nib.h"
+#include "net/gnrc/ipv6/nib/send.h"
 #include "net/gnrc/netif.h"
 #include "net/ipv6/addr.h"
 #include "shell.h"
@@ -29,6 +30,9 @@ static int _nib_route(int argc, char **argv);
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
 static int _nib_abr(int argc, char **argv);
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
+#if IS_USED(MODULE_GNRC_SEND)
+static int _nib_send(int argc, char **argv);
+#endif
 
 /* TODO: updated tests/gnrc_dhcpv6_client to no longer abuse this shell command
  * and add static qualifier */
@@ -54,6 +58,11 @@ int _gnrc_ipv6_nib(int argc, char **argv)
         res = _nib_abr(argc, argv);
     }
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
+#if IS_USED(MODULE_GNRC_SEND)
+    else if (strcmp(argv[1], "send") == 0) {
+        res = _nib_send(argc, argv);
+    }
+#endif
     else {
         _usage(argv);
     }
@@ -64,11 +73,14 @@ SHELL_COMMAND(nib, "Configure neighbor information base", _gnrc_ipv6_nib);
 
 static void _usage(char **argv)
 {
+    printf("usage: %s {neigh|prefix|route"
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
-    printf("usage: %s {neigh|prefix|route|abr|help} ...\n", argv[0]);
-#else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
-    printf("usage: %s {neigh|prefix|route|help} ...\n", argv[0]);
-#endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
+            "|abr"
+#endif
+#if IS_USED(MODULE_GNRC_SEND)
+            "|send"
+#endif
+            "|help} ...\n", argv[0]);
 }
 
 static void _usage_nib_neigh(char **argv)
@@ -373,5 +385,56 @@ static int _nib_abr(int argc, char **argv)
     return 0;
 }
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
+
+#if IS_USED(MODULE_GNRC_SEND)
+static void _usage_nib_send(char **argv)
+{
+    printf("usage: %s %s [enable [strict] | disable] <iface>\n", argv[0], argv[1]);
+}
+
+static int _nib_send(int argc, char **argv)
+{
+    if (argc < 4) {
+        _usage_nib_send(argv);
+        return 1;
+    }
+    int mode = -1;
+    if (!strcmp(argv[2], "enable")) {
+        mode = GNRC_NIB_IPV6_SEND_MODE_COMPAT;
+        if (argc > 4) {
+            if (!strcmp(argv[3], "strict")) {
+                mode = GNRC_NIB_IPV6_SEND_MODE_STRICT;
+            }
+        }
+    }
+    else if (!strcmp(argv[2], "disable")) {
+        mode = GNRC_NIB_IPV6_SEND_MODE_OFF;
+    }
+    else {
+        _usage_nib_send(argv);
+        return 1;
+    }
+    unsigned iface = atoi(argv[3]);
+    gnrc_netif_t *netif;
+    if (!(netif = _get_iface(iface))) {
+        printf("Interface %u does not exist\n", iface);
+        return 1;
+    }
+    if (mode == GNRC_NIB_IPV6_SEND_MODE_OFF) {
+        gnrc_ipv6_nib_send_disable(netif);
+    }
+    else {
+        if (gnrc_ipv6_nib_send_get_mode(netif) == GNRC_NIB_IPV6_SEND_MODE_OFF) {
+            if (gnrc_ipv6_nib_send_enable(netif, mode)) {
+                printf("Could not enable SEND on interface %d.\n", iface);
+            }
+        }
+        else {
+            gnrc_ipv6_nib_send_set_mode(netif, mode);
+        }
+    }
+    return 0;
+}
+#endif
 
 /** @} */

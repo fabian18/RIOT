@@ -32,6 +32,9 @@
 #ifdef MODULE_NETSTATS_IPV6
 #include "net/netstats.h"
 #endif
+#if IS_USED(MODULE_GNRC_SEND)
+#include "net/gnrc/send.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -360,6 +363,9 @@ typedef struct gnrc_netif_ipv6 {
      * @note    Only available with module @ref net_ipv6_cga "ipv6_cga".
      */
     gnrc_ipv6_cga_ctx_t cga_ctx;
+#if IS_USED(MODULE_GNRC_SEND)
+    gnrc_send_ctx_t send_ctx;
+#endif /* MODULE_GNRC_SEND */
 #endif /* MODULE_IPV6_CGA */
 } __attribute__((aligned(sizeof(ipv6_addr_t)))) gnrc_netif_ipv6_t;
 
@@ -408,6 +414,28 @@ static inline gnrc_ipv6_cga_ctx_t *gnrc_netif_ipv6_get_cga_ctx(gnrc_netif_ipv6_t
     (void)netif;
     return NULL;
 }
+
+/**
+ * @brief   Forward declare @ref gnrc_send_ctx_t
+ */
+struct gnrc_send_ctx;
+
+/**
+ * @brief   Accessor function to be used rather that `netif->send_ctx`
+ *
+ * @param[in]   netif   GNRC IPv6 interface component
+ *
+ * @return      `netif->send_ctx` or NULL if not supported
+ */
+static inline struct gnrc_send_ctx *gnrc_netif_ipv6_get_send_ctx(gnrc_netif_ipv6_t *netif)
+{
+#if IS_USED(MODULE_GNRC_SEND)
+    return &netif->send_ctx;
+#endif
+    (void)netif;
+    return NULL;
+}
+
 
 #ifdef __cplusplus
 }

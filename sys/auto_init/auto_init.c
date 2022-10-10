@@ -175,6 +175,10 @@ extern void gnrc_ipv6_nib_init(void);
 AUTO_INIT(gnrc_ipv6_nib_init,
           AUTO_INIT_PRIO_MOD_GNRC_IPV6_NIB);
 #endif
+#if IS_USED(MODULE_AUTO_INIT_GNRC_SEND)
+extern void gnrc_send_init(void);
+AUTO_INIT(gnrc_send_init, 1275);
+#endif
 #if IS_USED(MODULE_SKALD)
 extern void skald_init(void);
 AUTO_INIT(skald_init,

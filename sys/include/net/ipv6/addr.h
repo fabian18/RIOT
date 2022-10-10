@@ -77,6 +77,15 @@ typedef union {
 } ipv6_addr_t;
 
 /**
+ * @brief   Static initializer for IPv6 address with all bits set
+ *
+ */
+#define IPV6_ADDR_MASK                      {{ 0xff, 0xff, 0xff, 0xff, \
+                                               0xff, 0xff, 0xff, 0xff, \
+                                               0xff, 0xff, 0xff, 0xff, \
+                                               0xff, 0xff, 0xff, 0xff }}
+
+/**
  * @brief   Static initializer for the unspecified IPv6 address (::)
  *
  * @see <a href="http://tools.ietf.org/html/rfc4291#section-2.5.2">
@@ -256,6 +265,11 @@ typedef union {
  * @brief In-memory constants of defined addresses and prefixes
  * @{
  */
+/**
+ * @see @ref IPV6_ADDR_MASK
+ */
+extern const ipv6_addr_t ipv6_addr_mask;
+
 /**
  * @see @ref IPV6_ADDR_UNSPECIFIED
  */

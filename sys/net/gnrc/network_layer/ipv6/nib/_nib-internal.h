@@ -68,6 +68,7 @@ extern "C" {
  */
 #define _PFX_ON_LINK    (0x0001)
 #define _PFX_AAC        (0x0002)
+#define _PFX_SECURED    (0x0004)
 /** @} */
 
 /**
@@ -240,6 +241,16 @@ typedef struct {
 } _nib_offl_entry_t;
 
 /**
+ * @brief   Authoritative Border Router flags
+ */
+typedef uint8_t _nib_abr_flags_t;
+
+/**
+ * @brief    Authoritative Border Router entry has been created from a SEND secured message
+ */
+#define _ABR_SECURED    (0x01u)
+
+/**
  * @brief   Internal NIB-representation of the authoritative border router
  *          for multihop prefix and 6LoWPAN context dissemination
  */
@@ -249,6 +260,7 @@ typedef struct {
                                      *   the _nib_abr_entry_t::addr */
     uint32_t valid_until_ms;        /**< timestamp (in ms) until which information is valid
                                      *   (needs resolution in minutes an 16 bits of them)*/
+    _nib_abr_flags_t flags;         /**< internal flags */
     evtimer_msg_event_t timeout;    /**< timeout of the information */
     /**
      * @brief   Bitfield marking the prefixes in the NIB's off-link entries
@@ -315,6 +327,29 @@ static inline void _nib_onl_set_if(_nib_onl_entry_t *node, unsigned iface)
     assert(iface <= _NIB_IF_MAX);
     node->info &= ~(_NIB_IF_MASK);
     node->info |= ((iface << _NIB_IF_POS) & _NIB_IF_MASK);
+}
+
+/**
+ *  @brief  Check if a Neighbor Cache Entry is secured
+ *
+ *  @param[in]  node    Neighbor Cache Entry
+ *
+ *  @retval     true if secured
+ *  @retval     false if not secured
+ */
+static inline bool _nib_onl_secured(const _nib_onl_entry_t *node)
+{
+    return node->info & GNRC_IPV6_NIB_NC_INFO_SECURED;
+}
+
+/**
+ *  @brief  Set a Neighbor Cache Entry secured
+ *
+ *  @param[in]  node    Neighbor Cache Entry
+ */
+static inline void _nib_onl_set_secured(_nib_onl_entry_t *node)
+{
+    node->info |= GNRC_IPV6_NIB_NC_INFO_SECURED;
 }
 
 /**
@@ -459,7 +494,7 @@ static inline _nib_onl_entry_t *_nib_onl_nc_get(const ipv6_addr_t *addr, unsigne
  * @return  NULL, if there is no space left.
  */
 _nib_onl_entry_t *_nib_nc_add(const ipv6_addr_t *addr, unsigned iface,
-                              uint16_t cstate);
+                              uint16_t cstate, uint16_t cflags);
 
 /**
  * @brief   Removes a node from the neighbor cache
@@ -532,7 +567,8 @@ static inline void _nib_dad_remove(_nib_onl_entry_t *node)
  *          of _nib_dr_entry_t::next_hop set to @p router_addr.
  * @return  NULL, if no space is left.
  */
-_nib_dr_entry_t *_nib_drl_add(const ipv6_addr_t *addr, unsigned iface);
+_nib_dr_entry_t *_nib_drl_add(const ipv6_addr_t *addr, unsigned iface,
+                              uint16_t cflags);
 
 /**
  * @brief   Removes a default router list entry
@@ -655,12 +691,16 @@ bool _nib_offl_is_entry(const _nib_offl_entry_t *entry);
 static inline _nib_offl_entry_t *_nib_offl_add(const ipv6_addr_t *next_hop,
                                                unsigned iface,
                                                const ipv6_addr_t *pfx,
-                                               unsigned pfx_len, uint8_t mode)
+                                               unsigned pfx_len, uint8_t mode,
+                                               uint16_t cflags)
 {
     _nib_offl_entry_t *nib_offl = _nib_offl_alloc(next_hop, iface, pfx, pfx_len);
 
     if (nib_offl != NULL) {
-        nib_offl->mode |= mode;
+        if (!(nib_offl->mode & mode)) {
+            nib_offl->mode |= mode;
+            nib_offl->flags |= cflags;
+        }
     }
     return nib_offl;
 }
@@ -698,7 +738,7 @@ static inline _nib_offl_entry_t *_nib_dc_add(const ipv6_addr_t *next_hop,
                                              const ipv6_addr_t *dst)
 {
     assert((next_hop != NULL) && (dst != NULL));
-    return _nib_offl_add(next_hop, iface, dst, IPV6_ADDR_BIT_LEN, _DC);
+    return _nib_offl_add(next_hop, iface, dst, IPV6_ADDR_BIT_LEN, _DC, 0);
 }
 
 /**
@@ -801,7 +841,7 @@ static inline _nib_offl_entry_t *_nib_ft_add(const ipv6_addr_t *next_hop,
                                              const ipv6_addr_t *pfx,
                                              unsigned pfx_len)
 {
-    return _nib_offl_add(next_hop, iface, pfx, pfx_len, _FT);
+    return _nib_offl_add(next_hop, iface, pfx, pfx_len, _FT, 0);
 }
 
 /**
@@ -831,7 +871,7 @@ static inline void _nib_ft_remove(_nib_offl_entry_t *nib_offl)
  * @return  An authoritative border router entry, on success.
  * @return  NULL, if no space is left.
  */
-_nib_abr_entry_t *_nib_abr_add(const ipv6_addr_t *addr);
+_nib_abr_entry_t *_nib_abr_add(const ipv6_addr_t *addr, _nib_abr_flags_t cflags);
 
 /**
  * @brief   Removes an authoritative border router

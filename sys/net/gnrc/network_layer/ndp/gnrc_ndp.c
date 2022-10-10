@@ -20,13 +20,15 @@
 #include "net/gnrc/netreg.h"
 #include "net/gnrc/icmpv6.h"
 #include "net/gnrc/ipv6.h"
+#include "net/gnrc/ipv6/nib/send.h"
 #include "net/gnrc/netif/internal.h"
 #ifdef MODULE_GNRC_SIXLOWPAN_ND
 #include "net/gnrc/sixlowpan/nd.h"
 #endif
 #include "net/ndp.h"
-
+#include "net/send.h"
 #include "net/gnrc/ndp.h"
+#include "net/gnrc/send.h"
 
 #include "timex.h"
 
@@ -309,6 +311,23 @@ void gnrc_ndp_nbr_sol_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
                 pkt = hdr;
             }
         }
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF) {
+            if (!(hdr = gnrc_send_nonce_build(NULL, GNRC_SEND_NONCE_SIZE, pkt))) {
+                break;
+            }
+            gnrc_send_nonce_get(gnrc_send_opt_nonce_get_nonce((ndp_opt_nonce_t *)hdr->data));
+            pkt = hdr;
+            if (src) {
+                const ipv6_addr_t *addr = ipv6_addr_is_unspecified(src) ? tgt : src;
+                if (gnrc_netif_ipv6_addr_is_cga(netif, addr)) {
+                    if (!(hdr = gnrc_send_cga_params_build(addr, netif, pkt))) {
+                        break;
+                    }
+                    pkt = hdr;
+                }
+            }
+        }
         /* add neighbor solicitation header */
         hdr = gnrc_ndp_nbr_sol_build(tgt, pkt);
         if (hdr == NULL) {
@@ -316,6 +335,15 @@ void gnrc_ndp_nbr_sol_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
             break;
         }
         pkt = hdr;
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF &&
+            src &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_signature_build(pkt, netif, src, dst))) {
+                break;
+            }
+            pkt = gnrc_pkt_append(pkt, hdr);
+        }
         /* add remaining headers */
         hdr = _build_headers(netif, src, dst, pkt);
         if (hdr == NULL) {
@@ -366,6 +394,18 @@ void gnrc_ndp_nbr_adv_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
             DEBUG("ndp: no VALID link-local source address found for NA\n");
             break;
         }
+#if 0
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF &&
+            !gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            /* A SEND node MUST send a secured advertisement in response to a
+               secured solicitation. Advertisements sent in response to an
+               unsecured solicitation MUST be secured as well, but MUST NOT
+               contain the Nonce option. */
+            DEBUG("ndp: No source address to reply NA\n");
+            break;
+        }
+#endif
         if (gnrc_netif_is_rtr(netif) && gnrc_netif_is_rtr_adv(netif)) {
             adv_flags |= NDP_NBR_ADV_FLAGS_R;
         }
@@ -409,6 +449,14 @@ void gnrc_ndp_nbr_adv_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
                 }
             }
         }
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_cga_params_build(src, netif, pkt))) {
+                break;
+            }
+            pkt = hdr;
+        }
         /* add neighbor advertisement header */
         hdr = gnrc_ndp_nbr_adv_build(tgt, adv_flags, pkt);
         if (hdr == NULL) {
@@ -416,6 +464,14 @@ void gnrc_ndp_nbr_adv_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
             break;
         }
         pkt = hdr;
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_signature_build(pkt, netif, src, dst))) {
+                break;
+            }
+            pkt = gnrc_pkt_append(pkt, hdr);
+        }
         /* add remaining headers */
         hdr = _build_headers(netif, src, &real_dst, pkt);
         if (hdr == NULL) {
@@ -468,6 +524,21 @@ void gnrc_ndp_rtr_sol_send(gnrc_netif_t *netif, const ipv6_addr_t *dst)
         else {
             src = &ipv6_addr_unspecified;
         }
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF) {
+            if (!(hdr = gnrc_send_nonce_build(NULL, GNRC_SEND_NONCE_SIZE, pkt))) {
+                break;
+            }
+            gnrc_send_nonce_get(gnrc_send_opt_nonce_get_nonce((ndp_opt_nonce_t *)hdr->data));
+            pkt = hdr;
+            if (!ipv6_addr_is_unspecified(src) &&
+                gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+                if (!(hdr = gnrc_send_cga_params_build(src, netif, pkt))) {
+                    break;
+                }
+                pkt = hdr;
+            }
+        }
         /* add router solicitation header */
         hdr = gnrc_ndp_rtr_sol_build(pkt);
         if (hdr == NULL) {
@@ -475,6 +546,15 @@ void gnrc_ndp_rtr_sol_send(gnrc_netif_t *netif, const ipv6_addr_t *dst)
             break;
         }
         pkt = hdr;
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF &&
+            !ipv6_addr_is_unspecified(src) &&
+            gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            if (!(hdr = gnrc_send_signature_build(pkt, netif, src, dst))) {
+                break;
+            }
+            pkt = gnrc_pkt_append(pkt, hdr);
+        }
         /* add remaining headers */
         hdr = _build_headers(netif, src, dst, pkt);
         if (hdr == NULL) {
@@ -528,6 +608,23 @@ void gnrc_ndp_rtr_adv_send(gnrc_netif_t *netif, const ipv6_addr_t *src,
         if (!src && !(src = gnrc_netif_ipv6_addr_best_src(netif, dst, true))) {
             DEBUG("ndp rtr: no VALID source address found for RA\n");
             break;
+        }
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF &&
+            !gnrc_netif_ipv6_addr_is_cga(netif, src)) {
+            /* A SEND node MUST send a secured advertisement in response to a
+               secured solicitation. Advertisements sent in response to an
+               unsecured solicitation MUST be secured as well, but MUST NOT
+               contain the Nonce option. */
+            DEBUG("ndp: No source address to reply RA\n");
+            break;
+        }
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF) {
+            if (!(hdr = gnrc_send_cga_params_build(src, netif, pkt))) {
+                break;
+            }
+            pkt = hdr;
         }
         /* add SL2A for source address */
         DEBUG(" - SL2A\n");
@@ -583,6 +680,13 @@ void gnrc_ndp_rtr_adv_send(gnrc_netif_t *netif, const ipv6_addr_t *src,
             break;
         }
         pkt = hdr;
+        if (IS_USED(MODULE_GNRC_SEND) &&
+            gnrc_ipv6_nib_send_get_mode(netif) != GNRC_NIB_IPV6_SEND_MODE_OFF) {
+            if (!(hdr = gnrc_send_signature_build(pkt, netif, src, dst))) {
+                break;
+            }
+            pkt = gnrc_pkt_append(pkt, hdr);
+        }
         hdr = _build_headers(netif, src, dst, pkt);
         if (hdr == NULL) {
             DEBUG("ndp: error adding lower-layer headers.\n");

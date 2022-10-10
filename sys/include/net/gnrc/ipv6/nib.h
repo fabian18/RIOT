@@ -29,6 +29,7 @@
 #include "net/gnrc/ipv6/nib/ft.h"
 #include "net/gnrc/ipv6/nib/nc.h"
 #include "net/gnrc/ipv6/nib/pl.h"
+#include "net/gnrc/ipv6/nib/send.h"
 
 #include "net/icmpv6.h"
 #include "net/ipv6/addr.h"
@@ -243,6 +244,16 @@ extern "C" {
  * @brief   Interface down event
  */
 #define GNRC_IPV6_NIB_IFACE_DOWN            (0x4fd5U)
+
+/**
+ * @brief   Triggers a Certificate Path Solicitation retransmission
+ */
+#define GNRC_IPV6_NIB_SEND_CP_SOL           (0x4fd6U)
+
+/**
+ * @brief   Triggers a Certificate Path Advertisement transmission of one component
+ */
+#define GNRC_IPV6_NIB_SEND_CP_ADV           (0x4fd7U)
 /** @} */
 
 /**

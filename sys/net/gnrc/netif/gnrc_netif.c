@@ -21,8 +21,10 @@
 #include <kernel_defines.h>
 
 #include "bitfield.h"
+#include "cib.h"
 #include "event.h"
 #include "net/ethernet.h"
+#include "net/gnrc/send.h"
 #include "net/ipv6.h"
 #include "net/gnrc.h"
 #include "net/gnrc/ipv6/nib.h"
@@ -1610,6 +1612,16 @@ static void _cga_ctx_init(gnrc_netif_t *netif)
 #endif
 }
 
+static void _send_ctx_init(gnrc_netif_t *netif)
+{
+    (void)netif;
+#if IS_USED(MODULE_GNRC_SEND)
+    gnrc_send_ctx_t *ctx = gnrc_netif_ipv6_get_send_ctx(&netif->ipv6);
+    memset(ctx, 0, sizeof(*ctx));
+    cib_init(&ctx->last_cp_adv.cib, ARRAY_SIZE(ctx->last_cp_adv.ts));
+#endif
+}
+
 int gnrc_netif_default_init(gnrc_netif_t *netif)
 {
     netdev_t *dev = netif->dev;
@@ -1624,6 +1636,7 @@ int gnrc_netif_default_init(gnrc_netif_t *netif)
     _check_netdev_capabilities(dev);
     _init_from_device(netif);
     _cga_ctx_init(netif);
+    _send_ctx_init(netif);
 #ifdef DEVELHELP
     _test_options(netif);
 #endif

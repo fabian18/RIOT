@@ -19,10 +19,12 @@
 #include "net/gnrc/netif/internal.h"
 #include "net/gnrc/ipv6/nib.h"
 #include "net/gnrc/ndp.h"
+#include "net/gnrc/send.h"
 
 #include "_nib-6ln.h"
 #include "_nib-6lr.h"
 #include "_nib-aac.h"
+#include "_nib-send.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
@@ -246,7 +248,8 @@ void _handle_rereg_address(ipv6_addr_t *addr)
 }
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
-_nib_abr_entry_t *_handle_abro(const sixlowpan_nd_opt_abr_t *abro)
+_nib_abr_entry_t *_handle_abro(const icmpv6_hdr_t *icmpv6,
+                               const sixlowpan_nd_opt_abr_t *abro)
 {
     _nib_abr_entry_t *abr = NULL;
 
@@ -254,8 +257,20 @@ _nib_abr_entry_t *_handle_abro(const sixlowpan_nd_opt_abr_t *abro)
         /* ignore silently */
         return NULL;
     }
-    abr = _nib_abr_add(&abro->braddr);
+    int sec = gnrc_send_remove_status((const void **)&icmpv6);
+    abr = _nib_abr_add(&abro->braddr,
+                       GNRC_SEND_SECURED(sec) ? _ABR_SECURED : 0);
     if (abr != NULL) {
+        if (IS_USED(GNRC_MODULE_SEND)) {
+            if (sec != GNRC_SEND_STATUS_OK && abr->flags & _ABR_SECURED) {
+                DEBUG("nib: Don´t update secure ABR entry from unsecured message\n");
+                return NULL;
+            }
+            if (sec == GNRC_SEND_STATUS_OK) {
+                DEBUG("nib: Setting ABR secured\n");
+                abr->flags |= _ABR_SECURED;
+            }
+        }
         uint32_t abro_version = sixlowpan_nd_opt_abr_get_version(abro);
         /* correct for default value */
         uint32_t ltime_ms = MS_PER_SEC * SEC_PER_MIN *
@@ -272,14 +287,9 @@ _nib_abr_entry_t *_handle_abro(const sixlowpan_nd_opt_abr_t *abro)
 }
 #endif /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
 
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
 uint32_t _handle_6co(const icmpv6_hdr_t *icmpv6,
-                     const sixlowpan_nd_opt_6ctx_t *sixco,
-                     _nib_abr_entry_t *abr)
-#else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
-uint32_t _handle_6co(const icmpv6_hdr_t *icmpv6,
-                     const sixlowpan_nd_opt_6ctx_t *sixco)
-#endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
+                     const sixlowpan_nd_opt_6ctx_t *sixco
+                     GNRC_IPV6_NIB_6LN_MULTIHOP_ARG(, _nib_abr_entry_t *abr))
 {
     uint16_t ltime;
 

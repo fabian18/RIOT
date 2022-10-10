@@ -134,6 +134,11 @@ extern "C" {
  * @brief   Address was added manually
  */
 #define GNRC_IPV6_NIB_NC_INFO_AR_STATE_MANUAL           (0x0600)
+
+/**
+ * @brief   NC entry has been created from SEND secured messages
+ */
+#define GNRC_IPV6_NIB_NC_INFO_SECURED                   (0x0800)
 /** @} */
 
 /**
