@@ -47,6 +47,13 @@
 #define ENABLE_DEBUG_CRYPTO     0
 #include "debug.h"
 
+#ifdef TEST_SUITES
+/* In unittests some functions are overloaded to not depend on VFS */
+#define _ATTRIBUTE_WEAK         __attribute__((weak))
+#else
+#define _ATTRIBUTE_WEAK
+#endif
+
 #define DEBUG_GNRC_SEND(s, ...)  DEBUG("[SEND GNRC] function %s: " s, __func__, ## __VA_ARGS__)
 
 #define DEBUG_GNRC_SEND_CRYPTO(s, ...)  if (ENABLE_DEBUG_CRYPTO) { \
@@ -198,6 +205,7 @@ void gnrc_send_clear_cp_vfs(void)
     } while (read > 0);
 }
 
+_ATTRIBUTE_WEAK
 int gnrc_send_load_ta(gnrc_send_crt_t *crt, unsigned crt_max,
                       gnrc_send_ta_t *ta, unsigned ta_max)
 {
@@ -254,6 +262,7 @@ int gnrc_send_load_ta(gnrc_send_crt_t *crt, unsigned crt_max,
     return ret;
 }
 
+_ATTRIBUTE_WEAK
 int gnrc_send_load_crt(gnrc_send_crt_t *crt, unsigned crt_max)
 {
     int ret, plen;
@@ -300,6 +309,7 @@ int gnrc_send_load_crt(gnrc_send_crt_t *crt, unsigned crt_max)
     return ret;
 }
 
+_ATTRIBUTE_WEAK
 int gnrc_send_load_cp(gnrc_send_crt_t *crt, unsigned crt_max,
                       gnrc_send_cp_t *cp, unsigned cp_max)
 {
@@ -409,6 +419,7 @@ skip: ;
     return ret;
 }
 
+_ATTRIBUTE_WEAK
 int gnrc_send_load_keys(gnrc_send_key_t *key, void *key_buf, size_t key_buf_size)
 {
     int ret, key_len;

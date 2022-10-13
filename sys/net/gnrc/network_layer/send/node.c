@@ -51,24 +51,31 @@
 #include "send_internal.h"
 #include "net/gnrc/send.h"
 
-static uint8_t _k_buf[GNRC_SEND_KEY_BUF_SIZE];
-static gnrc_send_key_t _key_meta[1];
+#ifdef TEST_SUITES
+/* In unittests node variables are initialized by hand and not loaded from VFS */
+#define _STATIC
+#else
+#define _STATIC             static
+#endif
+
+_STATIC uint8_t _k_buf[GNRC_SEND_KEY_BUF_SIZE];
+_STATIC gnrc_send_key_t _key_meta[1];
 
 static unsigned _crt_numof;
-static gnrc_send_crt_t _crt_meta[GNRC_SEND_CRT_NUMOF];
+_STATIC gnrc_send_crt_t _crt_meta[GNRC_SEND_CRT_NUMOF];
 
 static unsigned _ta_numof;
-static gnrc_send_ta_t _ta_meta[GNRC_SEND_TA_NUMOF];
+_STATIC gnrc_send_ta_t _ta_meta[GNRC_SEND_TA_NUMOF];
 
 static mutex_t _cp_mutex = MUTEX_INIT;
 static unsigned _cp_numof;
-static gnrc_send_cp_t _cp_meta[GNRC_SEND_CP_NUMOF];
+_STATIC gnrc_send_cp_t _cp_meta[GNRC_SEND_CP_NUMOF];
 
 static mutex_t _cert_mutex = MUTEX_INIT;
 static uint8_t _cert_verify_buf[GNRC_SEND_CRT_BUF_SIZE];
 static gnrc_send_x509_crt_t _cert_verify_chain[2];
 
-static gnrc_send_ident_t _gnrc_send_self_ident;
+_STATIC gnrc_send_ident_t _gnrc_send_self_ident;
 
 void gnrc_send_init_node(void)
 {
