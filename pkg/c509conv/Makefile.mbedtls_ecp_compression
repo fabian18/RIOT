@@ -1,0 +1,5 @@
+MODULE:=c509conv_mbedtls_ecp_compression
+
+SRC:=$(filter-out test.c,$(wildcard *.c))
+
+include $(RIOTBASE)/Makefile.base

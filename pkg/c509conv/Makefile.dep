@@ -1,0 +1,8 @@
+USEPKG += nanocbor
+USEPKG += mbedtls
+USEMODULE += mbedtls_asn1_parse
+USEMODULE += mbedtls_asn1_write
+
+ifneq (,$(filter c509conv_c509,$(USEMODULE)))
+  USEMODULE += c509conv_mbedtls_ecp_compression
+endif

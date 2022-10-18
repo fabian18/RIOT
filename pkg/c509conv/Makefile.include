@@ -1,0 +1,4 @@
+INCLUDES += -I$(PKGDIRBASE)/c509conv/c509/include
+
+# real modules are c509conv_c509 and c509conv_mbedtls_ecp_compression
+PSEUDOMODULES += c509conv
