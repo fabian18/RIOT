@@ -76,6 +76,9 @@ PKG_PREPARED   = $(PKG_STATE)-prepared
 PKG_PATCHED    = $(PKG_STATE)-patched
 PKG_DOWNLOADED = $(PKG_STATE)-downloaded
 
+# init and update git submodules
+PKG_HAS_SUBMODULES ?= 0
+
 # Custom prepared target that can be defined in packages Makefile.
 PKG_CUSTOM_PREPARED ?=
 
@@ -134,6 +137,9 @@ $(PKG_SOURCE_DIR)/.git: | $(PKG_CUSTOM_PREPARED)
 	$(Q)rm -Rf $(PKG_SOURCE_DIR)
 	$(Q)mkdir -p $(PKG_SOURCE_DIR)
 	$(Q)$(GITCACHE) clone $(PKG_URL) $(PKG_VERSION) $(PKG_SOURCE_DIR)
+	$(Q)if [ $(PKG_HAS_SUBMODULES) -ne 0 ]; then \
+		$(GIT_IN_PKG) submodule update --init --recursive; \
+	fi
 else
 # redirect stderr so git sees a pipe and not a terminal see https://github.com/git/git/blob/master/progress.c#L138
 $(PKG_SOURCE_DIR)/.git: | $(PKG_CUSTOM_PREPARED)
@@ -146,6 +152,9 @@ $(PKG_SOURCE_DIR)/.git: | $(PKG_CUSTOM_PREPARED)
 	$(Q)$(GIT_IN_PKG) config advice.detachedHead false
 	$(Q)$(GIT_IN_PKG) fetch $(GIT_QUIET) --depth=1 -t --filter=blob:none origin $(PKG_VERSION)
 	$(Q)$(GIT_IN_PKG) checkout $(GIT_QUIET) $(PKG_VERSION) 2>&1 | cat
+	$(Q)if [ $(PKG_HAS_SUBMODULES) -ne 0 ]; then \
+		$(GIT_IN_PKG) submodule update --init --recursive; \
+	fi
 endif
 
 ifeq ($(PKG_SOURCE_DIR),$(PKG_BUILD_DIR))
