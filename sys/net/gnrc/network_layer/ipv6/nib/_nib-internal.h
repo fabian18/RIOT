@@ -298,6 +298,47 @@ static inline void _nib_onl_set_if(_nib_onl_entry_t *node, unsigned iface)
 }
 
 /**
+ * @brief   Looks up if an event is queued in the event timer
+ *
+ * @param[in] ctx   Context of the event. May be NULL for any event context.
+ * @param[in] type  [Type of the event](@ref net_gnrc_ipv6_nib_msg).
+ *
+ * @return  Milliseconds to the event, if event in queue.
+ * @return  UINT32_MAX, event is not in queue.
+ */
+uint32_t _evtimer_lookup(const void *ctx, uint16_t type);
+
+/**
+ * @brief   Removes an event from the event timer
+ *
+ * @param[in] event Representation of the event.
+ */
+void _evtimer_del(evtimer_msg_event_t *event);
+
+/**
+ * @brief   Adds an event to the event timer
+ *
+ * @param[in] ctx       The context of the event
+ * @param[in] type      [Type of the event](@ref net_gnrc_ipv6_nib_msg).
+ * @param[in,out] event Representation of the event.
+ * @param[in] offset    Offset in milliseconds to the event.
+ * @param[in] stype     @p type as a string
+ */
+void _evtimer_add_dbg(void *ctx, int16_t type,
+                      evtimer_msg_event_t *event, uint32_t offset,
+                      const char *stype);
+
+/**
+ * @brief   Use this macro instead of @ref _evtimer_add_dbg
+ *
+ * @param[in] ctx       The context of the event
+ * @param[in] type      [Type of the event](@ref net_gnrc_ipv6_nib_msg).
+ * @param[in,out] event Representation of the event.
+ * @param[in] offset    Offset in milliseconds to the event.
+ */
+#define _evtimer_add(ctx, type, event, offset) _evtimer_add_dbg(ctx, type, event, offset, #type)
+
+/**
  * @brief   Creates or gets an existing on-link entry by address
  *
  * @param[in] addr  An IPv6 address. May be NULL (to be pointed to by a prefix
@@ -822,47 +863,6 @@ void _nib_ft_get(const _nib_offl_entry_t *dst, gnrc_ipv6_nib_ft_t *fte);
  */
 int _nib_get_route(const ipv6_addr_t *dst, gnrc_pktsnip_t *ctx,
                    gnrc_ipv6_nib_ft_t *entry);
-
-/**
- * @brief   Looks up if an event is queued in the event timer
- *
- * @param[in] ctx   Context of the event. May be NULL for any event context.
- * @param[in] type  [Type of the event](@ref net_gnrc_ipv6_nib_msg).
- *
- * @return  Milliseconds to the event, if event in queue.
- * @return  UINT32_MAX, event is not in queue.
- */
-uint32_t _evtimer_lookup(const void *ctx, uint16_t type);
-
-/**
- * @brief   Removes an event from the event timer
- *
- * @param[in] event Representation of the event.
- */
-void _evtimer_del(evtimer_msg_event_t *event);
-
-/**
- * @brief   Adds an event to the event timer
- *
- * @param[in] ctx       The context of the event
- * @param[in] type      [Type of the event](@ref net_gnrc_ipv6_nib_msg).
- * @param[in,out] event Representation of the event.
- * @param[in] offset    Offset in milliseconds to the event.
- * @param[in] stype     @p type as a string
- */
-void _evtimer_add_dbg(void *ctx, int16_t type,
-                      evtimer_msg_event_t *event, uint32_t offset,
-                      const char *stype);
-
-/**
- * @brief   Use this macro instead of @ref _evtimer_add_dbg
- *
- * @param[in] ctx       The context of the event
- * @param[in] type      [Type of the event](@ref net_gnrc_ipv6_nib_msg).
- * @param[in,out] event Representation of the event.
- * @param[in] offset    Offset in milliseconds to the event.
- */
-#define _evtimer_add(ctx, type, event, offset) _evtimer_add_dbg(ctx, type, event, offset, #type)
 
 #ifdef __cplusplus
 }
