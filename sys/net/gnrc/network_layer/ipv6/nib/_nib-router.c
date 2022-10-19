@@ -14,6 +14,7 @@
  */
 
 #include <assert.h>
+#include <inttypes.h>
 #include <kernel_defines.h>
 
 #include "net/gnrc/ipv6/nib.h"

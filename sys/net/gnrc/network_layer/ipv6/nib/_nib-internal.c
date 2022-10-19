@@ -26,6 +26,7 @@
 #include "net/gnrc/ipv6/nib.h"
 #include "net/gnrc/netif/internal.h"
 #include "random.h"
+#include "evtimer_msg.h"
 
 #include "_nib-internal.h"
 #include "_nib-router.h"
@@ -78,6 +79,31 @@ void _nib_acquire(void)
 void _nib_release(void)
 {
     rmutex_unlock(&_nib_mutex);
+}
+
+void _evtimer_del(evtimer_msg_event_t *event)
+{
+    DEBUG("nib: Remove timer event %p\n", (void *)event);
+    evtimer_del(&_nib_evtimer, &event->event);
+}
+
+void _evtimer_add_dbg(void *ctx, int16_t type,
+                      evtimer_msg_event_t *event, uint32_t offset,
+                      const char *stype)
+{
+#ifdef MODULE_GNRC_IPV6
+    kernel_pid_t target_pid = gnrc_ipv6_pid;
+#else
+    kernel_pid_t target_pid = KERNEL_PID_LAST;  /* just for testing */
+#endif
+    _evtimer_del(event);
+    event->event.next = NULL;
+    event->event.offset = offset;
+    event->msg.type = type;
+    event->msg.content.ptr = ctx;
+    DEBUG("nib: Add event %p, ctx=%p, type=%s, offset=%"PRIu32"ms\n",
+          (void *)event, ctx, stype, offset);
+    evtimer_add_msg(&_nib_evtimer, event, target_pid);
 }
 
 static inline bool _addr_equals(const ipv6_addr_t *addr,
