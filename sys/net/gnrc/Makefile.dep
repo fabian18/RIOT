@@ -325,6 +325,10 @@ ifneq (,$(filter gnrc_send,$(USEMODULE)))
   USEMODULE += mbedtls_sha256
   USEMODULE += mbedtls_sha1
   USEPKG += libbase58
+  ifneq (,$(filter gnrc_send_c509,$(USEMODULE)))
+    USEPKG += c509conv
+    USEMODULE += c509conv_c509
+  endif
 endif
 
 ifneq (,$(filter gnrc_icmpv6_echo,$(USEMODULE)))

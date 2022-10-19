@@ -38,12 +38,15 @@
 #include "vfs.h"
 #include "vfs_default.h"
 #include "vfs_util.h"
+#if IS_USED(MODULE_GNRC_SEND_C509)
+#include "c509.h"
+#endif
 
 #include "send_conf.h"
 #include "send_internal.h"
 #include "x509_ip_extn.h"
 
-#define ENABLE_DEBUG            0
+#define ENABLE_DEBUG            1
 #define ENABLE_DEBUG_CRYPTO     0
 #include "debug.h"
 
@@ -248,6 +251,13 @@ int gnrc_send_load_ta(gnrc_send_crt_t *crt, unsigned crt_max,
         memcpy(ta->name,
                gnrc_send_x509_get_subject(x509),
                (ta->name_size = gnrc_send_x509_get_subject_size(x509)));
+#if IS_USED(MODULE_GNRC_SEND_C509)
+        if ((ret = x509_to_c509_enc_subject(ta->name_cbor, sizeof(ta->name_cbor),
+                                            ta->name, ta->name_size)) < 0) {
+            continue;
+        }
+        ta->name_cbor_size = ret;
+#endif
         ta->crt = crt;
         gnrc_send_crt_init(ta->crt, x509);
         ta->crt->extn = extn;
@@ -1036,9 +1046,17 @@ int gnrc_send_cp_sol_send(gnrc_netif_t *netif,
     /* add TA options that the client is willing to accept certificates from */
     gnrc_send_ta_iter_t iter = gnrc_send_ta_acquire();
     while ((gnrc_send_ta_iterator(&iter))) {
-        if ((hdr = gnrc_send_trust_anchor_build(iter.ta, NDP_TA_TYPE_DER, pkt))) {
+#if IS_USED(MODULE_GNRC_SEND_C509)
+        if ((hdr = gnrc_ndp_opt_trust_anchor_build(iter.ta->name_cbor, iter.ta->name_cbor_size,
+                                                   NDP_TA_TYPE_CBOR, pkt))) {
             pkt = hdr;
         }
+#else
+        if ((hdr = gnrc_ndp_opt_trust_anchor_build(iter.ta->name, iter.ta->name_size,
+                                                   NDP_TA_TYPE_DER, pkt))) {
+            pkt = hdr;
+        }
+#endif
     }
     gnrc_send_ta_release();
     if (!(hdr = gnrc_ndp_cp_sol_build(0, comp, pkt))) {
@@ -1097,9 +1115,17 @@ int gnrc_send_cp_adv_send(gnrc_netif_t *netif,
         }
         /* add TA option if the first component was requested */
         if (comp == cp->num_comp - 1) {
-            if (!(hdr = gnrc_ndp_opt_trust_anchor_build(cp->ta->name, cp->ta->name_size, NDP_TA_TYPE_DER, pkt))) {
+#if IS_USED(MODULE_GNRC_SEND_C509)
+            if (!(hdr = gnrc_ndp_opt_trust_anchor_build(cp->ta->name_cbor, cp->ta->name_cbor_size,
+                                                        NDP_TA_TYPE_CBOR, pkt))) {
                 goto release;
             }
+#else
+            if (!(hdr = gnrc_ndp_opt_trust_anchor_build(cp->ta->name, cp->ta->name_size,
+                                                        NDP_TA_TYPE_DER, pkt))) {
+                goto release;
+            }
+#endif
             pkt = hdr;
         }
         if (comp) {
@@ -1119,6 +1145,29 @@ int gnrc_send_cp_adv_send(gnrc_netif_t *netif,
                     gnrc_pktbuf_release(pkt);
                     return -ENOENT;
                 }
+#if IS_USED(MODULE_GNRC_SEND_C509)
+                {
+                    size_t size;
+                    void *buf;
+                    gnrc_send_x509_crt_t *x509 = gnrc_send_x509_acquire(&size, &buf);
+                    int ret = gnrc_send_load_x509(path, buf, size, x509, NULL);
+                    if (ret < 0) {
+                        gnrc_send_x509_release();
+                        goto release;
+                    }
+                    void *c = ((uint8_t *)buf) + ret;
+                    if ((ret = x509_to_c509(c, size - ret, buf, ret)) < 0) {
+                        gnrc_send_x509_release();
+                        goto release;
+                    }
+                    if (!(hdr = gnrc_ndp_opt_certificate_build(c, ret, NDP_CERT_TYPE_CBOR, pkt))) {
+                        gnrc_send_x509_release();
+                        goto release;
+                    }
+                    pkt = hdr;
+                    gnrc_send_x509_release();
+                }
+#else
                 if (!(hdr = gnrc_ndp_opt_certificate_build(NULL, st.st_size, NDP_CERT_TYPE_DER, pkt))) {
                     goto release;
                 }
@@ -1126,6 +1175,7 @@ int gnrc_send_cp_adv_send(gnrc_netif_t *netif,
                 if (vfs_file_to_buffer(path, ((ndp_opt_cert_t *)pkt->data) + 1, pkt->size - sizeof(ndp_opt_cert_t)) < 0) {
                     goto release;
                 }
+#endif
             }
             else {
                 assert(crt->crt_inmem.zero == 0);

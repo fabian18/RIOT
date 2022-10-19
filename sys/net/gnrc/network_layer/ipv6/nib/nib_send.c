@@ -37,8 +37,12 @@
 #include "_nib-send.h"
 #include "net/ipv6/addr.h"
 #include "fmt.h"
+#include "net/send.h"
 #include "vfs.h"
 #include "vfs_util.h"
+#if IS_USED(MODULE_GNRC_SEND_C509)
+#include "c509.h"
+#endif
 
 #include "_nib-arsm.h"
 #include "send_conf.h"
@@ -662,6 +666,10 @@ static const gnrc_send_ta_t *_handle_ta(const icmpv6_hdr_t *icmpv6, const ndp_op
         return gnrc_send_get_ta_by_fqdn(gnrc_send_opt_ta_get_name(ta_opt),
                                         gnrc_send_opt_ta_get_name_size(ta_opt));
     }
+    else if (ta_opt->name_type == NDP_TA_TYPE_CBOR) {
+        return gnrc_send_get_ta_by_name_cbor(gnrc_send_opt_ta_get_name(ta_opt),
+                                             gnrc_send_opt_ta_get_name_size(ta_opt));
+    }
     return NULL;
 }
 
@@ -676,7 +684,12 @@ void gnrc_ipv6_nib_send_handle_cp_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv
     ndp_opt_ta_t *ta_opt = NULL;
     FOREACH_OPT(cp_sol, opt, icmpv6_len - sizeof(ndp_cp_sol_t)) {
         if (opt->type == NDP_OPT_TRUST_ANCHOR) {
-            if (!ta_opt && ((ndp_opt_ta_t *)opt)->name_type != NDP_TA_TYPE_DER) {
+            if (IS_USED(MODULE_GNRC_SEND_C509)) {
+                if (!ta_opt && ((ndp_opt_ta_t *)opt)->name_type != NDP_TA_TYPE_CBOR) {
+                    DEBUG_NIB_SEND("Warning: First Ta option in CPS is not CBOR encoded.\n");
+                }
+            }
+            else if (!ta_opt && ((ndp_opt_ta_t *)opt)->name_type != NDP_TA_TYPE_DER) {
                 DEBUG_NIB_SEND("Warning: First Ta option in CPS is not DER encoded.\n");
             }
             ta_opt = (ndp_opt_ta_t *)opt;
@@ -780,7 +793,8 @@ static int _handle_cert(const icmpv6_hdr_t *icmpv6, const ndp_opt_cert_t *cert_o
     size_t size;
     uint8_t *buf;
     gnrc_send_x509_extn_t extn = { .ip_block_numof = 0 };
-    if (cert_opt->cert_type != NDP_CERT_TYPE_DER) {
+    if (cert_opt->cert_type != NDP_CERT_TYPE_DER &&
+        cert_opt->cert_type != NDP_CERT_TYPE_CBOR) {
         DEBUG_NIB_SEND("Unsupprted certificate type\n");
         return -EINVAL;
     }
@@ -791,6 +805,16 @@ static int _handle_cert(const icmpv6_hdr_t *icmpv6, const ndp_opt_cert_t *cert_o
         return -ENOBUFS;
     }
     memcpy(buf, gnrc_send_opt_cert_get_cert(cert_opt), cert_size);
+    if (cert_opt->cert_type == NDP_CERT_TYPE_CBOR) {
+#if IS_USED(MODULE_GNRC_SEND_C509)
+        void *x = ((uint8_t *)buf) + cert_size;
+        if ((ret = c509_to_x509(x, size - cert_size, buf, cert_size)) < 0) {
+            DEBUG_NIB_SEND("Certificate C509 conversion failed\n");
+            return -EINVAL;
+        }
+        memmove(buf, x, ret);
+#endif
+    }
     if ((ret = gnrc_send_load_x509(NULL, buf, size, x509, &extn) < 0)) {
         gnrc_send_x509_release();
         return ret;

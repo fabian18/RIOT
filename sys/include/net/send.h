@@ -242,6 +242,10 @@ typedef struct __attribute__((packed)) {
  * @brief   Trust anchor is an FQDN string
  */
 #define SEND_OPT_TA_NAME_TYPE_FQDN      (2u)
+/**
+ * @brief   Trust anchor is CBOR encoded
+ */
+#define SEND_OPT_TA_NAME_TYPE_CBOR      (255u)
 /** @} */
 
 /**
@@ -250,6 +254,7 @@ typedef struct __attribute__((packed)) {
 typedef enum {
     NDP_TA_TYPE_DER = SEND_OPT_TA_NAME_TYPE_DER,    /**< @ref SEND_OPT_TA_NAME_TYPE_DER */
     NDP_TA_TYPE_FQDN = SEND_OPT_TA_NAME_TYPE_FQDN,  /**< @ref SEND_OPT_TA_NAME_TYPE_FQDN */
+    NDP_TA_TYPE_CBOR = SEND_OPT_TA_NAME_TYPE_CBOR,  /**< @ref SEND_OPT_TA_NAME_TYPE_CBOR */
 } ndp_ta_name_type_t;
 
 /**

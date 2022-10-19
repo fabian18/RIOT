@@ -50,6 +50,9 @@
 #include "mutex.h"
 #include "send_internal.h"
 #include "net/gnrc/send.h"
+#if IS_USED(MODULE_GNRC_SEND_C509)
+#include "c509.h"
+#endif
 
 #ifdef TEST_SUITES
 /* In unittests node variables are initialized by hand and not loaded from VFS */
@@ -167,6 +170,20 @@ const gnrc_send_ta_t *gnrc_send_get_ta_by_name(const void *name, size_t nsize)
 const gnrc_send_ta_t *gnrc_send_get_ta_by_fqdn(const char *fqdn, size_t len)
 {
     (void)fqdn; (void)len;
+    return NULL;
+}
+
+const gnrc_send_ta_t *gnrc_send_get_ta_by_name_cbor(const char *name, size_t len)
+{
+#if IS_USED(MODULE_GNRC_SEND_C509)
+    uint8_t der[GNRC_SEND_NAME_BUF_SIZE];
+    int ret;
+    if ((ret = c509_to_x509_enc_subject(der, sizeof(der), name, len)) < 0) {
+        return NULL;
+    }
+    return gnrc_send_get_ta_by_name(der, ret);
+#endif
+    (void)name; (void)len;
     return NULL;
 }
 

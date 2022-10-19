@@ -214,6 +214,10 @@ struct gnrc_send_ta {
     size_t name_size;                           /**< Subject name size */
     uint8_t pk[GNRC_SEND_ECDSA_PK_DER_MAX];     /**< Buffer to store the public key */
     uint8_t name[GNRC_SEND_NAME_DER_MAX];       /**< Buffer to store the subject name */
+#if IS_USED(MODULE_GNRC_SEND_C509)
+    uint8_t name_cbor[GNRC_SEND_NAME_BUF_SIZE / 2]; /**< Buffer to store the CBOR encoded subject name */
+    size_t name_cbor_size;                          /**< Subject name size in CBOR encoding */
+#endif
 };
 
 /**
@@ -703,6 +707,16 @@ const struct gnrc_send_ta *gnrc_send_get_ta_by_name(const void *name, size_t nsi
  * @return  NULL or found trust anchor
  */
 const struct gnrc_send_ta *gnrc_send_get_ta_by_fqdn(const char *fqdn, size_t len);
+
+/**
+ * @brief   Find a trust anchor by CBOR encoded name
+ *
+ * @param[in]       name         CBOR encoded name
+ * @param[in]       nsize        Name size
+ *
+ * @return  NULL or found trust anchor
+ */
+const struct gnrc_send_ta *gnrc_send_get_ta_by_name_cbor(const char *name, size_t nsize);
 
 /**
  * @brief   Find a trust anchor by a subject name identity
