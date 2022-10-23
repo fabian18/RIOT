@@ -123,8 +123,12 @@ uint8_t _handle_aro(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
  * @brief   Handler for @ref GNRC_IPV6_NIB_REREG_ADDRESS event handler
  *
  * @param[in] addr  An IPv6 address.
+ *
+ * @pre     @p addr must point into the address array of @ref gnrc_netif_ipv6_t
+ *          and the pointer must have been tagged with the index, using
+ *          @ref gnrc_netif_ipv6_set_addr_index()
  */
-void _handle_rereg_address(const ipv6_addr_t *addr);
+void _handle_rereg_address(ipv6_addr_t *addr);
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C) || defined(DOXYGEN)
 _nib_abr_entry_t *_handle_abro(const sixlowpan_nd_opt_abr_t *abro);
@@ -141,7 +145,7 @@ uint32_t _handle_6co(const icmpv6_hdr_t *icmpv6,
  * => throw error in case it is compiled in => don't define it here as NOP macro
  */
 #define _get_next_rs_interval(netif)                (NDP_RS_MS_INTERVAL)
-#define _handle_rereg_address(netif)                (void)netif
+#define _handle_rereg_address(addr)                 (void)addr
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C) || defined(DOXYGEN)
 #define _handle_abro(abro)                          (NULL)
 #define _handle_6co(icmpv6, sixco, abr)             (UINT32_MAX)

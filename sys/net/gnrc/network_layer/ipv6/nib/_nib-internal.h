@@ -103,6 +103,14 @@ typedef struct _nib_onl_entry {
      * @brief Neighbors IPv6 address
      */
     ipv6_addr_t ipv6;
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN) || defined(DOXYGEN)
+    /**
+     * @brief   Source address used to probe this neighbor
+     *
+     * @note    Only available if @ref CONFIG_GNRC_IPV6_NIB_6LR != 0.
+     */
+    ipv6_addr_t probe;
+#endif
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LR) || defined(DOXYGEN)
     /**
      * @brief   The neighbors EUI-64 (used for DAD)

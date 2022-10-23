@@ -93,6 +93,7 @@ uint8_t _handle_aro(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
               aro->eui64.uint8[3], aro->eui64.uint8[4], aro->eui64.uint8[5],
               aro->eui64.uint8[6], aro->eui64.uint8[7]);
         if (icmpv6->type == ICMPV6_NBR_ADV) {
+            assert(nce);
             if (!_is_iface_eui64(netif, &aro->eui64)) {
                 DEBUG("nib: ARO EUI-64 is not mine, ignoring ARO\n");
                 return _ADDR_REG_STATUS_IGNORE;
@@ -102,55 +103,77 @@ uint8_t _handle_aro(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                     uint16_t ltime = byteorder_ntohs(aro->ltime);
                     uint32_t rereg_time;
                     int idx = gnrc_netif_ipv6_addr_idx(netif, &ipv6->dst);
-
                     if (idx < 0) {
-                        DEBUG("nib: Address %s is not assigned to interface "
-                              "%d ignoring ARO\n",
-                              ipv6_addr_to_str(addr_str, &ipv6->dst,
-                                               sizeof(addr_str)), netif->pid);
+                        DEBUG("nib: Address %s is not assigned to interface %d. "
+                              "Ignoring ARO.\n",
+                              ipv6_addr_to_str(addr_str, &ipv6->dst, sizeof(addr_str)),
+                              netif->pid);
                         return _ADDR_REG_STATUS_IGNORE;
                     }
-                    /* if ltime 1min, reschedule NS in 30sec, otherwise 1min
-                     * before timeout */
-                    rereg_time = (ltime == 1U) ? (30 * MS_PER_SEC) :
-                                 (ltime - 1U) * SEC_PER_MIN * MS_PER_SEC;
+                    if (ltime > 0) {
+                        /* if ltime 1min, reschedule NS in 30sec, otherwise 1min
+                         * before timeout */
+                        rereg_time = (ltime == 1U) ? (30 * MS_PER_SEC) :
+                                     (ltime - 1U) * SEC_PER_MIN * MS_PER_SEC;
+                    }
+                    else {
+                        DEBUG("nib: ARO lifetime in NA is not supposed to be 0. "
+                              "Ignoring ARO.\n");
+                        return _ADDR_REG_STATUS_IGNORE;
+                    }
                     DEBUG("nib: Address registration of %s successful. "
                           "Scheduling re-registration in %" PRIu32 "ms\n",
                           ipv6_addr_to_str(addr_str, &ipv6->dst,
                                            sizeof(addr_str)), rereg_time);
                     _handle_valid_addr(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[idx], idx));
-                    _evtimer_add(&netif->ipv6.addrs[idx],
+                    _evtimer_add(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[idx], idx),
                                  GNRC_IPV6_NIB_REREG_ADDRESS,
                                  &netif->ipv6.addrs_timers[idx],
                                  rereg_time);
                     break;
                 }
-                case SIXLOWPAN_ND_STATUS_DUP:
+                /* Address registration errors are not sent back to the source address
+                   of the NS due to a possible risk of L2 address collision. Instead,
+                   the NA is sent to the link-local IPv6 address with the Interface ID
+                   part derived from the EUI-64 field of the ARO as per [RFC4944].
+                   [RFC 6775](https://datatracker.ietf.org/doc/html/rfc6775#section-6.5.2) */
+                case SIXLOWPAN_ND_STATUS_DUP: {
                     DEBUG("nib: Address registration reports duplicate. "
                           "Removing address %s%%%u\n",
-                          ipv6_addr_to_str(addr_str,
-                                           &ipv6->dst,
-                                           sizeof(addr_str)), netif->pid);
-                    gnrc_netif_ipv6_addr_remove_internal(netif, &ipv6->dst);
-                    /* TODO: generate new address */
+                          ipv6_addr_to_str(addr_str, &nce->probe, sizeof(addr_str)),
+                          netif->pid);
+                    gnrc_netif_ipv6_addr_remove_internal(netif, &nce->probe);
+                    /* TODO: generate new address,
+                             increase DAD counter for a tentative addresses
+                             and call _handle_rereg_address() */
                     break;
+                }
                 case SIXLOWPAN_ND_STATUS_NC_FULL: {
+                    int idx = gnrc_netif_ipv6_addr_idx(netif, &nce->probe);
+                    if (idx < 0) {
+                        DEBUG("nib: Probe Address %s is not assigned to interface %d. "
+                              "Ignoring ARO.\n",
+                              ipv6_addr_to_str(addr_str, &nce->probe, sizeof(addr_str)),
+                              netif->pid);
+                        return _ADDR_REG_STATUS_IGNORE;
+                    }
+                    _nib_dr_entry_t *dr = _nib_drl_get(&ipv6->src, netif->pid);
+                    assert(dr != NULL); /* otherwise we wouldn't be here */
+                    _nib_drl_remove(dr);
+                    if (_nib_drl_iter(NULL) == NULL) { /* no DRL left */
                         DEBUG("nib: Router's neighbor cache is full. "
                               "Searching new router for DAD\n");
-                        _nib_dr_entry_t *dr = _nib_drl_get(&ipv6->src, netif->pid);
-                        assert(dr != NULL); /* otherwise we wouldn't be here */
-                        _nib_drl_remove(dr);
-                        if (_nib_drl_iter(NULL) == NULL) { /* no DRL left */
-                            netif->ipv6.rs_sent = 0;
-                            /* search (hopefully) new router */
-                            _handle_search_rtr(netif);
-                        }
-                        else {
-                            assert(dr->next_hop != NULL);
-                            _handle_rereg_address(&ipv6->dst);
-                        }
+                        netif->ipv6.rs_sent = 0;
+                        /* search (hopefully) new router */
+                        _handle_search_rtr(netif);
                     }
-                    break;
+                    else {
+                        DEBUG("nib: Router's neighbor cache is full. "
+                              "Using a different router for DAD\n");
+                        _handle_rereg_address(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[idx], idx));
+                    }
+                }
+                break;
             }
             return aro->status;
         }
@@ -170,70 +193,54 @@ uint8_t _handle_aro(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     return _ADDR_REG_STATUS_IGNORE;
 }
 
-static inline bool _is_tentative(const gnrc_netif_t *netif, int idx)
+void _handle_rereg_address(ipv6_addr_t *addr)
 {
-    return (gnrc_netif_ipv6_addr_get_state(netif, idx) &
-            GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE);
-}
-
-static inline bool _is_valid(const gnrc_netif_t *netif, int idx)
-{
-    return (gnrc_netif_ipv6_addr_get_state(netif, idx) ==
-            GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID);
-}
-
-void _handle_rereg_address(const ipv6_addr_t *addr)
-{
-    gnrc_netif_t *netif = gnrc_netif_get_by_ipv6_addr(addr);
-
-    gnrc_netif_acquire(netif);
+    int idx = gnrc_netif_ipv6_get_addr_index(&addr);
+    assert(idx < CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF);
+    gnrc_netif_ipv6_t *netif_ip = container_of(addr, gnrc_netif_ipv6_t, addrs[idx]);
+    gnrc_netif_t *netif = container_of(netif_ip, gnrc_netif_t, ipv6);
     _nib_dr_entry_t *router = _nib_drl_get(NULL, netif->pid);
-    const bool router_reachable = (router != NULL) &&
-                                  _is_reachable(router->next_hop);
-
-    if (router_reachable && (netif != NULL)) {
-        assert((unsigned)netif->pid == _nib_onl_get_if(router->next_hop));
+    gnrc_netif_acquire(netif);
+    if (ipv6_addr_is_unspecified(addr) ||
+        (idx = gnrc_netif_ipv6_addr_idx(netif, addr)) < 0) {
+        DEBUG("nib: Couldn't re-register. Address was probably removed.\n");
+    }
+    else if (!router || !_is_reachable(router->next_hop)) {
+        DEBUG("nib: Couldn't re-register. Router was probably removed.\n");
+        /* The router should actually not be unreachable,
+           because this case should be handled by NUD. */
+        _handle_search_rtr(netif);
+    }
+    else if (_get_nud_state(router->next_hop) == GNRC_IPV6_NIB_NC_INFO_NUD_STATE_PROBE) {
+        if (ipv6_addr_equal(addr, &router->next_hop->probe)) {
+            DEBUG("nib: Address %s is already used for probing. "
+                  "Ignoring registration request.\n",
+                  ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
+        }
+        else {
+            /* the timer polls every netif->ipv6.retrans_time ms if NUD
+               can be done using that address */
+            DEBUG("nib: Probing already in progress with %s.\n",
+                  ipv6_addr_to_str(addr_str, &router->next_hop->probe, sizeof(addr_str)));
+            DEBUG("nib: Rescheduling with %s.\n",
+                  ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
+            _evtimer_add(gnrc_netif_ipv6_set_addr_index(addr, idx),
+                         GNRC_IPV6_NIB_REREG_ADDRESS,
+                         &netif->ipv6.addrs_timers[idx],
+                         netif->ipv6.retrans_time);
+        }
+    }
+    else {
+        /* The event is very closely coupled with the address.
+           If addr was not assigned, the event should not have triggered. */
         DEBUG("nib: Re-registering %s",
               ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
         DEBUG(" with upstream router %s\n",
-              ipv6_addr_to_str(addr_str, &router->next_hop->ipv6,
-                               sizeof(addr_str)));
-        _snd_ns(&router->next_hop->ipv6, netif, addr, &router->next_hop->ipv6);
-    }
-    else {
-        DEBUG("nib: Couldn't re-register %s, no current router found or address "
-              "wasn't assigned to any interface anymore.\n",
-              ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
-    }
-    if (netif != NULL) {
-        int idx = gnrc_netif_ipv6_addr_idx(netif, addr);
-
-        if (idx < 0) {
-            DEBUG("nib: %s is not assigned to interface %d anymore.\n",
-                  ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)),
-                  netif->pid);
-        }
-        else if (router_reachable &&
-                 (_is_valid(netif, idx) || (_is_tentative(netif, idx) &&
-                 (gnrc_netif_ipv6_addr_dad_trans(netif, idx) <
-                 SIXLOWPAN_ND_REG_TRANSMIT_NUMOF)))) {
-            uint32_t retrans_time;
-
-            if (_is_valid(netif, idx)) {
-                retrans_time = SIXLOWPAN_ND_MAX_RS_SEC_INTERVAL * MS_PER_SEC;
-            }
-            else {
-                retrans_time = netif->ipv6.retrans_time;
-                /* increment encoded retransmission count */
-                netif->ipv6.addrs_flags[idx]++;
-            }
-            _evtimer_add(&netif->ipv6.addrs[idx], GNRC_IPV6_NIB_REREG_ADDRESS,
-                         &netif->ipv6.addrs_timers[idx], retrans_time);
-        }
-        else {
-            netif->ipv6.rs_sent = 0;
-            _handle_search_rtr(netif);
-        }
+              ipv6_addr_to_str(addr_str, &router->next_hop->ipv6, sizeof(addr_str)));
+        _evtimer_del(&router->next_hop->nud_timeout);
+        _set_nud_state(netif, router->next_hop, GNRC_IPV6_NIB_NC_INFO_NUD_STATE_PROBE);
+        router->next_hop->probe = *addr;
+        _probe_nbr(router->next_hop, true);
     }
     gnrc_netif_release(netif);
 }

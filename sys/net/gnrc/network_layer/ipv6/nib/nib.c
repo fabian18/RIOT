@@ -784,29 +784,23 @@ static void _handle_rtr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     }
 #endif  /* !CONFIG_GNRC_IPV6_NIB_6LBR */
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
-    if (!gnrc_netif_is_6lbr(netif) && rtr_adv->ltime.u16 != 0) {
-        uint16_t rtr_ltime = byteorder_ntohs(rtr_adv->ltime);
-
-        dr = _nib_drl_add(&ipv6->src, netif->pid);
-        if (dr != NULL) {
-            _evtimer_add(dr, GNRC_IPV6_NIB_RTR_TIMEOUT, &dr->rtr_timeout,
-                         rtr_ltime * MS_PER_SEC);
-        }
-        else {
+    uint16_t rtr_ltime = byteorder_ntohs(rtr_adv->ltime);
+    bool new_dr = !(dr = _nib_drl_get(&ipv6->src, netif->pid));
+    (void)new_dr;
+    if (rtr_ltime != 0) {
+        if (!dr && !(dr = _nib_drl_add(&ipv6->src, netif->pid))) {
             DEBUG("nib: default router list is full. Ignoring RA from %s\n",
-                  ipv6_addr_to_str(addr_str, &ipv6->src, sizeof(addr_str)));
+                    ipv6_addr_to_str(addr_str, &ipv6->src, sizeof(addr_str)));
             return;
         }
+        _evtimer_add(dr, GNRC_IPV6_NIB_RTR_TIMEOUT, &dr->rtr_timeout,
+                     rtr_ltime * MS_PER_SEC);
         /* UINT16_MAX * 1000 < UINT32_MAX so there are no overflows */
         next_timeout = _min(next_timeout, rtr_ltime * MS_PER_SEC);
     }
-    else {
-        dr = _nib_drl_get(&ipv6->src, netif->pid);
-
+    else if (dr) {
         DEBUG("nib: router lifetime was 0. Removing router and routes via it.");
-        if (dr != NULL) {
-            _handle_rtr_timeout(dr);
-        }
+        _handle_rtr_timeout(dr);
         dr = NULL;
     }
     if (rtr_adv->cur_hl != 0) {
@@ -828,18 +822,6 @@ static void _handle_rtr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     if (rtr_adv->retrans_timer.u32 != 0) {
         netif->ipv6.retrans_time = byteorder_ntohl(rtr_adv->retrans_timer);
     }
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
-    if ((dr != NULL) && gnrc_netif_is_6ln(netif) &&
-        !gnrc_netif_is_6lbr(netif)) {
-        /* (register addresses already assigned but not valid yet)*/
-        for (int i = 0; i < CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF; i++) {
-            if ((netif->ipv6.addrs_flags[i] != 0) &&
-                (netif->ipv6.addrs_flags[i] != GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID)) {
-                _handle_rereg_address(&netif->ipv6.addrs[i]);
-            }
-        }
-    }
-#endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
     tmp_len = icmpv6_len - sizeof(ndp_rtr_adv_t);
     FOREACH_OPT(rtr_adv, opt, tmp_len) {
         switch (opt->type) {
@@ -907,6 +889,30 @@ static void _handle_rtr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     if (dr == NULL) {
         return;
     }
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
+    /* The host triggers sending NS messages containing an ARO when a new
+       address is configured, when it discovers a new default router, or
+       well before the Registration Lifetime expires.
+       [RFC 6775](https://datatracker.ietf.org/doc/html/rfc6775#section-5.5.1) */
+    else if (gnrc_netif_is_6ln(netif)) {
+        for (int i = 0; i < CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF; i++) {
+            uint8_t flags = netif->ipv6.addrs_flags[i] & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK;
+            if (flags != 0 &&
+                flags != GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_DEPRECATED &&
+                flags != GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID) {
+                uint8_t dad = gnrc_netif_ipv6_addr_dad_trans(netif, i);
+                if ((dad >= SIXLOWPAN_ND_REG_TRANSMIT_NUMOF) ||
+                    (new_dr && _nib_drl_get(NULL, netif->pid) == dr)) {
+                    if (!ipv6_addr_is_link_local(&netif->ipv6.addrs[i]) ||
+                        netif->ipv6.addrs_priv[i] != GNRC_NETIF_IPV6_ADDR_PRIV_NONE) {
+                        _handle_rereg_address(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[i], i));
+                    }
+                }
+            }
+        }
+    }
+#endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
+
 #if IS_ACTIVE(MODULE_DHCPV6_CLIENT)
     uint8_t current_conf_mode = dhcpv6_client_get_conf_mode();
     if (rtr_adv->flags & NDP_RTR_ADV_FLAGS_M) {

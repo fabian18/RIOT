@@ -64,8 +64,9 @@ void _snd_ns(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
  *
  * @param[in] nbr       Neighbor to send neighbor solicitation to.
  * @param[in] reset     Reset probe counter.
+ * @param[in] src       Source address to be used or NULL if not relevant
  */
-void _snd_uc_ns(_nib_onl_entry_t *nbr, bool reset);
+void _snd_uc_ns(_nib_onl_entry_t *nbr, bool reset, const ipv6_addr_t *src);
 
 /**
  * @brief   Handles SL2AO

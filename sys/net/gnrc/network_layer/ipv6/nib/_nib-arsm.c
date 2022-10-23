@@ -65,7 +65,7 @@ void _snd_ns(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
     gnrc_ndp_nbr_sol_send(tgt, netif, src, dst, ext_opt);
 }
 
-void _snd_uc_ns(_nib_onl_entry_t *nbr, bool reset)
+void _snd_uc_ns(_nib_onl_entry_t *nbr, bool reset, const ipv6_addr_t *src)
 {
     gnrc_netif_t *netif = gnrc_netif_get_by_pid(_nib_onl_get_if(nbr));
 
@@ -81,7 +81,7 @@ void _snd_uc_ns(_nib_onl_entry_t *nbr, bool reset)
 #else   /* CONFIG_GNRC_IPV6_NIB_ARSM */
     (void)reset;
 #endif  /* CONFIG_GNRC_IPV6_NIB_ARSM */
-    _snd_ns(&nbr->ipv6, netif, NULL, &nbr->ipv6);
+    _snd_ns(&nbr->ipv6, netif, src, &nbr->ipv6);
     _evtimer_add(nbr, GNRC_IPV6_NIB_SND_UC_NS, &nbr->nud_timeout,
                  netif->ipv6.retrans_time);
     gnrc_netif_release(netif);
@@ -278,6 +278,7 @@ void _handle_state_timeout(_nib_onl_entry_t *nbr)
 void _probe_nbr(_nib_onl_entry_t *nbr, bool reset)
 {
     const uint16_t state = _get_nud_state(nbr);
+    ipv6_addr_t *src = NULL;
 
     DEBUG("nib: Probing ");
     switch (state) {
@@ -331,9 +332,40 @@ void _probe_nbr(_nib_onl_entry_t *nbr, bool reset)
                 gnrc_netif_release(netif);
             }
             break;
+        case GNRC_IPV6_NIB_NC_INFO_NUD_STATE_DELAY:
+            /* _probe_nbr() will be called from _handle_state_timeout() soon. */
+            break;
+        case GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE:
         case GNRC_IPV6_NIB_NC_INFO_NUD_STATE_PROBE:
+        case GNRC_IPV6_NIB_NC_INFO_NUD_STATE_REACHABLE:
+#ifdef MODULE_GNRC_SIXLOWPAN_ND
+        {
+            gnrc_netif_t *netif = gnrc_netif_get_by_pid(_nib_onl_get_if(nbr));
+            gnrc_netif_acquire(netif);
+            _nib_dr_entry_t *dr = _nib_drl_get(NULL, _nib_onl_get_if(nbr));
+            /* An ARO will be added in _snd_ns() */
+            if (dr && gnrc_netif_is_6ln(netif) && dr->next_hop == nbr) {
+                int idx = gnrc_netif_ipv6_addr_idx(netif, &dr->next_hop->probe);
+                if (idx >= 0) {
+                    /* use already specified probe address */
+                    src = &netif->ipv6.addrs[idx];
+                    gnrc_netif_ipv6_bus_post(netif, GNRC_IPV6_EVENT_DAD, src);
+                }
+                else if (reset) {
+                    /* not including an ARO is wasteful, so choose any address */
+                    src = gnrc_netif_ipv6_addr_best_src(netif, &dr->next_hop->ipv6, false);
+                    if (!ipv6_addr_is_link_local(src) || gnrc_netif_ipv6_addr_is_private(netif, src)) {
+                        dr->next_hop->probe = *src;
+                        gnrc_netif_ipv6_bus_post(netif, GNRC_IPV6_EVENT_DAD, src);
+                    }
+                }
+            }
+            gnrc_netif_release(netif);
+        }
+#endif
+            /* fall through */
         default:
-            _snd_uc_ns(nbr, reset);
+            _snd_uc_ns(nbr, reset, src);
             break;
     }
 }

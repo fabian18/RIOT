@@ -106,7 +106,7 @@ void _auto_configure_addr(gnrc_netif_t *netif, const ipv6_addr_t *pfx,
         if ((netif->ipv6.addrs_flags[idx] & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK)
             != GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID) {
             if (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif)) {
-                _handle_rereg_address(&netif->ipv6.addrs[idx]);
+                _handle_rereg_address(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[idx], idx));
             }
         }
         else {
@@ -244,7 +244,7 @@ void _auto_configure_cga(gnrc_netif_t *netif,
         if ((netif->ipv6.addrs_flags[idx] & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK)
             != GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID) {
             if (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif)) {
-                _handle_rereg_address(&netif->ipv6.addrs[idx]);
+                _handle_rereg_address(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[idx], idx));
             }
         }
         else {
