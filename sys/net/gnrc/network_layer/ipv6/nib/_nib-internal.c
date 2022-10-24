@@ -374,37 +374,61 @@ void _nib_nc_get(const _nib_onl_entry_t *node, gnrc_ipv6_nib_nc_t *nce)
 
 _nib_dr_entry_t *_nib_drl_add(const ipv6_addr_t *router_addr, unsigned iface)
 {
-    _nib_dr_entry_t *def_router = NULL;
+    _nib_dr_entry_t *def_router = NULL, *remove = NULL;
+    _nib_onl_entry_t *tmp_node;
 
     DEBUG("nib: Allocating default router list entry "
           "(router_addr = %s, iface = %u)\n",
           ipv6_addr_to_str(addr_str, router_addr, sizeof(addr_str)), iface);
     for (unsigned i = 0; i < CONFIG_GNRC_IPV6_NIB_DEFAULT_ROUTER_NUMOF; i++) {
         _nib_dr_entry_t *tmp = &_def_routers[i];
-        _nib_onl_entry_t *tmp_node = tmp->next_hop;
+        tmp_node = tmp->next_hop;
 
         if ((tmp_node != NULL) &&
             (_nib_onl_get_if(tmp_node) == iface) &&
             (ipv6_addr_equal(router_addr, &tmp_node->ipv6))) {
             /* exact match */
             DEBUG("  %p is an exact match\n", (void *)tmp);
-            tmp_node->mode |= _DRL;
+            if (!(tmp_node->mode & _DRL)) {
+                tmp_node->mode |= _DRL;
+            }
             return tmp;
         }
-        if ((def_router == NULL) && (tmp_node == NULL)) {
+        if (!def_router && !tmp_node) {
             def_router = tmp;
         }
-    }
-    if (def_router != NULL) {
-        DEBUG("  using %p\n", (void *)def_router);
-        def_router->next_hop = _nib_onl_alloc(router_addr, iface);
-
-        if (def_router->next_hop == NULL) {
-            return NULL;
+        else if (!def_router && tmp_node) {
+            /*  A node should retain entries in the Default Router List and the
+                Prefix List until their lifetimes expire. However, a node may
+                garbage-collect entries prematurely if it is low on memory. If not
+                all routers are kept on the Default Router list, a node should retain
+                at least two entries in the Default Router List (and preferably more)
+                in order to maintain robust connectivity for off-link destinations.
+                [RFC 4861](https://datatracker.ietf.org/doc/html/rfc4861#section-5.3)
+            */
+            if (!remove && _node_unreachable(tmp_node)) {
+                remove = tmp;
+            }
         }
-        _override_node(router_addr, iface, def_router->next_hop);
-        def_router->next_hop->mode |= _DRL;
     }
+    if (!def_router && !remove) {
+        DEBUG("  no free space to allocate new default router\n");
+        return NULL;
+    }
+    if (!(tmp_node = _nib_onl_alloc(router_addr, iface))) {
+        DEBUG("  no free space to allocate node for new default router\n");
+        return NULL;
+    }
+    if (!def_router) {
+        DEBUG("  removing %p to add new default router\n", (void *)remove);
+        /* no free DR entry */
+        _nib_drl_remove(remove);
+        def_router = remove;
+    }
+    DEBUG("  using %p\n", (void *)def_router);
+    def_router->next_hop = tmp_node;
+    _override_node(router_addr, iface, def_router->next_hop);
+    def_router->next_hop->mode |= _DRL;
     return def_router;
 }
 
@@ -456,38 +480,28 @@ _nib_dr_entry_t *_nib_drl_get(const ipv6_addr_t *router_addr, unsigned iface)
 
 _nib_dr_entry_t *_nib_drl_get_dr(void)
 {
-    _nib_dr_entry_t *ptr = NULL;
-
-    /* if there is already a default router selected or
+    /* if there is already a default router selected and
      * its reachability is not suspect */
-    if (!((_prime_def_router == NULL) ||
-          (_node_unreachable(_prime_def_router->next_hop)))) {
+    if (_prime_def_router && !_node_unreachable(_prime_def_router->next_hop)) {
         /* take it */
         return _prime_def_router;
     }
-    /* else search next reachable router */
+    /* else search next reachable secured router starting at the current defaultr ruter */
+    _nib_dr_entry_t *ptr = _prime_def_router, *any = NULL;
     do {
-        ptr = _nib_drl_iter(ptr);
-        /* if there is no reachable router */
-        if (ptr == NULL) {
-            _nib_dr_entry_t *next = _nib_drl_iter(_prime_def_router);
-            /* if first time called or last selected router is last in
-             * router list */
-            if ((_prime_def_router == NULL) || (next == NULL)) {
-                /* wrap around to first (potentially unreachable) route
-                 * to trigger NUD for it */
-                _prime_def_router = _nib_drl_iter(NULL);
-            }
-            /* there is another default router, choose it regardless of
-             * reachability to potentially trigger NUD for it */
-            else if (next != NULL) {
-                _prime_def_router = next;
-            }
-            return _prime_def_router;
+        if (!(ptr = _nib_drl_iter(ptr))) {
+            continue; /* end of list */
         }
-    } while (_node_unreachable(ptr->next_hop));
-    _prime_def_router = ptr;
-    return _prime_def_router;
+        if (!any) {
+            any = ptr;
+        }
+        if (!_node_unreachable(ptr->next_hop)) {
+            /* choose at least a (probably) reachable router */
+            return (_prime_def_router = ptr);
+        }
+    } while (ptr != _prime_def_router);
+    /* choose next or keep current dr */
+    return any ? (_prime_def_router = any) : _prime_def_router;
 }
 
 void _nib_drl_ft_get(const _nib_dr_entry_t *drl, gnrc_ipv6_nib_ft_t *fte)
