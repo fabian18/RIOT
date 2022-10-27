@@ -139,8 +139,8 @@ void gnrc_ipv6_nib_iface_up(gnrc_netif_t *netif)
 #endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
     netif->ipv6.na_sent = 0;
     _auto_configure_addr(netif, &ipv6_addr_link_local_prefix, 64U);
-    if (!gnrc_netif_is_rtr_adv(netif) ||
-        (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif))) {
+    if (!gnrc_netif_is_6lbr(netif) &&
+        (!gnrc_netif_is_rtr_adv(netif) || gnrc_netif_is_6ln(netif))) {
         uint32_t next_rs_time = random_uint32_range(0, NDP_MAX_RS_MS_DELAY);
 
         _evtimer_add(netif, GNRC_IPV6_NIB_SEARCH_RTR, &netif->ipv6.search_rtr,
@@ -162,8 +162,8 @@ void gnrc_ipv6_nib_iface_down(gnrc_netif_t *netif, bool send_final_ra)
     gnrc_netif_acquire(netif);
 
     _deinit_iface_arsm(netif);
-    if (!gnrc_netif_is_rtr_adv(netif) ||
-        (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif))) {
+    if (!gnrc_netif_is_6lbr(netif) &&
+        (!gnrc_netif_is_rtr_adv(netif) || gnrc_netif_is_6ln(netif))) {
         _evtimer_del(&netif->ipv6.search_rtr);
     }
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
@@ -703,6 +703,9 @@ static void _handle_rtr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     uint32_t next_timeout = UINT32_MAX;
 
     assert(netif != NULL);
+    if (gnrc_netif_is_6lbr(netif)) {
+        return; /* this should not happen */
+    }
     /* check validity, see: https://tools.ietf.org/html/rfc4861#section-6.1.1 */
     /* checksum is checked by GNRC's ICMPv6 module */
     if (!(ipv6_addr_is_link_local(&ipv6->src)) ||
@@ -1517,7 +1520,8 @@ void _handle_search_rtr(gnrc_netif_t *netif)
 {
 #if !IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_NO_RTR_SOL)
     gnrc_netif_acquire(netif);
-    if (!(gnrc_netif_is_rtr_adv(netif)) || gnrc_netif_is_6ln(netif)) {
+    if (!gnrc_netif_is_6lbr(netif) &&
+        (!gnrc_netif_is_rtr_adv(netif) || gnrc_netif_is_6ln(netif))) {
         uint32_t next_rs = _evtimer_lookup(netif, GNRC_IPV6_NIB_SEARCH_RTR);
         uint32_t interval = _get_next_rs_interval(netif);
 
