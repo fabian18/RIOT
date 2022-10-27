@@ -46,10 +46,10 @@ void _snd_ns(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
     assert(netif != NULL);
     _nib_dr_entry_t *dr = _nib_drl_get(NULL, netif->pid);
 
-    /* add ARO based on interface */
-    if ((src != NULL) && gnrc_netif_is_6ln(netif) &&
-        (_nib_onl_get_if(dr->next_hop) == (unsigned)netif->pid) &&
+    /* reregister src if NS is sent to the default upstream router of netif */
+    if (gnrc_netif_is_6ln(netif) && src && dr &&
         ipv6_addr_equal(&dr->next_hop->ipv6, dst)) {
+        assert((_nib_onl_get_if(dr->next_hop) == (unsigned)netif->pid));
         eui64_t eui64;
         int res = gnrc_netif_get_eui64(netif, &eui64);
 
@@ -57,6 +57,7 @@ void _snd_ns(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
             DEBUG("nib: can't get EUI-64 of the interface for ARO\n");
             return;
         }
+        /* add ARO */
         ext_opt = gnrc_sixlowpan_nd_opt_ar_build(0, CONFIG_GNRC_SIXLOWPAN_ND_AR_LTIME,
                                                  &eui64, NULL);
         if (ext_opt == NULL) {
