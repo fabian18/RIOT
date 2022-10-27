@@ -25,12 +25,15 @@
 #include "net/gnrc/sixlowpan/nd.h"
 #endif  /* MODULE_GNRC_SIXLOWPAN_ND */
 
+#include "_nib-internal.h"
 #include "_nib-arsm.h"
 #include "_nib-router.h"
 #include "_nib-6lr.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
+
+extern void _handle_search_rtr(gnrc_netif_t *netif);
 
 static char addr_str[IPV6_ADDR_MAX_STR_LEN];
 
@@ -231,6 +234,11 @@ void _handle_snd_ns(_nib_onl_entry_t *nbr)
 
                 _set_nud_state(netif, nbr,
                                GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE);
+                /* one of our DR became unreachable, so try find a new one */
+                if (_nib_drl_get(&nbr->ipv6, _nib_onl_get_if(nbr))) {
+                    netif->ipv6.rs_sent = 0;
+                    _handle_search_rtr(netif);
+                }
             }
             /* intentionally falls through */
         case GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE:
