@@ -391,6 +391,15 @@ _nib_onl_entry_t *_nib_onl_iter(const _nib_onl_entry_t *last);
 _nib_onl_entry_t *_nib_onl_get(const ipv6_addr_t *addr, unsigned iface);
 
 /**
+ *  @brief The index of @p node within an internal datastructure
+ *
+ *  @param[in]  node    On-link entry
+ *
+ *  @return     An internal index of @p node
+ */
+unsigned _nib_onl_idx(const _nib_onl_entry_t *node);
+
+/**
  * @brief   Gets a node by IPv6 address and interface from the neighbor cache
  *
  * @pre     `(addr != NULL)`

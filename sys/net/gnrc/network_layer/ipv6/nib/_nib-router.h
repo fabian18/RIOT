@@ -22,6 +22,7 @@
 #include <kernel_defines.h>
 
 #include "net/gnrc/ipv6/nib/conf.h"
+#include "net/gnrc/pkt.h"
 #include "net/gnrc/netif/internal.h"
 #include "net/gnrc/netif/ipv6.h"
 #include "net/ipv6/addr.h"
@@ -34,6 +35,31 @@ extern "C" {
 #endif
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER) || defined(DOXYGEN)
+
+/**
+ *  @brief  Internal Router Advertisement context
+ */
+typedef struct {
+    void *ctx;              /**< Either netif or NCE */
+    gnrc_pktsnip_t *opts;   /**< Additional options to send */
+} _nib_ra_ctx_t;
+
+/**
+ * @brief   Allocate a Router Advertisement contest
+ *
+ * @param[in]   node    An on-link entry which also is a Neighbor Cache Entry
+ *
+ * @return  Allocated Router Advertisement context
+ */
+_nib_ra_ctx_t *_ra_ctx_new(_nib_onl_entry_t *node);
+
+/**
+ *  @brief  Release a previously allocated Router Advertisement Context
+ *
+ *  @param[in]  ra_ctx  Allocate a Router Advertisement context
+ */
+void _ra_ctx_free(_nib_ra_ctx_t *ra_ctx);
+
 /**
  * @brief   Initializes interface for router behavior
  *
@@ -83,9 +109,13 @@ static inline void _call_route_info_cb(gnrc_netif_t *netif, unsigned type,
 /**
  * @brief   Handler for @ref GNRC_IPV6_NIB_REPLY_RS event handler
  *
- * @param[in] host  Host that sent the router solicitation
+ * @param[in] ra_ctx    Router Advertisement context,
+ *                      where ra_ctx->ctx is a valid Neighbor Cache Entry
+ *
+ * @post    Ownership of @p ra_ctx is handed over to this function,
+ *          hence it muast not be freed using @ref _ra_ctx_free()
  */
-void _handle_reply_rs(_nib_onl_entry_t *host);
+void _handle_reply_rs(_nib_ra_ctx_t *ra_ctx);
 
 /**
  * @brief   Handler for @ref GNRC_IPV6_NIB_SND_MC_RA event handler
@@ -115,9 +145,10 @@ void _set_rtr_adv(gnrc_netif_t *netif);
  * @param[in] dst   Destination address for the router advertisement.
  * @param[in] final The router advertisement are the final ones of the @p netif
  *                  (because it was set to be a non-forwarding interface e.g.).
+ * @param[in] ra_ctx Router Advertisement context
  */
 void _snd_rtr_advs(gnrc_netif_t *netif, const ipv6_addr_t *dst,
-                  bool final);
+                   bool final, _nib_ra_ctx_t *ra_ctx);
 /**
  * @brief   Send router advertisements to remove a prefix
  *
@@ -134,10 +165,10 @@ void _snd_rtr_advs_drop_pfx(gnrc_netif_t *netif, const ipv6_addr_t *dst,
                                                         (void)type; \
                                                         (void)ctx_addr; \
                                                         (void)ctx
-#define _handle_reply_rs(host)                          (void)host
+#define _handle_reply_rs(ra_ctx)                        (void)ra_ctx
 #define _handle_snd_mc_ra(netif)                        (void)netif
 #define _set_rtr_adv(netif)                             (void)netif
-#define _snd_rtr_advs(netif, dst, final)                (void)netif; \
+#define _snd_rtr_advs(netif, dst, final, ra_ctx)        (void)netif; \
                                                         (void)dst; \
                                                         (void)final
 #define _snd_rtr_advs_drop_pfx(netif, dst, pfx)         (void)netif; \

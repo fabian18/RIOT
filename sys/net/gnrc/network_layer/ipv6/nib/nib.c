@@ -139,7 +139,7 @@ void gnrc_ipv6_nib_iface_up(gnrc_netif_t *netif)
 #endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
     netif->ipv6.na_sent = 0;
     _auto_configure_addr(netif, &ipv6_addr_link_local_prefix, 64U);
-    if (!(gnrc_netif_is_rtr_adv(netif)) ||
+    if (!gnrc_netif_is_rtr_adv(netif) ||
         (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif))) {
         uint32_t next_rs_time = random_uint32_range(0, NDP_MAX_RS_MS_DELAY);
 
@@ -147,7 +147,7 @@ void gnrc_ipv6_nib_iface_up(gnrc_netif_t *netif)
                      next_rs_time);
     }
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
-    else {
+    else if (gnrc_netif_is_rtr_adv(netif)) {
         _handle_snd_mc_ra(netif);
     }
 #endif  /* CONFIG_GNRC_IPV6_NIB_ROUTER */
@@ -162,12 +162,12 @@ void gnrc_ipv6_nib_iface_down(gnrc_netif_t *netif, bool send_final_ra)
     gnrc_netif_acquire(netif);
 
     _deinit_iface_arsm(netif);
-    if (!(gnrc_netif_is_rtr_adv(netif)) ||
+    if (!gnrc_netif_is_rtr_adv(netif) ||
         (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif))) {
         _evtimer_del(&netif->ipv6.search_rtr);
     }
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
-    else {
+    else if (gnrc_netif_is_rtr_adv(netif)) {
         _evtimer_del(&netif->ipv6.snd_mc_ra);
         if (send_final_ra) {
             /* trigger final RA with lifetime set to zero */
@@ -453,7 +453,7 @@ void gnrc_ipv6_nib_handle_timer_event(void *ctx, uint16_t type)
             break;
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
         case GNRC_IPV6_NIB_REPLY_RS:
-            DEBUG("nib: event GNRC_IPV6_NIB_REPLY_RS, ctx=host %p, time=%"PRIu32"ms\n",
+            DEBUG("nib: event GNRC_IPV6_NIB_REPLY_RS, ctx=%p, time=%"PRIu32"ms\n",
                   ctx, evtimer_now_msec());
             _handle_reply_rs(ctx);
             break;
@@ -525,10 +525,10 @@ void gnrc_ipv6_nib_handle_timer_event(void *ctx, uint16_t type)
 void gnrc_ipv6_nib_change_rtr_adv_iface(gnrc_netif_t *netif, bool enable)
 {
     gnrc_netif_acquire(netif);
-    if (enable) {
+    if (enable && !gnrc_netif_is_rtr_adv(netif)) {
         _set_rtr_adv(netif);
     }
-    else {
+    else if (!enable && gnrc_netif_is_rtr_adv(netif)) {
         uint32_t next_rs_time = random_uint32_range(0, NDP_MAX_RS_MS_DELAY);
 
         netif->ipv6.ra_sent = (UINT8_MAX - NDP_MAX_FIN_RA_NUMOF) + 1;
@@ -645,10 +645,16 @@ static void _handle_rtr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
             return;
         }
         else if (nce != NULL) {
+            _nib_ra_ctx_t *ra_ctx;
+            if (!(ra_ctx = _ra_ctx_new(nce))) {
+                DEBUG("nib: Cannot reply RA, due to no context available\n");
+                return;
+            }
+            ra_ctx->ctx = nce;
             /* we send unicast RAs so we do not need to rate-limit as
              * https://tools.ietf.org/html/rfc4861#section-6.2.6 asks for */
-            _evtimer_add(nce, GNRC_IPV6_NIB_REPLY_RS, &nce->reply_rs,
-                         next_ra_delay);
+            _evtimer_add(ra_ctx, GNRC_IPV6_NIB_REPLY_RS,
+                         &nce->reply_rs, next_ra_delay);
         }
         else {
             uint32_t now = evtimer_now_msec();
@@ -665,7 +671,11 @@ static void _handle_rtr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     }
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LR)
     else if (gnrc_netif_is_rtr(netif) && gnrc_netif_is_rtr_adv(netif)) {
-        _snd_rtr_advs(netif, &ipv6->src, false);
+        _nib_ra_ctx_t ra_ctx = {
+            .ctx = netif,
+        };
+        _snd_rtr_advs(netif, &ipv6->src, false, &ra_ctx);
+        gnrc_pktbuf_release(ra_ctx.opts);
     }
 #endif  /* CONFIG_GNRC_IPV6_NIB_6LR */
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)

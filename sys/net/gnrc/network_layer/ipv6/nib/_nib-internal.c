@@ -262,6 +262,11 @@ _nib_onl_entry_t *_nib_onl_get(const ipv6_addr_t *addr, unsigned iface)
     return NULL;
 }
 
+unsigned _nib_onl_idx(const _nib_onl_entry_t *node) {
+    assert(node >= _nodes);
+    return _nodes - node;
+}
+
 void _nib_nc_set_reachable(_nib_onl_entry_t *node)
 {
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ARSM)

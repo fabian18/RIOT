@@ -25,6 +25,7 @@
 #include "net/sock/dns.h"
 #endif
 
+#include "_nib-internal.h"
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
 #include "_nib-6ln.h"
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
@@ -38,30 +39,62 @@ static char addr_str[IPV6_ADDR_MAX_STR_LEN];
 
 typedef struct _rtr_adv_params {
     bool final;
+    gnrc_pktsnip_t *ext_opts;
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
     _nib_abr_entry_t *abr;
 #endif
 } _rtr_adv_params_t;
 
+static _nib_ra_ctx_t _ra_ctx[CONFIG_GNRC_IPV6_NIB_NUMOF];
+
+/* If multicast RA also should need a context, _ra_mc_ctx_new() could run
+   through the array, check for ->ctx being NULL and set ->ctx to the on-link
+   entry that triggered the multicats RA.
+   For unicast RA it is a simple bijective relation between on-link entry and RA context. */
+_nib_ra_ctx_t *_ra_ctx_new(_nib_onl_entry_t *node)
+{
+    assert(node->mode & _NC); /* created from RS */
+    _nib_ra_ctx_t *ra_ctx = &_ra_ctx[_nib_onl_idx(node)];
+    if (ra_ctx->ctx) {
+        return NULL;
+    }
+    if (ra_ctx->opts) {
+        gnrc_pktbuf_release(ra_ctx->opts);
+    }
+    ra_ctx->ctx = node;
+    return ra_ctx;
+}
+
+void _ra_ctx_free(_nib_ra_ctx_t *ra_ctx) {
+    gnrc_pktbuf_release(ra_ctx->opts);
+    ra_ctx->ctx = NULL;
+}
+
 static void _snd_ra(gnrc_netif_t *netif, const ipv6_addr_t *dst,
                     const _rtr_adv_params_t *ra_params);
 
-void _handle_reply_rs(_nib_onl_entry_t *host)
+void _handle_reply_rs(_nib_ra_ctx_t *ra_ctx)
 {
-    gnrc_netif_t *netif = gnrc_netif_get_by_pid(_nib_onl_get_if(host));
-
+    _nib_onl_entry_t *nce = ra_ctx->ctx;
+    assert(nce);
+    if (!(nce->mode & _NC)) {
+        _ra_ctx_free(ra_ctx);
+        return;
+    }
+    gnrc_netif_t *netif = gnrc_netif_get_by_pid(_nib_onl_get_if(nce));
     assert(netif != NULL);
     gnrc_netif_acquire(netif);
     if (gnrc_netif_is_rtr_adv(netif)) {
-        _snd_rtr_advs(netif, &host->ipv6, false);
+        _snd_rtr_advs(netif, &nce->ipv6, false, ra_ctx);
     }
+    _ra_ctx_free(ra_ctx);
     gnrc_netif_release(netif);
 }
 
 void _handle_snd_mc_ra(gnrc_netif_t *netif)
 {
+    assert(netif);
     gnrc_netif_acquire(netif);
-    assert(netif != NULL);
     if (!gnrc_netif_is_6ln(netif)) {
         bool final_ra = (netif->ipv6.ra_sent > (UINT8_MAX - NDP_MAX_FIN_RA_NUMOF));
         uint32_t next_ra_time = random_uint32_range(NDP_MIN_RA_INTERVAL_MS,
@@ -73,7 +106,8 @@ void _handle_snd_mc_ra(gnrc_netif_t *netif)
          * scheduled within the possible time for next_ra_time) */
         if ((final_ra && (next_scheduled > NDP_MAX_RA_INTERVAL_MS)) ||
             gnrc_netif_is_rtr_adv(netif)) {
-            _snd_rtr_advs(netif, NULL, final_ra);
+            _nib_ra_ctx_t ra_ctx = { .ctx = netif };
+            _snd_rtr_advs(netif, NULL, final_ra, &ra_ctx);
             netif->ipv6.last_ra = evtimer_now_msec();
             if ((netif->ipv6.ra_sent < NDP_MAX_INIT_RA_NUMOF) || final_ra) {
                 if ((netif->ipv6.ra_sent < NDP_MAX_INIT_RA_NUMOF) &&
@@ -92,9 +126,10 @@ void _handle_snd_mc_ra(gnrc_netif_t *netif)
     gnrc_netif_release(netif);
 }
 
-void _snd_rtr_advs(gnrc_netif_t *netif, const ipv6_addr_t *dst, bool final)
+void _snd_rtr_advs(gnrc_netif_t *netif, const ipv6_addr_t *dst, bool final, _nib_ra_ctx_t *ra_ctx)
 {
-    _rtr_adv_params_t ra_params = { .final = final };
+    _rtr_adv_params_t ra_params = { .final = final,
+                                    .ext_opts = ra_ctx->opts };
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
     DEBUG("nib: Send router advertisements for each border router:\n");
     while ((ra_params.abr = _nib_abr_iter(ra_params.abr))) {
@@ -155,9 +190,21 @@ static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
                                        const _rtr_adv_params_t *params)
 {
     (void)params;
-    gnrc_pktsnip_t *ext_opts = NULL;
+    gnrc_pktsnip_t *ext_opts = params->ext_opts;
+    gnrc_pktsnip_t *next = NULL;
     _nib_offl_entry_t *pfx = NULL;
     unsigned id = netif->pid;
+
+    while (ext_opts) {
+        gnrc_pktsnip_t *cpy;
+        if (!(cpy = gnrc_pktbuf_add(next, ext_opts->data, ext_opts->size, ext_opts->type))) {
+            DEBUG("nib: No space left in packet buffer\n");
+            goto release;
+        }
+        next = cpy;
+        ext_opts = ext_opts->next;
+    }
+    ext_opts = next;
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_DNS) && SOCK_HAS_IPV6
     uint32_t rdnss_ltime = _evtimer_lookup(&sock_dns_server,
@@ -174,9 +221,10 @@ static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
             /* gnrc_ndp_opt_rdnss_build() only returns NULL when pktbuf is full
              * in this configuration */
             DEBUG("nib: No space left in packet buffer. Not adding RDNSSO\n");
-            goto release;
         }
-        ext_opts = rdnsso;
+        else {
+            ext_opts = rdnsso;
+        }
     }
 #endif  /* CONFIG_GNRC_IPV6_NIB_DNS */
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
@@ -193,9 +241,10 @@ static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
                                             ctx->ltime, &ctx->prefix, ext_opts);
             if (sixco == NULL) {
                 DEBUG("nib: No space left in packet buffer. Not adding 6LO\n");
-                goto release;
             }
-            ext_opts = sixco;
+            else {
+                ext_opts = sixco;
+            }
         }
     }
 #endif  /* MODULE_GNRC_SIXLOWPAN_CTX */
@@ -222,9 +271,10 @@ static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
                                            ext_opts);
     if (abro == NULL) {
         DEBUG("nib: No space left in packet buffer. Not adding ABRO\n");
-        goto release;
     }
-    ext_opts = abro;
+    else {
+        ext_opts = abro;
+    }
 #else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
     while ((pfx = _nib_offl_iter(pfx))) {
         if ((pfx->mode & _PL) && (_nib_onl_get_if(pfx->next_hop) == id)) {
@@ -316,15 +366,9 @@ void _snd_rtr_advs_drop_pfx(gnrc_netif_t *netif, const ipv6_addr_t *dst,
 static void _snd_ra(gnrc_netif_t *netif, const ipv6_addr_t *dst,
                     const _rtr_adv_params_t *params)
 {
-    gnrc_pktsnip_t *ext_opts = NULL;
-
-    if (params->final) {
-        ext_opts = _build_final_ext_opts(netif);
-    }
-    else {
-        ext_opts = _build_ext_opts(netif, params);
-    }
-
+    gnrc_pktsnip_t *ext_opts = params->final
+                               ? _build_final_ext_opts(netif)
+                               : _build_ext_opts(netif, params);
     gnrc_ndp_rtr_adv_send(netif, NULL, dst, params->final, ext_opts);
 }
 #else  /* CONFIG_GNRC_IPV6_NIB_ROUTER */
