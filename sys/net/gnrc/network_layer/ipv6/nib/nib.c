@@ -1297,7 +1297,7 @@ static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                     aro_status = _handle_aro(netif, ipv6,
                                              (const icmpv6_hdr_t *)nbr_adv,
                                              (const sixlowpan_nd_opt_ar_t *)opt,
-                                             opt, nce);
+                                             NULL, nce);
                     break;
 #endif  /* CONFIG_GNRC_IPV6_NIB_6LN */
                 default:
