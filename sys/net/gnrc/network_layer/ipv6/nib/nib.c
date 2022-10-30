@@ -241,6 +241,10 @@ static bool _on_link(const ipv6_addr_t *dst, unsigned *iface)
     }
 
     while ((entry = _nib_offl_iter(entry))) {
+        if (_get_ar_state(entry->next_hop) == GNRC_IPV6_NIB_NC_INFO_AR_STATE_TENTATIVE) {
+            /* Tentative NCEs MUST NOT be used to determine on-link status of the registered nodes */
+            continue;
+        }
         if ((ipv6_addr_match_prefix(dst, &entry->pfx) >= entry->pfx_len) &&
             ((match == NULL) || (entry->pfx_len > match->pfx_len))) {
             match = entry;
@@ -623,11 +627,7 @@ static void _handle_rtr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
         FOREACH_OPT(rtr_sol, opt, tmp_len) {
             switch (opt->type) {
                 case NDP_OPT_SL2A:
-                    if (!gnrc_netif_is_6ln(netif)) {
-                        _handle_sl2ao(netif, ipv6, (const icmpv6_hdr_t *)rtr_sol,
-                                      opt);
-                    }
-
+                    _handle_sl2ao(netif, ipv6, (const icmpv6_hdr_t *)rtr_sol, opt);
                     break;
                 default:
                     break;

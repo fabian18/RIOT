@@ -98,7 +98,6 @@ void _handle_sl2ao(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                    const icmpv6_hdr_t *icmpv6, const ndp_opt_t *sl2ao)
 {
     assert(netif != NULL);
-    _nib_onl_entry_t *nce = _nib_onl_nc_get(&ipv6->src, netif->pid);
     int l2addr_len;
 
     l2addr_len = gnrc_netif_ndp_addr_len_from_l2ao(netif, sl2ao);
@@ -106,19 +105,40 @@ void _handle_sl2ao(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
         DEBUG("nib: Unexpected SL2AO length. Ignoring SL2AO\n");
         return;
     }
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ARSM)
-    if ((nce != NULL) &&
-        ((nce->l2addr_len != l2addr_len) ||
-         (memcmp(nce->l2addr, sl2ao + 1, nce->l2addr_len) != 0)) &&
+    _nib_onl_entry_t *nce = _nib_onl_nc_get(&ipv6->src, netif->pid);
+    if (nce) {
         /* a 6LR MUST NOT modify an existing NCE based on an SL2AO in an RS
-         * see https://tools.ietf.org/html/rfc6775#section-6.3 */
-        !_rtr_sol_on_6lr(netif, icmpv6)) {
-        DEBUG("nib: L2 address differs. Setting STALE\n");
-        _evtimer_del(&nce->nud_timeout);
-        _set_nud_state(netif, nce, GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE);
+        * see https://tools.ietf.org/html/rfc6775#section-6.3 */
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LR)
+        if (gnrc_netif_is_6lr(netif)) {
+            if (_get_ar_state(nce) == GNRC_IPV6_NIB_NC_INFO_AR_STATE_TENTATIVE) {
+                if (icmpv6->type == ICMPV6_RTR_SOL) {
+                    /* but restart registration timer on duplicate RS */
+                    _evtimer_add(nce, GNRC_IPV6_NIB_ADDR_REG_TIMEOUT,
+                                 &nce->addr_reg_timeout,
+                                 SIXLOWPAN_ND_TENTATIVE_NCE_SEC_LTIME * MS_PER_SEC);
+                }
+                else if (icmpv6->type == ICMPV6_RTR_ADV){
+                    /* TENTATIVE NCE was created from RS before the neighbor turned into a router */
+                    _evtimer_del(&nce->addr_reg_timeout);
+                    _set_ar_state(nce, GNRC_IPV6_NIB_NC_INFO_AR_STATE_GC);
+                }
+            }
+            else if (icmpv6->type == ICMPV6_RTR_SOL) {
+                DEBUG("nib: Don´t update NCE from RS on 6LR\n");
+                return;
+            }
+        }
+#endif
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ARSM)
+            if (((nce->l2addr_len != l2addr_len) || memcmp(nce->l2addr, sl2ao + 1, nce->l2addr_len))) {
+                DEBUG("nib: L2 address differs. Setting STALE\n");
+                _evtimer_del(&nce->nud_timeout);
+                _set_nud_state(netif, nce, GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE);
+            }
+#endif
     }
-#endif  /* CONFIG_GNRC_IPV6_NIB_ARSM */
-    if (nce == NULL) {
+    else {
         DEBUG("nib: Creating NCE for (ipv6 = %s, iface = %u, nud_state = STALE)\n",
               ipv6_addr_to_str(addr_str, &ipv6->src, sizeof(addr_str)),
               netif->pid);
@@ -128,15 +148,15 @@ void _handle_sl2ao(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
             if (icmpv6->type == ICMPV6_NBR_SOL) {
                 nce->info &= ~GNRC_IPV6_NIB_NC_INFO_IS_ROUTER;
             }
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_DAD) && IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LR)
-            else if (_rtr_sol_on_6lr(netif, icmpv6)) {
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LR)
+            else if (gnrc_netif_is_6lr(netif) && icmpv6->type == ICMPV6_RTR_SOL) {
                 DEBUG("nib: Setting newly created entry to tentative\n");
                 _set_ar_state(nce, GNRC_IPV6_NIB_NC_INFO_AR_STATE_TENTATIVE);
                 _evtimer_add(nce, GNRC_IPV6_NIB_ADDR_REG_TIMEOUT,
                              &nce->addr_reg_timeout,
                              SIXLOWPAN_ND_TENTATIVE_NCE_SEC_LTIME * MS_PER_SEC);
             }
-#endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_DAD && CONFIG_GNRC_IPV6_NIB_6LR */
+#endif
         }
         else {
             DEBUG("nib: Neighbor cache full\n");
@@ -157,13 +177,9 @@ void _handle_sl2ao(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
             nce->info &= ~GNRC_IPV6_NIB_NC_INFO_IS_ROUTER;
         }
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ARSM)
-        /* a 6LR MUST NOT modify an existing NCE based on an SL2AO in an RS
-         * see https://tools.ietf.org/html/rfc6775#section-6.3 */
-        if (!_rtr_sol_on_6lr(netif, icmpv6)) {
-            nce->l2addr_len = l2addr_len;
-            memcpy(nce->l2addr, sl2ao + 1, l2addr_len);
-        }
-#endif  /* CONFIG_GNRC_IPV6_NIB_ARSM */
+        nce->l2addr_len = l2addr_len;
+        memcpy(nce->l2addr, sl2ao + 1, l2addr_len);
+#endif
     }
 }
 

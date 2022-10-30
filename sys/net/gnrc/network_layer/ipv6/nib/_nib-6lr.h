@@ -59,22 +59,6 @@ static inline void _set_ar_state(_nib_onl_entry_t *entry, uint16_t state)
 }
 
 /**
- * @brief   Checks if the received message is a router solicitation and
- *          the interface represents a 6Lo router
- *
- * @see [RFC 6775](https://tools.ietf.org/html/rfc6775#section-6.3)
- *
- * @param[in] netif     A network interface.
- * @param[in] icmpv6    An ICMPv6 message.
- */
-static inline bool _rtr_sol_on_6lr(const gnrc_netif_t *netif,
-                                   const icmpv6_hdr_t *icmpv6)
-{
-    (void)netif;    /* gnrc_netif_is_6lr() might just evaluate to false */
-    return gnrc_netif_is_6lr(netif) && (icmpv6->type == ICMPV6_RTR_SOL);
-}
-
-/**
  * @brief   Registers an address to the (upstream; in case of multihop DAD)
  *          router
  *
@@ -118,7 +102,6 @@ gnrc_pktsnip_t *_copy_and_handle_aro(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6
                                      const ndp_opt_t *sl2ao);
 
 #else   /* CONFIG_GNRC_IPV6_NIB_6LR || defined(DOXYGEN) */
-#define _rtr_sol_on_6lr(netif, icmpv6)  (false)
 #define _get_ar_state(nbr)              (_ADDR_REG_STATUS_IGNORE)
 #define _set_ar_state(nbr, state)       (void)nbr; (void)state
 /* _reg_addr_upstream() doesn't make sense without 6LR so don't even use it
