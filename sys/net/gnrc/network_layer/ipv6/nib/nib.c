@@ -911,7 +911,7 @@ static void _handle_rtr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
 
     /* stop sending router solicitations
      * see https://tools.ietf.org/html/rfc4861#section-6.3.7 */
-    evtimer_del(&_nib_evtimer, &netif->ipv6.search_rtr.event);
+    _evtimer_del(&netif->ipv6.search_rtr);
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
     if (gnrc_netif_is_6ln(netif) && !gnrc_netif_is_6lbr(netif)) {
         if (IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)) {
@@ -1088,8 +1088,7 @@ static void _handle_nbr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                 return;
             }
             /* cancel validation timer */
-            evtimer_del(&_nib_evtimer,
-                        &tgt_netif->ipv6.addrs_timers[idx].event);
+            _evtimer_del(&tgt_netif->ipv6.addrs_timers[idx]);
             /* _remove_tentative_addr() context switches to `tgt_netif->pid` so
              * release `tgt_netif`. We are done here anyway. */
             ipv6_addr_priv_t priv = tgt_netif->ipv6.addrs_priv[idx];
@@ -1243,8 +1242,7 @@ static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
             DEBUG("nib: duplicate address detected, removing target address "
                   "from this interface\n");
             /* cancel validation timer */
-            evtimer_del(&_nib_evtimer,
-                        &tgt_netif->ipv6.addrs_timers[idx].event);
+            _evtimer_del(&tgt_netif->ipv6.addrs_timers[idx]);
             /* _remove_tentative_addr() context switches to `tgt_netif->pid` so
              * release `tgt_netif`. We are done here anyway. */
             ipv6_addr_priv_t priv = tgt_netif->ipv6.addrs_priv[idx];
@@ -1604,7 +1602,7 @@ static uint32_t _handle_rdnsso(gnrc_netif_t *netif, const icmpv6_hdr_t *icmpv6,
             }
         }
         else {
-            evtimer_del(&_nib_evtimer, &_rdnss_timeout.event);
+            _evtimer_del(&_rdnss_timeout);
             _handle_rdnss_timeout(&sock_dns_server);
         }
     }

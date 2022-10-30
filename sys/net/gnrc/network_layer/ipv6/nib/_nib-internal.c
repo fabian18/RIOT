@@ -291,15 +291,15 @@ void _nib_nc_remove(_nib_onl_entry_t *node)
           ipv6_addr_to_str(addr_str, &node->ipv6, sizeof(addr_str)),
           _nib_onl_get_if(node));
     node->mode &= ~(_NC);
-    evtimer_del((evtimer_t *)&_nib_evtimer, &node->snd_na.event);
+    _evtimer_del(&node->snd_na);
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ARSM)
-    evtimer_del((evtimer_t *)&_nib_evtimer, &node->nud_timeout.event);
+    _evtimer_del(&node->nud_timeout);
 #endif  /* CONFIG_GNRC_IPV6_NIB_ARSM */
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
-    evtimer_del((evtimer_t *)&_nib_evtimer, &node->reply_rs.event);
+    _evtimer_del(&node->reply_rs);
 #endif  /* CONFIG_GNRC_IPV6_NIB_ROUTER */
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LR)
-    evtimer_del((evtimer_t *)&_nib_evtimer, &node->addr_reg_timeout.event);
+    _evtimer_del(&node->addr_reg_timeout);
 #endif  /* CONFIG_GNRC_IPV6_NIB_6LR */
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_QUEUE_PKT)
     gnrc_pktqueue_t *tmp;
@@ -714,7 +714,7 @@ void _nib_offl_remove_prefix(_nib_offl_entry_t *pfx)
     gnrc_netif_t *netif;
 
     /* remove prefix timer */
-    evtimer_del(&_nib_evtimer, &pfx->pfx_timeout.event);
+    _evtimer_del(&pfx->pfx_timeout);
 
     /* get interface associated with prefix */
     netif = gnrc_netif_get_by_pid(_nib_onl_get_if(pfx->next_hop));
