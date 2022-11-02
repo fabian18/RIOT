@@ -18,8 +18,9 @@
 #ifndef NET_GNRC_NETIF_IPV6_H
 #define NET_GNRC_NETIF_IPV6_H
 
-#include "modules.h"
+#include <assert.h>
 
+#include "modules.h"
 #include "evtimer_msg.h"
 #include "net/ipv6/addr.h"
 #include "net/ipv6/cga.h"
@@ -148,12 +149,34 @@ typedef struct {
     int addr_idx[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
 } gnrc_ipv6_cga_ctx_t;
 
+static_assert(CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF <= 16,
+              "Only a maximum of 16 IPv6 addresses are supported per interface");
+
 /**
  * @brief   IPv6 component for @ref gnrc_netif_t
  *
  * @note only available with @ref net_gnrc_ipv6.
+ * @note This struct has an alignment of 16 bytes to allow pointer tagging
+ *       an address pointer with 16 different values.
+ *       A pointer to an assigned ipv6 address passed to a function, may carry
+ *       its index in the address array. Once we know the index, we can even
+ *       figure out the pointer of this struct using container_of().
  */
 typedef struct gnrc_netif_ipv6 {
+    /**
+     * @brief   IPv6 unicast and anycast addresses of the interface
+     *
+     * @note    Only available with module @ref net_gnrc_ipv6 "gnrc_ipv6".
+     */
+    ipv6_addr_t addrs[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+
+    /**
+     * @brief   IPv6 multicast groups of the interface
+     *
+     * @note    Only available with module @ref net_gnrc_ipv6 "gnrc_ipv6".
+     */
+    ipv6_addr_t groups[GNRC_NETIF_IPV6_GROUPS_NUMOF];
+
     /**
      * @brief   Flags for gnrc_netif_t::ipv6_addrs
      *
@@ -168,19 +191,6 @@ typedef struct gnrc_netif_ipv6 {
      */
     ipv6_addr_priv_t addrs_priv[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
 
-    /**
-     * @brief   IPv6 unicast and anycast addresses of the interface
-     *
-     * @note    Only available with module @ref net_gnrc_ipv6 "gnrc_ipv6".
-     */
-    ipv6_addr_t addrs[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
-
-    /**
-     * @brief   IPv6 multicast groups of the interface
-     *
-     * @note    Only available with module @ref net_gnrc_ipv6 "gnrc_ipv6".
-     */
-    ipv6_addr_t groups[GNRC_NETIF_IPV6_GROUPS_NUMOF];
 #ifdef MODULE_NETSTATS_IPV6
     /**
      * @brief IPv6 packet statistics
@@ -351,7 +361,37 @@ typedef struct gnrc_netif_ipv6 {
      */
     gnrc_ipv6_cga_ctx_t cga_ctx;
 #endif /* MODULE_IPV6_CGA */
-} gnrc_netif_ipv6_t;
+} __attribute__((aligned(sizeof(ipv6_addr_t)))) gnrc_netif_ipv6_t;
+
+/**
+ * @brief   Get the tag of a pointer to an assigned IPv6 address
+ *
+ * @param[in, out]  addr    Pointer to address pointer to be untagged
+ *
+ * @return          The tag
+ */
+static inline unsigned gnrc_netif_ipv6_get_addr_index(ipv6_addr_t **addr)
+{
+    unsigned idx = ((uintptr_t)*addr) & (sizeof(ipv6_addr_t) - 1);
+    *addr = (ipv6_addr_t *)(((uintptr_t)*addr) & ~(sizeof(ipv6_addr_t) - 1));
+    return idx;
+}
+
+/**
+ * @brief   Set a tag to an address pointer
+ *
+ * @param[in, out]  addr    Pointer to address to be tagged
+ * @param[in]       idx     Address index to be encoded into @p addr
+ *
+ * @return          The tagged address pointer
+ */
+static inline ipv6_addr_t *gnrc_netif_ipv6_set_addr_index(ipv6_addr_t *addr, unsigned idx)
+{
+    addr = (ipv6_addr_t *)(((uintptr_t)addr) & ~(sizeof(ipv6_addr_t) - 1));
+    addr = (ipv6_addr_t *)(((uintptr_t)addr) | idx);
+    return addr;
+}
+
 
 /**
  * @brief   Accessor function to be used rather that `netif->cga_ctx`
