@@ -46,6 +46,8 @@
 #define EVTIMER_H
 
 #include <stdint.h>
+#include <stdbool.h>
+
 #include "modules.h"
 
 #if IS_USED(MODULE_EVTIMER_ON_ZTIMER)
@@ -115,6 +117,17 @@ void evtimer_add(evtimer_t *evtimer, evtimer_event_t *event);
  * @param[in] event         An event
  */
 void evtimer_del(evtimer_t *evtimer, evtimer_event_t *event);
+
+/**
+ * @brief   Checks if an event is already scheduled
+ *
+ * @param[in] evtimer       An event timer
+ * @param[in] event         An event
+ *
+ * @retval      true if scheduled
+ * @retval      false if not scheduled
+ */
+bool evtimer_is_scheduled(evtimer_t *evtimer, const evtimer_event_t *event);
 
 /**
  * @brief   Print overview of current state of an event timer

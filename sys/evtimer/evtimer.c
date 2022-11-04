@@ -219,6 +219,23 @@ void evtimer_del(evtimer_t *evtimer, evtimer_event_t *event)
     irq_restore(state);
 }
 
+bool evtimer_is_scheduled(evtimer_t *evtimer, const evtimer_event_t *event)
+{
+    if (!event->next || !evtimer->events) {
+        return false;
+    }
+    evtimer_event_t *list = evtimer->events;
+    unsigned state = irq_disable();
+    while (list != event) {
+        if ((list = list->next) == evtimer->events) {
+            irq_restore(state);
+            return false; /* not found */
+        }
+    }
+    irq_restore(state);
+    return true;
+}
+
 static void _evtimer_handler(void *arg)
 {
     DEBUG("_evtimer_handler()\n");
