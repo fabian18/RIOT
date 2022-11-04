@@ -394,6 +394,16 @@ void _evtimer_add_dbg(void *ctx, int16_t type,
 #define _evtimer_add(ctx, type, event, offset) _evtimer_add_dbg(ctx, type, event, offset, #type)
 
 /**
+ * @brief   Checks if an NIB event is scheduled
+ *
+ * @param[in] event     NIB event
+ *
+ * @retval  true if scheduled
+ * @retval  false if not scheduled
+ */
+bool _evtimer_is_scheduled(const evtimer_msg_event_t *event);
+
+/**
  * @brief   Creates or gets an existing on-link entry by address
  *
  * @param[in] addr  An IPv6 address. May be NULL (to be pointed to by a prefix
