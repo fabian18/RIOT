@@ -35,31 +35,48 @@ static void _add_event_to_list(evtimer_t *evtimer, evtimer_event_t *event)
     DEBUG("evtimer: new event offset %" PRIu32 " ms\n", event->offset);
     evtimer_event_t **list = &evtimer->events;
 
+    if (!*list) {
+        DEBUG("evtimer: add very first event in %" PRIu32 " ms\n", event->offset);
+        event->next = evtimer->events = event;
+        return;
+    }
     while (*list) {
         /* Stop when new event time is nearer then next */
         if (event->offset < (*list)->offset) {
             DEBUG("evtimer: next %" PRIu32 " < %" PRIu32 " ms\n",
                   event->offset, (*list)->offset);
+
+            /* Set offset following event relative to new event */
+            DEBUG("evtimer: recalculate offset for %" PRIu32 " ms\n",
+                  (*list)->offset);
+
+            (*list)->offset -= event->offset;
+
+            DEBUG("evtimer: resulting new event offset %" PRIu32 " ms\n",
+                  (*list)->offset);
+
             break;
         }
         /* Set event offset relative to previous event */
         event->offset -= (*list)->offset;
-        list = &(*list)->next;
+        if (*(list = &(*list)->next) == evtimer->events) {
+            break;
+        }
     }
 
     DEBUG("evtimer: new event relative offset %" PRIu32 " ms\n", event->offset);
 
     /* Set found next bigger event after new event */
     event->next = *list;
-    if (*list) {
-        /* Set offset following event relative to new event */
-        DEBUG("evtimer: recalculate offset for %" PRIu32 " ms\n",
-              (*list)->offset);
 
-        (*list)->offset -= event->offset;
-
-        DEBUG("evtimer: resulting new event offset %" PRIu32 " ms\n",
-              (*list)->offset);
+    /* update circular reference of last event with the new first event */
+    if (list == &evtimer->events) {
+        while ((*list)->next != evtimer->events) {
+            list = &(*list)->next;
+        }
+        (*list)->next = event;
+        evtimer->events = event;
+        list = &evtimer->events;
     }
 
     *list = event;
@@ -69,25 +86,43 @@ static void _del_event_from_list(evtimer_t *evtimer, evtimer_event_t *event)
 {
     evtimer_event_t **list = &evtimer->events;
 
-    /* Find the entry to delete from the list */
-    while (*list) {
-        if (*list == event) {
-            break;
-        }
-        list = &(*list)->next;
+    if (!*list || !event->next) {
+        return; /* cannot be in circular list */
     }
 
-    if (*list) {
-        /* This is the entry we want to remove */
-        *list = (*list)->next;
-        /* If the deleted entry was _not_ the last one
-         * then update 'offset' of the entry that
-         * followed.
-         */
-        if (*list) {
-            (*list)->offset += event->offset;
+    /* Find the entry to delete from the list */
+    while (*list != event) {
+        if (*(list = &(*list)->next) == evtimer->events) {
+            return; /* not found */
         }
     }
+
+    /* If the entry to be deleted is _not_ the last one
+     * then update 'offset' of the entry that
+     * followed.
+     */
+    if ((*list)->next != evtimer->events) {
+        (*list)->next->offset += event->offset;
+    }
+    /* removing the only event */
+    if ((*list)->next == *list) {
+        evtimer->events = NULL;
+    }
+    /* removing the first event */
+    else {
+        if (list == &evtimer->events){
+            /* seek last event in the list and set its next pointer to the
+            event after the event that is removed */
+            while ((*list)->next != evtimer->events) {
+                list = &(*list)->next;
+            }
+            (*list)->next = evtimer->events->next;
+            list = &evtimer->events;
+        }
+        /* This is the entry we want to remove */
+        *list = (*list)->next;
+    }
+    event->next = NULL;
 }
 
 static void _set_timer(evtimer_t *evtimer)
@@ -184,19 +219,6 @@ void evtimer_del(evtimer_t *evtimer, evtimer_event_t *event)
     irq_restore(state);
 }
 
-static evtimer_event_t *_get_next(evtimer_t *evtimer)
-{
-    evtimer_event_t *event = evtimer->events;
-
-    if (event && (event->offset == 0)) {
-        evtimer->events = event->next;
-        return event;
-    }
-    else {
-        return NULL;
-    }
-}
-
 static void _evtimer_handler(void *arg)
 {
     DEBUG("_evtimer_handler()\n");
@@ -208,11 +230,18 @@ static void _evtimer_handler(void *arg)
     evtimer_event_t *event = evtimer->events;
     event->offset = 0;
 
-    /* iterate the event list */
-    while ((event = _get_next(evtimer))) {
-        evtimer->callback(event);
+    /* iterate the event list and call each event which timed out */
+    while (event && event->offset == 0) {
+        while (event->next != evtimer->events) {
+            event = event->next;
+        }
+        event->next = evtimer->events->next;
+        event = evtimer->events;
+        evtimer->events = evtimer->events->next != evtimer->events ? evtimer->events->next : NULL;
+        event->next = NULL; /* this marks the event as triggered */
+        evtimer->callback(event); /* may add or delete an event */
+        event = evtimer->events; /* may be NULL for no further events */
     }
-
     _update_timer(evtimer);
 }
 
@@ -229,9 +258,10 @@ void evtimer_print(const evtimer_t *evtimer)
     evtimer_event_t *list = evtimer->events;
     int nr = 0;
 
-    while (list) {
-        nr++;
-        printf("ev #%d offset=%u\n", nr, (unsigned)list->offset);
-        list = list->next;
+    if (list) {
+        do {
+            nr++;
+            printf("ev #%d offset=%u\n", nr, (unsigned)list->offset);
+        } while ((list = list->next) != evtimer->events);
     }
 }

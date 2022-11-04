@@ -907,17 +907,18 @@ static inline bool _node_unreachable(_nib_onl_entry_t *node)
 
 uint32_t _evtimer_lookup(const void *ctx, uint16_t type)
 {
-    evtimer_msg_event_t *event = (evtimer_msg_event_t *)_nib_evtimer.events;
+    evtimer_event_t *event = _nib_evtimer.events;
     uint32_t offset = 0;
 
     DEBUG("nib: lookup ctx = %p, type = %04x\n", (void *)ctx, type);
-    while (event != NULL) {
-        offset += event->event.offset;
-        if ((event->msg.type == type) &&
-            ((ctx == NULL) || (event->msg.content.ptr == ctx))) {
-            return offset;
-        }
-        event = (evtimer_msg_event_t *)event->event.next;
+    if (event) {
+        do {
+            evtimer_msg_event_t *msg_ev = (evtimer_msg_event_t *)event;
+            offset += msg_ev->event.offset;
+            if (msg_ev->msg.type == type && (!ctx || msg_ev->msg.content.ptr == ctx)) {
+                return offset;
+            }
+        } while ((event = event->next) != _nib_evtimer.events);
     }
     return UINT32_MAX;
 }
