@@ -213,7 +213,7 @@ static void test_nib_nc_mark_reachable__not_in_neighbor_cache(void)
     gnrc_ipv6_nib_nc_t nce;
 
     TEST_ASSERT_NOT_NULL(_nib_nc_add(&addr, IFACE,
-                                     GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE));
+                                     GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE, 0));
 
     /* check pre-state */
     TEST_ASSERT(gnrc_ipv6_nib_nc_iter(0, &iter_state, &nce));
@@ -282,7 +282,7 @@ static void test_nib_nc_mark_reachable__success(void)
     gnrc_ipv6_nib_nc_t nce;
 
     TEST_ASSERT_NOT_NULL(_nib_nc_add(&addr, IFACE,
-                                     GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE));
+                                     GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE, 0));
 
     /* check pre-state */
     TEST_ASSERT(gnrc_ipv6_nib_nc_iter(0, &iter_state, &nce));

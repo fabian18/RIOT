@@ -37,6 +37,8 @@
 #include "sched.h"
 #include "timex.h"
 
+#include "_nib-internal.h"
+
 #define _BUFFER_SIZE    (196)
 #define _ARO_LTIME      (4224)
 #define _CUR_HL         (155)
@@ -632,7 +634,8 @@ static void test_handle_pkt__nbr_adv__aro_not_my_eui64(void)
     int idx;
 
     idx = gnrc_netif_ipv6_addr_add_internal(_mock_netif, &_loc_gb, _LOC_GB_PFX_LEN,
-                                   GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE);
+                                   GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE,
+                                   GNRC_NETIF_IPV6_ADDR_PRIV_NONE);
     TEST_ASSERT(idx >= 0);
     gnrc_ipv6_nib_handle_pkt(_mock_netif, ipv6, icmpv6, icmpv6_len);
     TEST_ASSERT(ipv6_addr_equal(&_loc_gb, &_mock_netif->ipv6.addrs[idx]));
@@ -650,9 +653,14 @@ static void test_handle_pkt__nbr_adv__aro_duplicate(void)
     TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_nc_set(&_rem_ll, _mock_netif->pid,
                                                   _rem_l2, sizeof(_rem_l2)));
     idx = gnrc_netif_ipv6_addr_add_internal(_mock_netif, &_loc_gb, _LOC_GB_PFX_LEN,
-                                   GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE);
+                                   GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE,
+                                   GNRC_NETIF_IPV6_ADDR_PRIV_NONE);
     TEST_ASSERT(idx >= 0);
+    _nib_onl_entry_t *nce = _nib_nc_add(&_rem_ll, _mock_netif->pid, GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0);
+    TEST_ASSERT_NOT_NULL(nce);
+    nce->probe = _loc_gb;
     gnrc_ipv6_nib_handle_pkt(_mock_netif, ipv6, icmpv6, icmpv6_len);
+    _nib_nc_remove(nce);
     TEST_ASSERT(gnrc_netif_ipv6_addr_idx(_mock_netif, &_loc_gb) < 0);
 }
 
@@ -1039,8 +1047,8 @@ static void test_handle_pkt__rtr_adv__success(uint8_t rtr_adv_flags,
         TEST_ASSERT_EQUAL_INT(sizeof(_rem_l2), nce.l2addr_len);
         TEST_ASSERT_MESSAGE((memcmp(&_rem_l2, &nce.l2addr, nce.l2addr_len) == 0),
                             "_rem_l2 != nce.l2addr");
-        TEST_ASSERT_EQUAL_INT(GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE,
-                              gnrc_ipv6_nib_nc_get_nud_state(&nce));
+        TEST_ASSERT(GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE == gnrc_ipv6_nib_nc_get_nud_state(&nce) ||
+                    GNRC_IPV6_NIB_NC_INFO_NUD_STATE_PROBE == gnrc_ipv6_nib_nc_get_nud_state(&nce));
         TEST_ASSERT_EQUAL_INT(_mock_netif->pid, gnrc_ipv6_nib_nc_get_iface(&nce));
         TEST_ASSERT_EQUAL_INT(GNRC_IPV6_NIB_NC_INFO_AR_STATE_GC,
                               gnrc_ipv6_nib_nc_get_ar_state(&nce));

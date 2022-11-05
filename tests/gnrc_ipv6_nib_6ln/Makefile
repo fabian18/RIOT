@@ -13,6 +13,9 @@ USEMODULE += netdev_test
 CFLAGS += -DLOG_LEVEL=LOG_ERROR
 CFLAGS += -DGNRC_NETTYPE_NDP=GNRC_NETTYPE_TEST
 CFLAGS += -DTEST_SUITES
+CFLAGS += -DCONFIG_GNRC_IPV6_NIB_ARSM
+
+INCLUDES += -I$(RIOTBASE)/sys/net/gnrc/network_layer/ipv6/nib
 
 include $(RIOTBASE)/Makefile.include
 

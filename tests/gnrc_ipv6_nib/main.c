@@ -110,7 +110,8 @@ static void test_get_next_hop_l2addr__EHOSTUNREACH(const ipv6_addr_t *dst,
         /* add _rem_gb prefix as on-link prefix */
         TEST_ASSERT(gnrc_netif_ipv6_addr_add_internal(_mock_netif, &addr,
                             _REM_GB_PFX_LEN,
-                            GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID) >= 0);
+                            GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID,
+                            GNRC_NETIF_IPV6_ADDR_PRIV_NONE) >= 0);
     }
     else {
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_ft_add(NULL, 0, &_rem_ll,

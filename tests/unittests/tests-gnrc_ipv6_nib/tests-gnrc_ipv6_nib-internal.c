@@ -376,12 +376,12 @@ static void test_nib_nc_add__no_space_left_diff_addr(void)
         _nib_onl_entry_t *node;
 
         TEST_ASSERT_NOT_NULL((node = _nib_nc_add(&addr, IFACE,
-                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE)));
+                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0)));
         node->info |= GNRC_IPV6_NIB_NC_INFO_AR_STATE_REGISTERED;
         addr.u64[1].u64++;
     }
     TEST_ASSERT_NULL(_nib_nc_add(&addr, IFACE,
-                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNMANAGED));
+                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNMANAGED, 0));
 }
 
 /*
@@ -400,12 +400,12 @@ static void test_nib_nc_add__no_space_left_diff_iface(void)
         _nib_onl_entry_t *node;
 
         TEST_ASSERT_NOT_NULL((node = _nib_nc_add(&addr, iface,
-                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE)));
+                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0)));
         node->info |= GNRC_IPV6_NIB_NC_INFO_AR_STATE_TENTATIVE;
         iface++;
     }
     TEST_ASSERT_NULL(_nib_nc_add(&addr, iface,
-                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNMANAGED));
+                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNMANAGED, 0));
 }
 
 /*
@@ -424,13 +424,13 @@ static void test_nib_nc_add__no_space_left_diff_addr_iface(void)
         _nib_onl_entry_t *node;
 
         TEST_ASSERT_NOT_NULL((node = _nib_nc_add(&addr, iface,
-                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNMANAGED)));
+                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNMANAGED, 0)));
         node->info |= GNRC_IPV6_NIB_NC_INFO_AR_STATE_REGISTERED;
         addr.u64[1].u64++;
         iface++;
     }
     TEST_ASSERT_NULL(_nib_nc_add(&addr, iface,
-                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE));
+                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE, 0));
 }
 
 /*
@@ -450,11 +450,11 @@ static void test_nib_nc_add__success_duplicate(void)
         addr.u64[1].u64++;
         iface++;
         TEST_ASSERT_NOT_NULL((node = _nib_nc_add(&addr, iface,
-                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE)));
+                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE, 0)));
         node->info |= GNRC_IPV6_NIB_NC_INFO_AR_STATE_REGISTERED;
     }
     TEST_ASSERT(node == _nib_nc_add(&addr, iface,
-                                    GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE));
+                                    GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE, 0));
 }
 
 /*
@@ -468,7 +468,7 @@ static void test_nib_nc_add__success(void)
                                                { .u64 = TEST_UINT64 } } };
 
     TEST_ASSERT_NOT_NULL((node = _nib_nc_add(&addr, IFACE,
-                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE)));
+                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0)));
     TEST_ASSERT(node->mode & _NC);
     TEST_ASSERT_EQUAL_INT(GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE,
                           (node->info & GNRC_IPV6_NIB_NC_INFO_NUD_STATE_MASK));
@@ -489,7 +489,7 @@ static void test_nib_nc_add__success_full_but_garbage_collectible(void)
 
     for (int i = 0; i < (3 * CONFIG_GNRC_IPV6_NIB_NUMOF); i++) {
         TEST_ASSERT_NOT_NULL((node = _nib_nc_add(&addr, IFACE,
-                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE)));
+                                                 GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0)));
         TEST_ASSERT(last != node);
         TEST_ASSERT(ipv6_addr_equal(&addr, &node->ipv6));
         TEST_ASSERT_EQUAL_INT(IFACE, _nib_onl_get_if(node));
@@ -514,20 +514,20 @@ static void test_nib_nc_add__cache_out_crash(void)
 
     for (int i = 0; i < CONFIG_GNRC_IPV6_NIB_NUMOF - 2; i++) {
         TEST_ASSERT_NOT_NULL(_nib_nc_add(&addr, IFACE,
-                                         GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE));
+                                         GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0));
         addr.u64[1].u64++;
     }
     TEST_ASSERT_NOT_NULL((node1 = _nib_nc_add(&addr, IFACE,
-                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE)));
+                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0)));
     addr.u64[1].u64++;
     TEST_ASSERT_NOT_NULL((node2 = _nib_nc_add(&addr, IFACE,
-                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE)));
+                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0)));
     addr.u64[1].u64++;
     _nib_nc_remove(node1);
     _nib_nc_remove(node2);
     for (int i = 0; i < 3; i++) {
         TEST_ASSERT_NOT_NULL(_nib_nc_add(&addr, IFACE,
-                                         GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE));
+                                         GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0));
         addr.u64[1].u64++;
     }
 }
@@ -544,7 +544,7 @@ static void test_nib_nc_set_reachable__success(void)
                                                { .u64 = TEST_UINT64 } } };
 
     TEST_ASSERT_NOT_NULL((node = _nib_nc_add(&addr, IFACE,
-                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE)));
+                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0)));
     _nib_nc_set_reachable(node);
     TEST_ASSERT_EQUAL_INT(GNRC_IPV6_NIB_NC_INFO_NUD_STATE_REACHABLE,
                           (node->info & GNRC_IPV6_NIB_NC_INFO_NUD_STATE_MASK));
@@ -563,7 +563,7 @@ static void test_nib_nc_remove__uncleared(void)
                                                { .u64 = TEST_UINT64 } } };
 
     TEST_ASSERT_NOT_NULL((node = _nib_nc_add(&addr, IFACE,
-                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE)));
+                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE, 0)));
     node->mode |= _DC;
     _nib_nc_remove(node);
     TEST_ASSERT(node == _nib_onl_iter(NULL));
@@ -580,7 +580,7 @@ static void test_nib_nc_remove__cleared(void)
                                                { .u64 = TEST_UINT64 } } };
 
     TEST_ASSERT_NOT_NULL((node = _nib_nc_add(&addr, IFACE,
-                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE)));
+                                             GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE, 0)));
     _nib_nc_remove(node);
     TEST_ASSERT_NULL(_nib_onl_iter(NULL));
 }
@@ -596,10 +596,10 @@ static void test_nib_drl_add__no_space_left_diff_addr(void)
                                   { .u64 = TEST_UINT64 } } };
 
     for (int i = 0; i < CONFIG_GNRC_IPV6_NIB_DEFAULT_ROUTER_NUMOF; i++) {
-        TEST_ASSERT_NOT_NULL(_nib_drl_add(&addr, IFACE));
+        TEST_ASSERT_NOT_NULL(_nib_drl_add(&addr, IFACE, 0));
         addr.u64[1].u64++;
     }
-    TEST_ASSERT_NULL(_nib_drl_add(&addr, IFACE));
+    TEST_ASSERT_NULL(_nib_drl_add(&addr, IFACE, 0));
 }
 
 /*
@@ -620,7 +620,7 @@ static void test_nib_drl_add__no_space_left_nib_full(void)
         node->mode |= _PL;
         addr.u64[1].u64++;
     }
-    TEST_ASSERT_NULL(_nib_drl_add(&addr, IFACE));
+    TEST_ASSERT_NULL(_nib_drl_add(&addr, IFACE, 0));
 }
 
 /*
@@ -635,10 +635,10 @@ static void test_nib_drl_add__no_space_left_diff_iface(void)
     unsigned iface = 1;
 
     for (int i = 0; i < CONFIG_GNRC_IPV6_NIB_DEFAULT_ROUTER_NUMOF; i++) {
-        TEST_ASSERT_NOT_NULL(_nib_drl_add(&addr, iface));
+        TEST_ASSERT_NOT_NULL(_nib_drl_add(&addr, iface, 0));
         iface++;
     }
-    TEST_ASSERT_NULL(_nib_drl_add(&addr, iface));
+    TEST_ASSERT_NULL(_nib_drl_add(&addr, iface, 0));
 }
 
 /*
@@ -654,11 +654,11 @@ static void test_nib_drl_add__no_space_left_diff_addr_iface(void)
     unsigned iface = 1;
 
     for (int i = 0; i < CONFIG_GNRC_IPV6_NIB_DEFAULT_ROUTER_NUMOF; i++) {
-        TEST_ASSERT_NOT_NULL(_nib_drl_add(&addr, iface));
+        TEST_ASSERT_NOT_NULL(_nib_drl_add(&addr, iface, 0));
         addr.u64[1].u64++;
         iface++;
     }
-    TEST_ASSERT_NULL(_nib_drl_add(&addr, iface));
+    TEST_ASSERT_NULL(_nib_drl_add(&addr, iface, 0));
 }
 
 /*
@@ -677,9 +677,9 @@ static void test_nib_drl_add__success_duplicate(void)
     for (int i = 0; i < CONFIG_GNRC_IPV6_NIB_DEFAULT_ROUTER_NUMOF; i++) {
         addr.u64[1].u64++;
         iface++;
-        TEST_ASSERT_NOT_NULL((nib_dr = _nib_drl_add(&addr, iface)));
+        TEST_ASSERT_NOT_NULL((nib_dr = _nib_drl_add(&addr, iface, 0)));
     }
-    TEST_ASSERT(nib_dr == _nib_drl_add(&addr, iface));
+    TEST_ASSERT(nib_dr == _nib_drl_add(&addr, iface, 0));
 }
 
 /*
@@ -692,7 +692,7 @@ static void test_nib_drl_add__success(void)
     static const ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                                { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((nib_dr = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((nib_dr = _nib_drl_add(&addr, IFACE, 0)));
     TEST_ASSERT_NOT_NULL(nib_dr->next_hop);
     TEST_ASSERT(nib_dr->next_hop == _nib_onl_iter(NULL));
     TEST_ASSERT(nib_dr->next_hop->mode & (_DRL));
@@ -713,7 +713,7 @@ static void test_nib_drl_remove__uncleared(void)
     static const ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                                { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((nib_dr = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((nib_dr = _nib_drl_add(&addr, IFACE, 0)));
     node = nib_dr->next_hop;
     node->mode |= _NC;
     _nib_drl_remove(nib_dr);
@@ -731,7 +731,7 @@ static void test_nib_drl_remove__cleared(void)
     static const ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                                { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((nib_dr = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((nib_dr = _nib_drl_add(&addr, IFACE, 0)));
     _nib_drl_remove(nib_dr);
     TEST_ASSERT_NULL(_nib_drl_iter(NULL));
     TEST_ASSERT_NULL(_nib_onl_iter(NULL));
@@ -757,7 +757,7 @@ static void test_nib_drl_iter__one_elem(void)
     static const ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                                { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node = _nib_drl_add(&addr, IFACE, 0)));
     TEST_ASSERT_NOT_NULL((res = _nib_drl_iter(NULL)));
     TEST_ASSERT(res == node);
     TEST_ASSERT_NULL(_nib_drl_iter(res));
@@ -774,9 +774,9 @@ static void test_nib_drl_iter__two_elem(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
-    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE, 0)));
     TEST_ASSERT_NOT_NULL((res = _nib_drl_iter(NULL)));
     TEST_ASSERT(res == node1);
     TEST_ASSERT_NOT_NULL((res = _nib_drl_iter(res)));
@@ -795,11 +795,11 @@ static void test_nib_drl_iter__three_elem(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
-    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
-    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE, 0)));
     TEST_ASSERT_NOT_NULL((res = _nib_drl_iter(NULL)));
     TEST_ASSERT(res == node1);
     TEST_ASSERT_NOT_NULL((res = _nib_drl_iter(res)));
@@ -820,11 +820,11 @@ static void test_nib_drl_iter__three_elem_middle_removed(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
-    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
-    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE, 0)));
     node2->next_hop->mode = _EMPTY;
     _nib_drl_remove(node2);
     TEST_ASSERT_NOT_NULL((res = _nib_drl_iter(NULL)));
@@ -843,7 +843,7 @@ static void test_nib_drl_get__not_in_nib(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL(_nib_drl_add(&addr, IFACE));
+    TEST_ASSERT_NOT_NULL(_nib_drl_add(&addr, IFACE, 0));
     addr.u64[1].u64++;
     TEST_ASSERT_NULL(_nib_drl_get(&addr, IFACE));
 }
@@ -858,7 +858,7 @@ static void test_nib_drl_get__success(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((nib_alloced = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((nib_alloced = _nib_drl_add(&addr, IFACE, 0)));
     TEST_ASSERT_NOT_NULL((nib_got = _nib_drl_get(&addr, IFACE)));
     TEST_ASSERT(nib_alloced == nib_got);
 }
@@ -882,7 +882,7 @@ static void test_nib_drl_get_dr__round_robin1(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node = _nib_drl_add(&addr, IFACE, 0)));
     node->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE;
     TEST_ASSERT_NOT_NULL((nib_res = _nib_drl_get_dr()));
     TEST_ASSERT(nib_res == node);
@@ -901,10 +901,10 @@ static void test_nib_drl_get_dr__round_robin2(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
     node1->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE;
-    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE, 0)));
     node2->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE;
     TEST_ASSERT_NOT_NULL((nib_res = _nib_drl_get_dr()));
     TEST_ASSERT(nib_res == node1);
@@ -927,10 +927,10 @@ static void test_nib_drl_get_dr__success1(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
     node1->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE;
-    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE, 0)));
     node2->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE;
     TEST_ASSERT_NOT_NULL((nib_res = _nib_drl_get_dr()));
     TEST_ASSERT(nib_res == node1);
@@ -949,12 +949,12 @@ static void test_nib_drl_get_dr__success2(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
     node1->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE;
-    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE, 0)));
     node2->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE;
-    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE, 0)));
     node3->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_DELAY;
     TEST_ASSERT_NOT_NULL((nib_res = _nib_drl_get_dr()));
     TEST_ASSERT(nib_res == node3);
@@ -976,12 +976,12 @@ static void test_nib_drl_get_dr__success3(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
     node1->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE;
-    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE, 0)));
     node2->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_REACHABLE;
-    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE, 0)));
     node3->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE;
     TEST_ASSERT_NOT_NULL((nib_res = _nib_drl_get_dr()));
     TEST_ASSERT(nib_res == node2);
@@ -1005,12 +1005,12 @@ static void test_nib_drl_get_dr__success4(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                   { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node1 = _nib_drl_add(&addr, IFACE, 0)));
     addr.u64[1].u64++;
     node1->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE;
-    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node2 = _nib_drl_add(&addr, IFACE, 0)));
     node2->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_REACHABLE;
-    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE)));
+    TEST_ASSERT_NOT_NULL((node3 = _nib_drl_add(&addr, IFACE, 0)));
     node3->next_hop->info = GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE;
     TEST_ASSERT_NOT_NULL((nib_res = _nib_drl_get_dr()));
     TEST_ASSERT(nib_res == node2);
@@ -1687,7 +1687,7 @@ static void test_nib_pl_add__success(void)
     static const ipv6_addr_t pfx = { .u64 = { { .u8 = GLOBAL_PREFIX } } };
 
     TEST_ASSERT_NOT_NULL((dst = _nib_pl_add(IFACE, &pfx, GLOBAL_PREFIX_LEN,
-                                            UINT32_MAX, UINT32_MAX)));
+                                            UINT32_MAX, UINT32_MAX, 0)));
     TEST_ASSERT(dst->mode & _PL);
     TEST_ASSERT_EQUAL_INT(GLOBAL_PREFIX_LEN, dst->pfx_len);
     TEST_ASSERT(GLOBAL_PREFIX_LEN <= ipv6_addr_match_prefix(&pfx, &dst->pfx));
@@ -1709,7 +1709,7 @@ static void test_nib_pl_remove(void)
     static const ipv6_addr_t pfx = { .u64 = { { .u8 = GLOBAL_PREFIX } } };
 
     TEST_ASSERT_NOT_NULL((dst = _nib_pl_add(IFACE, &pfx, GLOBAL_PREFIX_LEN,
-                                            UINT32_MAX, UINT32_MAX)));
+                                            UINT32_MAX, UINT32_MAX, 0)));
     _nib_pl_remove(dst);
     TEST_ASSERT_NULL(_nib_offl_iter(NULL));
 }
@@ -1766,10 +1766,10 @@ static void test_nib_abr_add__no_space_left(void)
                                 { .u64 = TEST_UINT64 } } };
 
     for (int i = 0; i < CONFIG_GNRC_IPV6_NIB_ABR_NUMOF; i++) {
-        TEST_ASSERT_NOT_NULL(_nib_abr_add(&addr));
+        TEST_ASSERT_NOT_NULL(_nib_abr_add(&addr, 0));
         addr.u64[1].u64++;
     }
-    TEST_ASSERT_NULL(_nib_abr_add(&addr));
+    TEST_ASSERT_NULL(_nib_abr_add(&addr, 0));
 }
 
 /*
@@ -1785,9 +1785,9 @@ static void test_nib_abr_add__success_duplicate(void)
 
     for (int i = 0; i < CONFIG_GNRC_IPV6_NIB_ABR_NUMOF; i++) {
         addr.u64[1].u64++;
-        TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr)));
+        TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr, 0)));
     }
-    TEST_ASSERT(abr == _nib_abr_add(&addr));
+    TEST_ASSERT(abr == _nib_abr_add(&addr, 0));
 }
 
 /*
@@ -1800,7 +1800,7 @@ static void test_nib_abr_add__success(void)
     static const ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                              { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr, 0)));
     TEST_ASSERT(ipv6_addr_equal(&addr, &abr->addr));
 }
 
@@ -1814,7 +1814,7 @@ static void test_nib_abr_remove__success(void)
     static const ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                              { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL(_nib_abr_add(&addr));
+    TEST_ASSERT_NOT_NULL(_nib_abr_add(&addr, 0));
     _nib_abr_remove(&addr);
     TEST_ASSERT_NULL(_nib_abr_iter(abr));
 }
@@ -1830,7 +1830,7 @@ static void test_nib_abr_add_pfx__pfx_not_in_nib(void)
                                              { .u64 = TEST_UINT64 } } };
     _nib_offl_entry_t offl;
     offl.mode = _PL;
-    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr, 0)));
     TEST_ASSERT_NULL(_nib_abr_iter_pfx(abr, NULL));
     _nib_abr_add_pfx(abr, &offl);
     TEST_ASSERT_NULL(_nib_abr_iter_pfx(abr, NULL));
@@ -1848,9 +1848,9 @@ static void test_nib_abr_add_pfx__pfx_in_nib(void)
                                              { .u64 = TEST_UINT64 } } };
     static const ipv6_addr_t pfx = { .u64 = { { .u8 = GLOBAL_PREFIX } } };
 
-    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr, 0)));
     TEST_ASSERT_NOT_NULL((dst = _nib_pl_add(IFACE, &pfx, GLOBAL_PREFIX_LEN,
-                                            UINT32_MAX, UINT32_MAX)));
+                                            UINT32_MAX, UINT32_MAX, 0)));
     TEST_ASSERT_NULL(_nib_abr_iter_pfx(abr, NULL));
     _nib_abr_add_pfx(abr, dst);
     TEST_ASSERT_NOT_NULL(_nib_abr_iter_pfx(abr, NULL));
@@ -1866,7 +1866,7 @@ static void test_nib_abr_iter_pfx__empty(void)
     static const ipv6_addr_t addr = { .u64 = { { .u8 = GLOBAL_PREFIX },
                                              { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr, 0)));
     TEST_ASSERT_NULL(_nib_abr_iter_pfx(abr, NULL));
 }
 
@@ -1890,7 +1890,7 @@ static void test_nib_abr_iter__one_elem(void)
     static const ipv6_addr_t addr = { .u64 = { { .u8 = LINK_LOCAL_PREFIX },
                                              { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr = _nib_abr_add(&addr, 0)));
     TEST_ASSERT_NOT_NULL((res = _nib_abr_iter(NULL)));
     TEST_ASSERT(res == abr);
     TEST_ASSERT_NULL(_nib_abr_iter(res));
@@ -1907,11 +1907,11 @@ static void test_nib_abr_iter__three_elem(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = LINK_LOCAL_PREFIX },
                                 { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((abr1 = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr1 = _nib_abr_add(&addr, 0)));
     addr.u64[1].u64++;
-    TEST_ASSERT_NOT_NULL((abr2 = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr2 = _nib_abr_add(&addr, 0)));
     addr.u64[1].u64++;
-    TEST_ASSERT_NOT_NULL((abr3 = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr3 = _nib_abr_add(&addr, 0)));
     TEST_ASSERT_NOT_NULL((res = _nib_abr_iter(NULL)));
     TEST_ASSERT(res == abr1);
     TEST_ASSERT_NOT_NULL((res = _nib_abr_iter(res)));
@@ -1933,11 +1933,11 @@ static void test_nib_abr_iter__three_elem_middle_removed(void)
     ipv6_addr_t addr = { .u64 = { { .u8 = LINK_LOCAL_PREFIX },
                                 { .u64 = TEST_UINT64 } } };
 
-    TEST_ASSERT_NOT_NULL((abr1 = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr1 = _nib_abr_add(&addr, 0)));
     addr.u64[1].u64++;
-    TEST_ASSERT_NOT_NULL(_nib_abr_add(&addr));
+    TEST_ASSERT_NOT_NULL(_nib_abr_add(&addr, 0));
     addr.u64[1].u64++;
-    TEST_ASSERT_NOT_NULL((abr2 = _nib_abr_add(&addr)));
+    TEST_ASSERT_NOT_NULL((abr2 = _nib_abr_add(&addr, 0)));
     addr.u64[1].u64--;
     _nib_abr_remove(&addr);
     TEST_ASSERT_NOT_NULL((res = _nib_abr_iter(NULL)));

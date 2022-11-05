@@ -33,12 +33,13 @@
 
 static void set_up(void)
 {
-    evtimer_event_t *tmp;
-
-    for (evtimer_event_t *ptr = _nib_evtimer.events;
-         (ptr != NULL) && (tmp = (ptr->next), 1);
-         ptr = tmp) {
-        evtimer_del((evtimer_t *)(&_nib_evtimer), ptr);
+    evtimer_event_t *del = _nib_evtimer.events;
+    evtimer_event_t *next;
+    if (del) {
+        do {
+            next = del->next;
+            _evtimer_del((evtimer_msg_event_t *)del);
+        } while (next != _nib_evtimer.events);
     }
     _nib_init();
 }
@@ -53,7 +54,8 @@ static void test_nib_pl_set__EINVAL_unspec_addr(void)
     TEST_ASSERT_EQUAL_INT(-EINVAL, gnrc_ipv6_nib_pl_set(IFACE,
                                                         &ipv6_addr_unspecified,
                                                         GLOBAL_PREFIX_LEN,
-                                                        UINT32_MAX, UINT32_MAX));
+                                                        UINT32_MAX, UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -67,7 +69,8 @@ static void test_nib_pl_set__EINVAL_link_local(void)
                                                         &ipv6_addr_link_local_prefix,
                                                         GLOBAL_PREFIX_LEN,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -81,7 +84,8 @@ static void test_nib_pl_set__EINVAL_mc_addr(void)
                                                         &ipv6_addr_all_nodes_link_local,
                                                         GLOBAL_PREFIX_LEN,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -93,7 +97,8 @@ static void test_nib_pl_set__EINVAL_pfx_len(void)
     static const ipv6_addr_t pfx = { .u64 = { { .u8 = GLOBAL_PREFIX } } };
     TEST_ASSERT_EQUAL_INT(-EINVAL, gnrc_ipv6_nib_pl_set(IFACE, &pfx, 0,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 #if CONFIG_GNRC_IPV6_NIB_NUMOF < CONFIG_GNRC_IPV6_NIB_OFFL_NUMOF
@@ -116,13 +121,15 @@ static void test_nib_pl_set__ENOMEM_diff_iface(void)
     for (unsigned i = 0; i < MAX_NUMOF; i++) {
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(iface, &pfx,
                                                       GLOBAL_PREFIX_LEN,
-                                                      UINT32_MAX, UINT32_MAX));
+                                                      UINT32_MAX, UINT32_MAX,
+                                                      NULL));
         iface++;
     }
     TEST_ASSERT_EQUAL_INT(-ENOMEM, gnrc_ipv6_nib_pl_set(iface, &pfx,
                                                         GLOBAL_PREFIX_LEN,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -138,13 +145,15 @@ static void test_nib_pl_set__ENOMEM_diff_pfx(void)
     for (unsigned i = 0; i < CONFIG_GNRC_IPV6_NIB_OFFL_NUMOF; i++) {
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx,
                                                       GLOBAL_PREFIX_LEN,
-                                                      UINT32_MAX, UINT32_MAX));
+                                                      UINT32_MAX, UINT32_MAX,
+                                                      NULL));
         pfx.u16[0].u16++;
     }
     TEST_ASSERT_EQUAL_INT(-ENOMEM, gnrc_ipv6_nib_pl_set(IFACE, &pfx,
                                                         GLOBAL_PREFIX_LEN,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -161,14 +170,16 @@ static void test_nib_pl_set__ENOMEM_diff_iface_pfx(void)
     for (unsigned i = 0; i < MAX_NUMOF; i++) {
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(iface, &pfx,
                                                       GLOBAL_PREFIX_LEN,
-                                                      UINT32_MAX, UINT32_MAX));
+                                                      UINT32_MAX, UINT32_MAX,
+                                                      NULL));
         iface++;
         pfx.u16[0].u16++;
     }
     TEST_ASSERT_EQUAL_INT(-ENOMEM, gnrc_ipv6_nib_pl_set(iface, &pfx,
                                                         GLOBAL_PREFIX_LEN,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -184,12 +195,14 @@ static void test_nib_pl_set__ENOMEM_diff_pfx_len(void)
 
     for (unsigned i = 0; i < CONFIG_GNRC_IPV6_NIB_OFFL_NUMOF; i++) {
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx, pfx_len,
-                                                      UINT32_MAX, UINT32_MAX));
+                                                      UINT32_MAX, UINT32_MAX,
+                                                      NULL));
         pfx_len--;
     }
     TEST_ASSERT_EQUAL_INT(-ENOMEM, gnrc_ipv6_nib_pl_set(IFACE, &pfx, pfx_len,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -205,13 +218,15 @@ static void test_nib_pl_set__ENOMEM_diff_iface_pfx_len(void)
 
     for (unsigned i = 0; i < MAX_NUMOF; i++) {
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len,
-                                                      UINT32_MAX, UINT32_MAX));
+                                                      UINT32_MAX, UINT32_MAX,
+                                                      NULL));
         pfx_len--;
         iface++;
     }
     TEST_ASSERT_EQUAL_INT(-ENOMEM, gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -227,13 +242,15 @@ static void test_nib_pl_set__ENOMEM_diff_pfx_pfx_len(void)
 
     for (unsigned i = 0; i < CONFIG_GNRC_IPV6_NIB_OFFL_NUMOF; i++) {
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx, pfx_len,
-                                                      UINT32_MAX, UINT32_MAX));
+                                                      UINT32_MAX, UINT32_MAX,
+                                                      NULL));
         pfx_len--;
         pfx.u16[0].u16++;
     }
     TEST_ASSERT_EQUAL_INT(-ENOMEM, gnrc_ipv6_nib_pl_set(IFACE, &pfx, pfx_len,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -249,14 +266,16 @@ static void test_nib_pl_set__ENOMEM_diff_iface_pfx_pfx_len(void)
 
     for (unsigned i = 0; i < MAX_NUMOF; i++) {
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len,
-                                                      UINT32_MAX, UINT32_MAX));
+                                                      UINT32_MAX, UINT32_MAX,
+                                                      NULL));
         pfx_len--;
         pfx.u16[0].u16++;
         iface++;
     }
     TEST_ASSERT_EQUAL_INT(-ENOMEM, gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len,
                                                         UINT32_MAX,
-                                                        UINT32_MAX));
+                                                        UINT32_MAX,
+                                                        NULL));
 }
 
 /*
@@ -275,10 +294,12 @@ static void test_nib_pl_set__success_duplicate(void)
         pfx.u16[0].u16++;
         iface++;
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len,
-                                                      UINT32_MAX, UINT32_MAX));
+                                                      UINT32_MAX, UINT32_MAX,
+                                                      NULL));
     }
     TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len,
-                                                  UINT32_MAX, UINT32_MAX));
+                                                  UINT32_MAX, UINT32_MAX,
+                                                  NULL));
 }
 
 /*
@@ -296,11 +317,13 @@ static void test_nib_pl_set__success_change(void)
 
     TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx,
                                                   GLOBAL_PREFIX_LEN,
-                                                  UINT32_MAX, UINT32_MAX));
+                                                  UINT32_MAX, UINT32_MAX,
+                                                  NULL));
     TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx,
                                                   GLOBAL_PREFIX_LEN,
                                                   TEST_UINT32,
-                                                  TEST_UINT32 - TEST_UINT8));
+                                                  TEST_UINT32 - TEST_UINT8,
+                                                  NULL));
     TEST_ASSERT(gnrc_ipv6_nib_pl_iter(0, &iter_state, &ple));
     TEST_ASSERT(ple.valid_until != UINT32_MAX);
     TEST_ASSERT(ple.pref_until != UINT32_MAX);
@@ -322,7 +345,8 @@ static void test_nib_pl_set__success(void)
 
     TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx,
                                                   GLOBAL_PREFIX_LEN,
-                                                  UINT32_MAX, UINT32_MAX));
+                                                  UINT32_MAX, UINT32_MAX,
+                                                  NULL));
     TEST_ASSERT(gnrc_ipv6_nib_pl_iter(0, &iter_state, &ple));
     TEST_ASSERT(ipv6_addr_match_prefix(&ple.pfx, &pfx) >= GLOBAL_PREFIX_LEN);
     TEST_ASSERT_EQUAL_INT(GLOBAL_PREFIX_LEN, ple.pfx_len);
@@ -348,7 +372,8 @@ static void test_nib_pl_del__unknown(void)
 
     for (unsigned i = 0; i < MAX_NUMOF; i++) {
         TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(iface, &pfx, pfx_len,
-                                                      UINT32_MAX, UINT32_MAX));
+                                                      UINT32_MAX, UINT32_MAX,
+                                                      NULL));
         pfx_len--;
         pfx.u16[0].u16++;
         iface++;
@@ -372,7 +397,8 @@ static void test_nib_pl_del__success(void)
     gnrc_ipv6_nib_pl_t ple;
 
     TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx, GLOBAL_PREFIX_LEN,
-                                                  UINT32_MAX, UINT32_MAX));
+                                                  UINT32_MAX, UINT32_MAX,
+                                                  NULL));
     gnrc_ipv6_nib_pl_del(IFACE, &pfx, GLOBAL_PREFIX_LEN);
     TEST_ASSERT(!gnrc_ipv6_nib_pl_iter(0, &iter_state, &ple));
 }
@@ -393,15 +419,18 @@ static void test_nib_pl_iter__empty_in_the_middle(void)
 
     TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx,
                                                   GLOBAL_PREFIX_LEN,
-                                                  UINT32_MAX, UINT32_MAX));
+                                                  UINT32_MAX, UINT32_MAX,
+                                                  NULL));
     pfx.u16[0].u16++;
     TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx,
                                                   GLOBAL_PREFIX_LEN,
-                                                  UINT32_MAX, UINT32_MAX));
+                                                  UINT32_MAX, UINT32_MAX,
+                                                  NULL));
     pfx.u16[0].u16++;
     TEST_ASSERT_EQUAL_INT(0, gnrc_ipv6_nib_pl_set(IFACE, &pfx,
                                                   GLOBAL_PREFIX_LEN,
-                                                  UINT32_MAX, UINT32_MAX));
+                                                  UINT32_MAX, UINT32_MAX,
+                                                  NULL));
     pfx.u16[0].u16--;
     gnrc_ipv6_nib_pl_del(IFACE, &pfx, GLOBAL_PREFIX_LEN);
     pfx.u16[0].u16--;
