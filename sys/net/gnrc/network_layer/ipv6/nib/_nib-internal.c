@@ -436,6 +436,7 @@ void _nib_drl_remove(_nib_dr_entry_t *nib_dr)
 {
     if (nib_dr->next_hop != NULL) {
         nib_dr->next_hop->mode &= ~(_DRL);
+        _evtimer_del(&nib_dr->rtr_timeout);
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_DC)
 /*  When removing a router from the Default
     Router list, the node MUST update the Destination Cache in such a way
