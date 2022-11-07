@@ -244,6 +244,11 @@ static inline uint32_t cpu_get_image_baseaddr(void)
  */
 bool cpu_check_address(volatile const char *address);
 
+/**
+ * @brief   Enables debugging capabilities of the Cortex-M CPU (DWT)
+ */
+void cortexm_init_debug(void);
+
 #ifdef __cplusplus
 }
 #endif

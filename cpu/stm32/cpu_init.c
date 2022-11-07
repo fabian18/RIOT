@@ -372,6 +372,8 @@ void cpu_init(void)
     if (IS_ACTIVE(CONFIG_STM32_WLX5XX_SUBGHZ_DEBUG)) {
         _wlx5xx_init_subghz_debug_pins();
     }
+
+    cortexm_init_debug();
 }
 
 void backup_ram_init(void)

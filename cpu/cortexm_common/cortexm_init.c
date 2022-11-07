@@ -18,7 +18,9 @@
  * @}
  */
 
+#include "kernel_defines.h"
 #include "cpu.h"
+#include "cpu_debug.h"
 
 /**
  * Interrupt vector base address, defined by the linker
@@ -131,5 +133,12 @@ bool cpu_check_address(volatile const char *address)
      );
 
     return result;
+#endif
+}
+
+void cortexm_init_debug(void)
+{
+#if IS_USED(MODULE_CPU_DEBUG_CYCCNT)
+    cpu_dbg_cyccnt_enable();
 #endif
 }

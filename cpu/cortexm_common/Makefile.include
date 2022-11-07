@@ -86,3 +86,6 @@ SLOT1_LEN := $(SLOT1_LEN)
 
 # JLink is able to flash any ARM CPUs
 PROGRAMMERS_SUPPORTED += jlink
+
+PSEUDOMODULES += cortexm_common_debug
+CFLAGS += -DHAVE_CPU_DEBUG_H=1
