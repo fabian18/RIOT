@@ -35,6 +35,29 @@
 #define ENABLE_DEBUG 0
 #include "debug.h"
 
+#ifndef ENABLE_DEBUG_CPU_GNRC_NDP
+#define ENABLE_DEBUG_CPU_GNRC_NDP   0
+#endif
+#define ENABLE_DEBUG_CPU            ENABLE_DEBUG_CPU_GNRC_NDP
+#if HAVE_CPU_DEBUG_H
+#include "cpu_debug.h"
+#else
+#define CPU_DBG_CYCCNT_INIT(...)
+#define CPU_DBG_CYCCNT(name)
+#define CPU_DBG_CYCCNT_STATIC(name)
+#define CPU_DBG_CYCCNT_START(cyccnt)
+#define CPU_DBG_CYCCNT_STOP(cyccnt)
+#define CPU_DBG_PRINT_CYCLES(cyccnt, tag_fmt, ...)
+#define CPU_DBG_PRINT_INSTRUCTIONS(cyccnt, tag_fmt, ...)
+#endif
+
+CPU_DBG_CYCCNT_STATIC(cyccnt_snd_nbr_sol)
+CPU_DBG_CYCCNT_STATIC(cyccnt_snd_nbr_adv)
+CPU_DBG_CYCCNT_STATIC(cyccnt_snd_rtr_sol)
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
+CPU_DBG_CYCCNT_STATIC(cyccnt_snd_rtr_adv)
+#endif
+
 static char addr_str[IPV6_ADDR_MAX_STR_LEN];
 
 gnrc_pktsnip_t *gnrc_ndp_nbr_sol_build(const ipv6_addr_t *tgt,
@@ -274,6 +297,7 @@ void gnrc_ndp_nbr_sol_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
                            const ipv6_addr_t *src, const ipv6_addr_t *dst,
                            gnrc_pktsnip_t *ext_opts)
 {
+    CPU_DBG_CYCCNT_START(&cyccnt_snd_nbr_sol);
     assert((tgt != NULL) && !ipv6_addr_is_multicast(tgt));
     assert((netif != NULL) && (dst != NULL));
     gnrc_pktsnip_t *hdr, *pkt = ext_opts;
@@ -360,16 +384,22 @@ void gnrc_ndp_nbr_sol_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
             }
         }
         gnrc_netif_release(netif);
+        CPU_DBG_CYCCNT_STOP(&cyccnt_snd_nbr_sol);
+        CPU_DBG_PRINT_CYCLES(&cyccnt_snd_nbr_sol,
+                             "[cyccnt_snd_nbr_sol] interface=%"PRIkernel_pid,
+                             netif->pid);
         return;
     } while (0);
     gnrc_pktbuf_release(pkt);
     gnrc_netif_release(netif);
+    CPU_DBG_CYCCNT_STOP(&cyccnt_snd_nbr_sol);
 }
 
 void gnrc_ndp_nbr_adv_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
                            const ipv6_addr_t *dst, bool supply_tl2a,
                            gnrc_pktsnip_t *ext_opts)
 {
+    CPU_DBG_CYCCNT_START(&cyccnt_snd_nbr_adv);
     ipv6_addr_t real_dst;
     gnrc_pktsnip_t *hdr, *pkt = ext_opts;
     uint8_t adv_flags = 0;
@@ -488,14 +518,20 @@ void gnrc_ndp_nbr_adv_send(const ipv6_addr_t *tgt, gnrc_netif_t *netif,
             }
         }
         gnrc_netif_release(netif);
+        CPU_DBG_CYCCNT_STOP(&cyccnt_snd_nbr_adv);
+        CPU_DBG_PRINT_CYCLES(&cyccnt_snd_nbr_adv,
+                             "[cyccnt_snd_nbr_adv] interface=%"PRIkernel_pid,
+                             netif->pid);
         return;
     } while (0);
     gnrc_pktbuf_release(pkt);
     gnrc_netif_release(netif);
+    CPU_DBG_CYCCNT_STOP(&cyccnt_snd_nbr_adv);
 }
 
 void gnrc_ndp_rtr_sol_send(gnrc_netif_t *netif, const ipv6_addr_t *dst)
 {
+    CPU_DBG_CYCCNT_START(&cyccnt_snd_rtr_sol);
     gnrc_pktsnip_t *hdr, *pkt = NULL;
 
     assert(netif != NULL);
@@ -571,10 +607,15 @@ void gnrc_ndp_rtr_sol_send(gnrc_netif_t *netif, const ipv6_addr_t *dst)
             }
         }
         gnrc_netif_release(netif);
+        CPU_DBG_CYCCNT_STOP(&cyccnt_snd_rtr_sol);
+        CPU_DBG_PRINT_CYCLES(&cyccnt_snd_rtr_sol,
+                             "[cyccnt_snd_rtr_sol] interface=%"PRIkernel_pid,
+                             netif->pid);
         return;
     } while (0);
     gnrc_pktbuf_release(pkt);
     gnrc_netif_release(netif);
+    CPU_DBG_CYCCNT_STOP(&cyccnt_snd_rtr_sol);
 }
 
 void gnrc_ndp_rtr_adv_send(gnrc_netif_t *netif, const ipv6_addr_t *src,
@@ -582,6 +623,7 @@ void gnrc_ndp_rtr_adv_send(gnrc_netif_t *netif, const ipv6_addr_t *src,
                            gnrc_pktsnip_t *ext_opts)
 {
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
+    CPU_DBG_CYCCNT_START(&cyccnt_snd_rtr_adv);
     gnrc_pktsnip_t *hdr = NULL, *pkt = ext_opts;
     uint32_t reach_time = 0, retrans_timer = 0;
     uint16_t adv_ltime = 0;
@@ -702,10 +744,15 @@ void gnrc_ndp_rtr_adv_send(gnrc_netif_t *netif, const ipv6_addr_t *src,
             }
         }
         gnrc_netif_release(netif);
+        CPU_DBG_CYCCNT_STOP(&cyccnt_snd_rtr_adv);
+        CPU_DBG_PRINT_CYCLES(&cyccnt_snd_rtr_adv,
+                             "[cyccnt_snd_rtr_adv] interface=%"PRIkernel_pid,
+                             netif->pid);
         return;
     } while (0);
     gnrc_pktbuf_release(pkt);
     gnrc_netif_release(netif);
+    CPU_DBG_CYCCNT_STOP(&cyccnt_snd_rtr_adv);
 #else
     (void)netif;
     (void)src;

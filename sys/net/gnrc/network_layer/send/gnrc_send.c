@@ -46,9 +46,28 @@
 #include "send_internal.h"
 #include "x509_ip_extn.h"
 
-#define ENABLE_DEBUG            1
+#define ENABLE_DEBUG            0
 #define ENABLE_DEBUG_CRYPTO     0
 #include "debug.h"
+
+#ifndef ENABLE_DEBUG_CPU_GNRC_SEND
+#define ENABLE_DEBUG_CPU_GNRC_SEND  0
+#endif
+#define ENABLE_DEBUG_CPU            ENABLE_DEBUG_CPU_GNRC_SEND
+#if HAVE_CPU_DEBUG_H
+#include "cpu_debug.h"
+#else
+#define CPU_DBG_CYCCNT_INIT(...)
+#define CPU_DBG_CYCCNT(name)
+#define CPU_DBG_CYCCNT_STATIC(name)
+#define CPU_DBG_CYCCNT_START(cyccnt)
+#define CPU_DBG_CYCCNT_STOP(cyccnt)
+#define CPU_DBG_PRINT_CYCLES(cyccnt, tag_fmt, ...)
+#define CPU_DBG_PRINT_INSTRUCTIONS(cyccnt, tag_fmt, ...)
+#endif
+
+CPU_DBG_CYCCNT_STATIC(cyccnt_snd_cp_sol)
+CPU_DBG_CYCCNT_STATIC(cyccnt_snd_cp_adv)
 
 #ifdef TEST_SUITES
 /* In unittests some functions are overloaded to not depend on VFS */
@@ -1038,6 +1057,7 @@ int gnrc_send_cp_sol_send(gnrc_netif_t *netif,
                           const ipv6_addr_t *src, const ipv6_addr_t *dst,
                           uint16_t comp, gnrc_send_cache_cps_t *cps_ctx)
 {
+    CPU_DBG_CYCCNT_START(&cyccnt_snd_cp_sol);
     assert(cps_ctx);
     gnrc_pktsnip_t *hdr, *pkt = NULL, *cp_sol;
     if (!src && !(src = gnrc_netif_ipv6_addr_best_src(netif, dst, true))) {
@@ -1077,13 +1097,19 @@ int gnrc_send_cp_sol_send(gnrc_netif_t *netif,
     if (gnrc_netapi_dispatch_send(GNRC_NETTYPE_NDP, GNRC_NETREG_DEMUX_CTX_ALL, pkt) == 0) {
         DEBUG_GNRC_SEND("unable to dispatch Certificate Path Solicitation\n");
         gnrc_pktbuf_release(pkt);
+        CPU_DBG_CYCCNT_STOP(&cyccnt_snd_cp_sol);
         return -ECANCELED;
     }
     DEBUG_GNRC_SEND("sent CPS ctx=%p\n", (void *)cps_ctx);
+    CPU_DBG_CYCCNT_STOP(&cyccnt_snd_cp_sol);
+    CPU_DBG_PRINT_CYCLES(&cyccnt_snd_cp_sol,
+                         "[cyccnt_snd_cp_sol] interface=%"PRIkernel_pid,
+                         netif->pid);
     return GNRC_SEND_STATUS_OK;
 release:
     DEBUG_GNRC_SEND("No memory\n");
     gnrc_pktbuf_release(pkt);
+    CPU_DBG_CYCCNT_STOP(&cyccnt_snd_cp_sol);
     return -ENOMEM;
 }
 
@@ -1093,10 +1119,12 @@ int gnrc_send_cp_adv_send(gnrc_netif_t *netif,
                           gnrc_send_cache_cpa_t *cpa_ctx,
                           gnrc_pktsnip_t *ext_opts)
 {
+    CPU_DBG_CYCCNT_START(&cyccnt_snd_cp_adv);
     gnrc_pktsnip_t *hdr, *pkt = ext_opts;
     if (!src && !(src = gnrc_netif_ipv6_addr_best_src(netif, dst, true))) {
         DEBUG_GNRC_SEND("No source address\n");
         gnrc_pktbuf_release(pkt);
+        CPU_DBG_CYCCNT_STOP(&cyccnt_snd_cp_adv);
         return -EADDRNOTAVAIL;
     }
     if (cp) {
@@ -1106,6 +1134,7 @@ int gnrc_send_cp_adv_send(gnrc_netif_t *netif,
         if (comp >= cp->num_comp) {
             gnrc_pktbuf_release(pkt);
             DEBUG_GNRC_SEND("Component out of range\n");
+            CPU_DBG_CYCCNT_STOP(&cyccnt_snd_cp_adv);
             return -EINVAL;
         }
         gnrc_send_crt_t *crt = cp->crt;
@@ -1143,6 +1172,7 @@ int gnrc_send_cp_adv_send(gnrc_netif_t *netif,
                 if (vfs_stat(path, &st) < 0) {
                     DEBUG_GNRC_SEND("Certificate not found\n");
                     gnrc_pktbuf_release(pkt);
+                    CPU_DBG_CYCCNT_STOP(&cyccnt_snd_cp_adv);
                     return -ENOENT;
                 }
 #if IS_USED(MODULE_GNRC_SEND_C509)
@@ -1206,13 +1236,19 @@ int gnrc_send_cp_adv_send(gnrc_netif_t *netif,
     if (gnrc_netapi_dispatch_send(GNRC_NETTYPE_NDP, GNRC_NETREG_DEMUX_CTX_ALL, pkt) == 0) {
         DEBUG_GNRC_SEND("unable to dispatch Certificate Path Advertisement\n");
         gnrc_pktbuf_release(pkt);
+        CPU_DBG_CYCCNT_STOP(&cyccnt_snd_cp_adv);
         return -ECANCELED;
     }
     (void)cpa_ctx;
     DEBUG_GNRC_SEND("sent CPA ctx=%p\n", (void *)cpa_ctx);
+    CPU_DBG_CYCCNT_STOP(&cyccnt_snd_cp_adv);
+    CPU_DBG_PRINT_CYCLES(&cyccnt_snd_cp_adv,
+                         "[cyccnt_snd_cp_adv] interface=%"PRIkernel_pid,
+                         netif->pid);
     return GNRC_SEND_STATUS_OK;
 release:
     DEBUG_GNRC_SEND("No memory\n");
     gnrc_pktbuf_release(pkt);
+    CPU_DBG_CYCCNT_STOP(&cyccnt_snd_cp_adv);
     return -ENOMEM;
 }

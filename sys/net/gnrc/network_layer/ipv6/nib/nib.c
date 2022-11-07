@@ -52,6 +52,22 @@
 #define ENABLE_DEBUG 0
 #include "debug.h"
 
+#ifndef ENABLE_DEBUG_CPU_NIB
+#define ENABLE_DEBUG_CPU_NIB    0
+#endif
+#define ENABLE_DEBUG_CPU        ENABLE_DEBUG_CPU_NIB
+#if HAVE_CPU_DEBUG_H
+#include "cpu_debug.h"
+#else
+#define CPU_DBG_CYCCNT_INIT(...)
+#define CPU_DBG_CYCCNT(name)
+#define CPU_DBG_CYCCNT_STATIC(name)
+#define CPU_DBG_CYCCNT_START(cyccnt)
+#define CPU_DBG_CYCCNT_STOP(cyccnt)
+#define CPU_DBG_PRINT_CYCLES(cyccnt, tag_fmt, ...)
+#define CPU_DBG_PRINT_INSTRUCTIONS(cyccnt, tag_fmt, ...)
+#endif
+
 #if IS_ACTIVE(ENABLE_DEBUG)
 #include "evtimer.h"
 #endif
@@ -100,7 +116,15 @@ static void _handle_cp_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                            const ndp_cp_adv_t *cp_adv, size_t icmpv6_len);
 static void _handle_snd_cps(gnrc_send_cache_cps_t *cps_ctx);
 static void _handle_snd_cpa(gnrc_send_cache_cpa_t *cpa_ctx);
+CPU_DBG_CYCCNT_STATIC(cyccnt_handle_cp_sol)
+CPU_DBG_CYCCNT_STATIC(cyccnt_handle_cp_adv)
 #endif
+CPU_DBG_CYCCNT_STATIC(cyccnt_handle_nbr_sol)
+CPU_DBG_CYCCNT_STATIC(cyccnt_handle_nbr_adv)
+#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
+CPU_DBG_CYCCNT_STATIC(cyccnt_handle_rtr_sol)
+#endif
+CPU_DBG_CYCCNT_STATIC(cyccnt_handle_rtr_adv)
 /** @} */
 
 void gnrc_ipv6_nib_init(void)
@@ -406,17 +430,37 @@ void gnrc_ipv6_nib_handle_pkt(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     switch (icmpv6->type) {
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
         case ICMPV6_RTR_SOL:
+            CPU_DBG_CYCCNT_START(&cyccnt_handle_rtr_sol);
             _handle_rtr_sol(netif, ipv6, (ndp_rtr_sol_t *)icmpv6, icmpv6_len);
+            CPU_DBG_CYCCNT_STOP(&cyccnt_handle_rtr_sol);
+            CPU_DBG_PRINT_CYCLES(&cyccnt_handle_rtr_sol,
+                                 "[cyccnt_handle_rtr_sol] interface=%"PRIkernel_pid,
+                                 netif->pid);
             break;
 #endif  /* CONFIG_GNRC_IPV6_NIB_ROUTER */
         case ICMPV6_RTR_ADV:
+            CPU_DBG_CYCCNT_START(&cyccnt_handle_rtr_adv);
             _handle_rtr_adv(netif, ipv6, (ndp_rtr_adv_t *)icmpv6, icmpv6_len);
+            CPU_DBG_CYCCNT_STOP(&cyccnt_handle_rtr_adv);
+            CPU_DBG_PRINT_CYCLES(&cyccnt_handle_rtr_adv,
+                                 "[cyccnt_handle_rtr_adv] interface=%"PRIkernel_pid,
+                                 netif->pid);
             break;
         case ICMPV6_NBR_SOL:
+            CPU_DBG_CYCCNT_START(&cyccnt_handle_nbr_sol);
             _handle_nbr_sol(netif, ipv6, (ndp_nbr_sol_t *)icmpv6, icmpv6_len);
+            CPU_DBG_CYCCNT_STOP(&cyccnt_handle_nbr_sol);
+            CPU_DBG_PRINT_CYCLES(&cyccnt_handle_nbr_sol,
+                                 "[cyccnt_handle_nbr_sol] interface=%"PRIkernel_pid,
+                                 netif->pid);
             break;
         case ICMPV6_NBR_ADV:
+            CPU_DBG_CYCCNT_START(&cyccnt_handle_nbr_adv);
             _handle_nbr_adv(netif, ipv6, (ndp_nbr_adv_t *)icmpv6, icmpv6_len);
+            CPU_DBG_CYCCNT_STOP(&cyccnt_handle_nbr_adv);
+            CPU_DBG_PRINT_CYCLES(&cyccnt_handle_nbr_adv,
+                                 "[cyccnt_handle_nbr_adv] interface=%"PRIkernel_pid,
+                                 netif->pid);
             break;
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_REDIRECT)
         case ICMPV6_REDIRECT:
@@ -432,12 +476,24 @@ void gnrc_ipv6_nib_handle_pkt(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
             break;
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_DAD */
 #if IS_USED(MODULE_GNRC_SEND)
-        case ICMPV6_CP_SOL:
+        case ICMPV6_CP_SOL: {
+            CPU_DBG_CYCCNT_START(&cyccnt_handle_cp_sol);
             _handle_cp_sol(netif, ipv6, (ndp_cp_sol_t *)icmpv6, icmpv6_len);
+            CPU_DBG_CYCCNT_STOP(&cyccnt_handle_cp_sol);
+            CPU_DBG_PRINT_CYCLES(&cyccnt_handle_cp_sol,
+                                 "[cyccnt_handle_cp_sol] interface=%"PRIkernel_pid,
+                                 netif->pid);
             break;
-        case ICMPV6_CP_ADV:
+        }
+        case ICMPV6_CP_ADV: {
+            CPU_DBG_CYCCNT_START(&cyccnt_handle_cp_adv);
             _handle_cp_adv(netif, ipv6, (ndp_cp_adv_t *)icmpv6, icmpv6_len);
+            CPU_DBG_CYCCNT_STOP(&cyccnt_handle_cp_adv);
+            CPU_DBG_PRINT_CYCLES(&cyccnt_handle_cp_adv,
+                                 "[cyccnt_handle_cp_adv] interface=%"PRIkernel_pid,
+                                 netif->pid);
             break;
+        }
 #endif
     }
     _nib_release();
@@ -1365,10 +1421,10 @@ static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
 
     int sec = GNRC_SEND_STATUS_OK;
     (void)sec;
-    if (IS_USED(MODULE_GNRC_SEND)) {
+#if IS_USED(MODULE_GNRC_SEND)
         /* handle sec status after checking DAD status */
         sec = gnrc_ipv6_nib_send_handle_nbr_adv(netif, ipv6, nbr_adv, icmpv6_len);
-    }
+#endif
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC) || IS_USED(MODULE_IPV6_CGA)
     gnrc_netif_t *tgt_netif = gnrc_netif_get_by_ipv6_addr(&nbr_adv->tgt);
 
