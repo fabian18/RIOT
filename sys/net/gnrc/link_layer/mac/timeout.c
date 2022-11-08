@@ -117,18 +117,12 @@ bool gnrc_mac_timeout_is_expired(gnrc_mac_timeout_t *mac_timeout, gnrc_mac_timeo
 
     int index = gnrc_mac_find_timeout(mac_timeout, type);
     if (index >= 0) {
-        evtimer_event_t *list;
-        list = (evtimer_event_t *)&mac_timeout->evtimer.events;
-        while (list->next) {
-            if (list->next == &mac_timeout->timeouts[index].msg_event.event) {
-                return false;
-            }
-            list = list->next;
+        if (!evtimer_is_scheduled(&mac_timeout->evtimer,
+                                  &mac_timeout->timeouts[index].msg_event.event)) {
+            /* if we reach here, timeout is expired */
+            mac_timeout->timeouts[index].type = GNRC_MAC_TIMEOUT_DISABLED;
+            return true;
         }
-
-        /* if we reach here, timeout is expired */
-        mac_timeout->timeouts[index].type = GNRC_MAC_TIMEOUT_DISABLED;
-        return true;
     }
     return false;
 }
