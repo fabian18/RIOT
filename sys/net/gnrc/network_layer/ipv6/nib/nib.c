@@ -584,9 +584,14 @@ static void _handle_rtr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     ndp_opt_t *opt;
 
     assert(netif != NULL);
+    if (!gnrc_netif_is_rtr(netif) || !gnrc_netif_is_rtr_adv(netif)) {
+        DEBUG("nib: Received router solicitation on non advertising interface %"PRIkernel_pid"\n",
+              netif->pid);
+        return;
+    }
     /* check validity, see: https://tools.ietf.org/html/rfc4861#section-6.1.1 */
     /* checksum is checked by GNRC's ICMPv6 module */
-    if (!(gnrc_netif_is_rtr(netif)) || (ipv6->hl != NDP_HOP_LIMIT) ||
+    if ((ipv6->hl != NDP_HOP_LIMIT) ||
         (rtr_sol->code != 0U) || (icmpv6_len < sizeof(ndp_rtr_sol_t))) {
         DEBUG("nib: Received router solicitation is invalid (or interface %i "
               "is not a forwarding interface). Discarding silently\n",
@@ -670,7 +675,7 @@ static void _handle_rtr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
         }
     }
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LR)
-    else if (gnrc_netif_is_rtr(netif) && gnrc_netif_is_rtr_adv(netif)) {
+    else {
         _nib_ra_ctx_t ra_ctx = {
             .ctx = netif,
         };
