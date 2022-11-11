@@ -1312,10 +1312,10 @@ static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC) && IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
         /* 6Lo-ND duplicate address detection (DAD) was ignored by neighbor, try
          * traditional DAD */
-        if ((aro_status == _ADDR_REG_STATUS_UNAVAIL) &&
-            gnrc_netif_is_6ln(netif)) {
+        if (aro_status == _ADDR_REG_STATUS_UNAVAIL && gnrc_netif_is_6ln(netif)) {
             DEBUG("nib: No ARO in NA, falling back to classic DAD\n");
-            _handle_dad(&ipv6->dst);
+            int idx = gnrc_netif_ipv6_addr_idx(netif, &ipv6->dst);
+            _handle_dad(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[idx], idx));
         }
 #elif IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
         (void)aro_status;

@@ -83,15 +83,23 @@ void _remove_tentative_addr(gnrc_netif_t *netif, const ipv6_addr_t *addr);
  * @brief   Handle @ref GNRC_IPV6_NIB_DAD event
  *
  * @param[in] addr  A TENTATIVE address.
+ *
+ * @pre     @p addr must point into the address array of @ref gnrc_netif_ipv6_t
+ *          and the pointer must have been tagged with the index, using
+ *          @ref gnrc_netif_ipv6_set_addr_index()
  */
-void _handle_dad(const ipv6_addr_t *addr);
+void _handle_dad(ipv6_addr_t *addr);
 
 /**
  * @brief   Handle @ref GNRC_IPV6_NIB_VALID_ADDR event
  *
  * @param[in] addr  A TENTATIVE address.
+ *
+ * @pre     @p addr must point into the address array of @ref gnrc_netif_ipv6_t
+ *          and the pointer must have been tagged with the index, using
+ *          @ref gnrc_netif_ipv6_set_addr_index()
  */
-void _handle_valid_addr(const ipv6_addr_t *addr);
+void _handle_valid_addr(ipv6_addr_t *addr);
 #else   /* CONFIG_GNRC_IPV6_NIB_SLAAC */
 #define _handle_dad(addr)           (void)addr
 #define _handle_valid_addr(addr)    (void)addr

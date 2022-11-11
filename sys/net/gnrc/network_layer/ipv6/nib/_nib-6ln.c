@@ -118,7 +118,7 @@ uint8_t _handle_aro(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                           "Scheduling re-registration in %" PRIu32 "ms\n",
                           ipv6_addr_to_str(addr_str, &ipv6->dst,
                                            sizeof(addr_str)), rereg_time);
-                    _handle_valid_addr(&netif->ipv6.addrs[idx]);
+                    _handle_valid_addr(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[idx], idx));
                     _evtimer_add(&netif->ipv6.addrs[idx],
                                  GNRC_IPV6_NIB_REREG_ADDRESS,
                                  &netif->ipv6.addrs_timers[idx],

@@ -110,7 +110,7 @@ void _auto_configure_addr(gnrc_netif_t *netif, const ipv6_addr_t *pfx,
             }
         }
         else {
-            _handle_valid_addr(&netif->ipv6.addrs[idx]);
+            _handle_valid_addr(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[idx], idx));
         }
     }
     gnrc_netif_release(netif);
@@ -248,7 +248,7 @@ void _auto_configure_cga(gnrc_netif_t *netif,
             }
         }
         else {
-            _handle_valid_addr(&netif->ipv6.addrs[idx]);
+            _handle_valid_addr(gnrc_netif_ipv6_set_addr_index(&netif->ipv6.addrs[idx], idx));
         }
     }
     gnrc_netif_release(netif);
@@ -305,63 +305,52 @@ void _auto_reconfigure_cga(gnrc_netif_t *netif, const ipv6_addr_t *address)
 }
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_SLAAC) || IS_USED(MODULE_IPV6_CGA)
-static int _get_netif_state(gnrc_netif_t **netif, const ipv6_addr_t *addr)
+void _handle_dad(ipv6_addr_t *addr)
 {
-    *netif = gnrc_netif_get_by_ipv6_addr(addr);
-    if (*netif != NULL) {
-        int idx;
-
-        gnrc_netif_acquire(*netif);
-        idx = gnrc_netif_ipv6_addr_idx(*netif, addr);
-        return ((idx >= 0) && gnrc_netif_ipv6_addr_dad_trans(*netif, idx)) ?
-               idx : -1;
-    }
-    return -1;
-}
-
-void _handle_dad(const ipv6_addr_t *addr)
-{
-    ipv6_addr_t sol_nodes;
-    gnrc_netif_t *netif = NULL;
-    int idx = _get_netif_state(&netif, addr);
-    if (idx >= 0) {
-        uint8_t dad = gnrc_netif_ipv6_addr_dad_trans(netif, idx);
-        if (dad == GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE) {
-            netif->ipv6.addrs_flags[idx] &= ~GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE;
+    int idx = gnrc_netif_ipv6_get_addr_index(&addr);
+    assert(idx < CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF);
+    gnrc_netif_ipv6_t *netif_ip = container_of(addr, gnrc_netif_ipv6_t, addrs[idx]);
+    gnrc_netif_t *netif = container_of(netif_ip, gnrc_netif_t, ipv6);
+    gnrc_netif_acquire(netif);
+    if (!ipv6_addr_is_unspecified(addr) &&
+        (idx = gnrc_netif_ipv6_addr_idx(netif, addr)) >= 0) {
+        uint8_t dad;
+        if ((dad = gnrc_netif_ipv6_addr_dad_trans(netif, idx))) {
+            if (dad == GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE) {
+                netif->ipv6.addrs_flags[idx] &= ~GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_TENTATIVE;
+            }
+            ipv6_addr_t sol_nodes;
+            ipv6_addr_set_solicited_nodes(&sol_nodes, addr);
+            DEBUG("nib: DAD %s\n", ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
+            netif->ipv6.addrs_flags[idx]++;
+            _snd_ns(addr, netif, &ipv6_addr_unspecified, &sol_nodes);
+            _evtimer_add(gnrc_netif_ipv6_set_addr_index(addr, idx),
+                         GNRC_IPV6_NIB_VALID_ADDR,
+                         &netif->ipv6.addrs_timers[idx],
+                         netif->ipv6.retrans_time);
         }
-        ipv6_addr_set_solicited_nodes(&sol_nodes, addr);
-        DEBUG("nib: DAD %s\n", ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
-        netif->ipv6.addrs_flags[idx]++;
-        _snd_ns(addr, netif, &ipv6_addr_unspecified, &sol_nodes);
-        _evtimer_add((void *)&netif->ipv6.addrs[idx],
-                     GNRC_IPV6_NIB_VALID_ADDR,
-                     &netif->ipv6.addrs_timers[idx],
-                     netif->ipv6.retrans_time);
     }
-    if (netif != NULL) {
-        /* was acquired in `_get_netif_state()` */
-        gnrc_netif_release(netif);
-    }
+    gnrc_netif_release(netif);
 }
 
-void _handle_valid_addr(const ipv6_addr_t *addr)
+void _handle_valid_addr(ipv6_addr_t *addr)
 {
-    gnrc_netif_t *netif = NULL;
-    int idx = _get_netif_state(&netif, addr);
-
-    DEBUG("nib: validating address %s (idx: %d, netif: %d)\n",
-          ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)), idx,
-          (netif != NULL) ? netif->pid : 0);
-    if (idx >= 0) {
+    int idx = gnrc_netif_ipv6_get_addr_index(&addr);
+    assert(idx < CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF);
+    gnrc_netif_ipv6_t *netif_ip = container_of(addr, gnrc_netif_ipv6_t, addrs[idx]);
+    gnrc_netif_t *netif = container_of(netif_ip, gnrc_netif_t, ipv6);
+    gnrc_netif_acquire(netif);
+    if (!ipv6_addr_is_unspecified(addr) &&
+        (idx = gnrc_netif_ipv6_addr_idx(netif, addr)) >= 0) {
+        DEBUG("nib: validating address %s (idx: %d, netif: %d)\n",
+              ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)), idx,
+              netif->pid);
         netif->ipv6.addrs_flags[idx] &= ~GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK;
         netif->ipv6.addrs_flags[idx] |= GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID;
         gnrc_netif_ipv6_bus_post(netif, GNRC_IPV6_EVENT_ADDR_VALID, &netif->ipv6.addrs[idx]);
-    }
-    if (netif != NULL) {
         _call_bootstrap(netif, addr);
-        /* was acquired in `_get_netif_state()` */
-        gnrc_netif_release(netif);
     }
+    gnrc_netif_release(netif);
 }
 #endif
 /** @} */
