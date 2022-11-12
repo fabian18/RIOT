@@ -329,6 +329,7 @@ void _handle_dad(ipv6_addr_t *addr)
             ipv6_addr_set_solicited_nodes(&sol_nodes, addr);
             DEBUG("nib: DAD %s\n", ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
             netif->ipv6.addrs_flags[idx]++;
+            gnrc_netif_ipv6_bus_post(netif, GNRC_IPV6_EVENT_DAD, &netif->ipv6.addrs[idx]);
             _snd_ns(addr, netif, &ipv6_addr_unspecified, &sol_nodes);
             _evtimer_add(gnrc_netif_ipv6_set_addr_index(addr, idx),
                          GNRC_IPV6_NIB_VALID_ADDR,

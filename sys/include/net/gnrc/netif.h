@@ -111,6 +111,22 @@ typedef enum {
  */
 typedef enum {
     /**
+     * @brief   Address is tested for being a duplicate
+     *
+     * On a non-sixlowpan interface, the event is generated when an address
+     * is configured and a Neighbor Solicitation to the corresponding
+     * Solicited-node multicast address is sent.
+     * On a sixlowpan interface, the event is generated when an address
+     * is (re)registered with the upstream default router.
+     * The message payload contains a pointer to the respective
+     * @ref ipv6_addr_t struct.
+     *
+     * @note If the address on the interface changed between sending
+     * the event and processing it, the pointer will point to the new address
+     * which might *not* be valid.
+     */
+    GNRC_IPV6_EVENT_DAD,
+    /**
      * @brief   Address becomes valid
      *
      * The event is generated when an address on the interface becomes valid.
