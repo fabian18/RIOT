@@ -125,7 +125,7 @@ static inline int cib_get(cib_t *__restrict cib)
  *                      Must not be NULL.
  * @return index of next item, -1 if the buffer is empty
  */
-static inline int cib_peek(cib_t *__restrict cib)
+static inline int cib_peek(const cib_t *__restrict cib)
 {
     if (cib_avail(cib)) {
         return (int)(cib->read_count & cib->mask);
