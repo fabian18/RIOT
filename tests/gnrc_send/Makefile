@@ -16,9 +16,11 @@ USEMODULE += od
 CFLAGS += -DGNRC_NETTYPE_NDP=GNRC_NETTYPE_TEST
 CFLAGS += -DTEST_SUITES
 CFLAGS += -DDEBUG_ASSERT_VERBOSE=1
+CFLAGS += -DCONFIG_GNRC_IPV6_NIB_NO_RTR_SOL=1
 
 INCLUDES += -I$(RIOTBASE)/sys/net/gnrc/pktbuf_static/include
 INCLUDES += -I$(RIOTBASE)/sys/net/gnrc/network_layer/send/include
+INCLUDES += -I$(RIOTBASE)/sys/net/gnrc/network_layer/ipv6/nib
 
 include $(RIOTBASE)/Makefile.include
 

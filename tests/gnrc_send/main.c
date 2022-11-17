@@ -31,6 +31,7 @@
 #include "msg_bus.h"
 #include "net/gnrc/ipv6/hdr.h"
 #include "net/gnrc/ipv6/nib/conf.h"
+#include "net/gnrc/ipv6/nib.h"
 #include "net/gnrc/netif.h"
 #include "net/gnrc/netif/internal.h"
 #include "net/gnrc/netreg.h"
@@ -54,14 +55,8 @@
 #include "ztimer.h"
 #include "byteorder.h"
 
+#include "_nib-internal.h"
 #include "send_internal.h"
-
-/* TODO: move to common header */
-#define FOREACH_OPT(ndp_pkt, opt, icmpv6_len) \
-    for (opt = (ndp_opt_t *)(ndp_pkt + 1); \
-         icmpv6_len > 0; \
-         icmpv6_len -= (opt->len << 3), \
-         opt = (ndp_opt_t *)(((uint8_t *)opt) + (opt->len << 3)))
 
 #define TEST_ASSERT_PKT_ALLOCATION(pkt, s, t, n)                            \
     TEST_ASSERT_NOT_NULL(pkt);                                              \
@@ -369,16 +364,12 @@ static void test_opt_signature_build_verify__success(void)
     rtr_sol = gnrc_pktbuf_start_write(rtr_sol);
     TEST_ASSERT_EQUAL_INT(0, gnrc_pktbuf_merge(rtr_sol));
     TEST_ASSERT(gnrc_pktbuf_is_sane());
-    {
-        ndp_rtr_sol_t *rs = rtr_sol->data;
-        ndp_opt_t *o;
-        FOREACH_OPT(rs, o, rtr_sol->size) {
-            if (o->type == NDP_OPT_SIGNATURE) {
-                opt = (ndp_opt_sig_t *)o;
-                break;
-            }
+    ndp_rtr_sol_t *rs = rtr_sol->data;
+    FOREACH_OPT(rs, o, rtr_sol->size - sizeof(*rtr_sol)) {
+        if (o->type == NDP_OPT_SIGNATURE) {
+            opt = (ndp_opt_sig_t *)o;
+            break;
         }
-
     }
     TEST_ASSERT_EQUAL_INT(0, gnrc_send_signature_check(rtr_sol->data, opt,
                                                        test_ec_pk_rtr, X509_EC_PK_SIZE_RTR,
@@ -411,16 +402,12 @@ static void test_opt_signature_build_verify__failure(void)
     rtr_sol = gnrc_pktbuf_start_write(rtr_sol);
     TEST_ASSERT_EQUAL_INT(0, gnrc_pktbuf_merge(rtr_sol));
     TEST_ASSERT(gnrc_pktbuf_is_sane());
-    {
-        ndp_rtr_sol_t *rs = rtr_sol->data;
-        ndp_opt_t *o;
-        FOREACH_OPT(rs, o, rtr_sol->size) {
-            if (o->type == NDP_OPT_SIGNATURE) {
-                opt = (ndp_opt_sig_t *)o;
-                break;
-            }
+    ndp_rtr_sol_t *rs = rtr_sol->data;
+    FOREACH_OPT(rs, o, rtr_sol->size - sizeof(*rtr_sol)) {
+        if (o->type == NDP_OPT_SIGNATURE) {
+            opt = (ndp_opt_sig_t *)o;
+            break;
         }
-
     }
     ipv6_addr_t bad_src = test_src;
     TEST_ASSERT_EQUAL_INT(-GNRC_SEND_STATUS_SIGNATURE_FAIL,
@@ -897,9 +884,10 @@ static void init_test_netdev_thread(void)
     msg_t mvalid;
     msg_bus_attach(gnrc_netif_get_bus(&_netif, GNRC_NETIF_BUS_IPV6), &mbus_entry);
     msg_bus_subscribe(&mbus_entry, GNRC_IPV6_EVENT_ADDR_VALID);
+    gnrc_ipv6_nib_iface_up(&_netif);
     while (1) {
-        uint32_t timeout = test_netif->ipv6.retrans_time * 2 * MS_PER_SEC;
-        if ((res = ztimer_msg_receive_timeout(ZTIMER_USEC, &mvalid, timeout)) == -ETIME) {
+        uint32_t timeout = test_netif->ipv6.retrans_time * 2;
+        if ((res = ztimer_msg_receive_timeout(ZTIMER_MSEC, &mvalid, timeout)) == -ETIME) {
             TEST_ASSERT_MESSAGE(1, "Valid address timeout");
             exit(1);
         }
