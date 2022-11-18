@@ -72,9 +72,6 @@ extern "C" {
 #define CONFIG_GNRC_IPV6_NIB_QUEUE_PKT                0
 #endif
 #if !CONFIG_GNRC_IPV6_NIB_6LR
-# ifndef CONFIG_GNRC_IPV6_NIB_ARSM
-# define CONFIG_GNRC_IPV6_NIB_ARSM                    0
-# endif
 # ifndef CONFIG_GNRC_IPV6_NIB_NUMOF
 /* only needs to store default router */
 # define CONFIG_GNRC_IPV6_NIB_NUMOF                  (1)

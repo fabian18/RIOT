@@ -330,7 +330,8 @@ void _probe_nbr(_nib_onl_entry_t *nbr, bool reset)
             break;
         case GNRC_IPV6_NIB_NC_INFO_NUD_STATE_INCOMPLETE:
         case GNRC_IPV6_NIB_NC_INFO_NUD_STATE_UNREACHABLE: {
-                gnrc_netif_t *netif = gnrc_netif_get_by_pid(_nib_onl_get_if(nbr));
+            gnrc_netif_t *netif = gnrc_netif_get_by_pid(_nib_onl_get_if(nbr));
+            if (!gnrc_netif_is_6ln(netif) || IS_USED(MODULE_IPV6_CGA)) {
                 uint32_t next_ns = _evtimer_lookup(nbr,
                                                    GNRC_IPV6_NIB_SND_MC_NS);
 
@@ -374,6 +375,7 @@ void _probe_nbr(_nib_onl_entry_t *nbr, bool reset)
                 gnrc_netif_release(netif);
             }
             break;
+        }
         case GNRC_IPV6_NIB_NC_INFO_NUD_STATE_DELAY:
             /* _probe_nbr() will be called from _handle_state_timeout() soon. */
             break;

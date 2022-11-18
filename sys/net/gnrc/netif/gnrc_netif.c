@@ -621,20 +621,27 @@ int gnrc_netif_ipv6_addr_add_internal(gnrc_netif_t *netif,
         return -ENOMEM;
     }
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ARSM)
-    ipv6_addr_t sol_nodes;
-    int res;
+    /* There is no need to join the solicited-node multicast address, since
+       nobody multicasts NSs in this type of network.
+       [RFC 6775](https://datatracker.ietf.org/doc/html/rfc6775#section-5.2) */
+    /* This is also required for private addresses and in SEND, CPS and CPA
+       are sent to the solicited-node multicast address */
+    if (!gnrc_netif_is_6ln(netif) || IS_USED(MODULE_IPV6_CGA)) {
+        ipv6_addr_t sol_nodes;
+        int res;
 
-    /* TODO: SHOULD delay join between 0 and MAX_RTR_SOLICITATION_DELAY
-     * for SLAAC */
-    ipv6_addr_set_solicited_nodes(&sol_nodes, addr);
-    res = gnrc_netif_ipv6_group_join_internal(netif, &sol_nodes);
-    if (res < 0) {
-        DEBUG("gnrc_netif: Can't join solicited-nodes of %s on interface %"
-              PRIkernel_pid "\n",
-              ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)),
-              netif->pid);
-        gnrc_netif_release(netif);
-        return res;
+        /* TODO: SHOULD delay join between 0 and MAX_RTR_SOLICITATION_DELAY
+        * for SLAAC */
+        ipv6_addr_set_solicited_nodes(&sol_nodes, addr);
+        res = gnrc_netif_ipv6_group_join_internal(netif, &sol_nodes);
+        if (res < 0) {
+            DEBUG("gnrc_netif: Can't join solicited-nodes of %s on interface %"
+                PRIkernel_pid "\n",
+                ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)),
+                netif->pid);
+            gnrc_netif_release(netif);
+            return res;
+        }
     }
 #else  /* CONFIG_GNRC_IPV6_NIB_ARSM */
     if (!gnrc_netif_is_6ln(netif)) {
