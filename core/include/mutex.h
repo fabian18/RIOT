@@ -123,7 +123,7 @@ extern "C" {
 /**
  * @brief Mutex structure. Must never be modified by the user.
  */
-typedef struct {
+typedef struct mutex {
     /**
      * @brief   The process waiting queue of the mutex. **Must never be changed
      *          by the user.**
