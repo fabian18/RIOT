@@ -34,6 +34,26 @@ config MODULE_CORE_MSG
     bool "Kernel messaging module"
     default y
 
+config MODULE_CORE_MSG_TIMESTAMP
+    bool "Put a timestamp into the message, when it is sent"
+    default n
+    depends on MODULE_CORE_MSG
+
+if MODULE_CORE_MSG_TIMESTAMP
+
+choice CORE_MSG_TIMESTAMP
+    bool "Choose a message timestamp resolution"
+    default MODULE_CORE_MSG_TIMESTAMP_MSEC
+
+    config MODULE_CORE_MSG_TIMESTAMP_MSEC
+        bool "Put a millisecond resolution timestamp into the message, when it is sent"
+
+    config MODULE_CORE_MSG_TIMESTAMP_NSEC
+        bool "Put a nanosecond resolution timestamp into the message, when it is sent"
+endchoice
+
+endif
+
 config MODULE_CORE_MSG_BUS
     bool "Messaging Bus module"
     help

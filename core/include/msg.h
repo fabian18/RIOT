@@ -176,10 +176,12 @@
 #ifndef MSG_H
 #define MSG_H
 
+#include <kernel_defines.h>
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "sched.h"
+#include "ztimer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -193,15 +195,38 @@ extern "C" {
  * the corresponding fields are never read by the kernel.
  *
  */
-typedef struct {
+typedef struct msg {
     kernel_pid_t sender_pid;    /**< PID of sending thread. Will be filled in
                                      by msg_send. */
     uint16_t type;              /**< Type field. */
+#if IS_USED(MODULE_CORE_MSG_TIMESTAMP_MSEC) || \
+    IS_USED(MODULE_CORE_MSG_TIMESTAMP_NSEC)
+    ztimer_now_t timestamp;     /**< Timestamp, when the message was sent */
+#endif
     union {
         void *ptr;              /**< Pointer content field. */
         uint32_t value;         /**< Value content field. */
     } content;                  /**< Content of the message. */
 } msg_t;
+
+/**
+ * @brief   Read the timestamp of a message when it was sent
+ *
+ * @param[in]   m           Message to read the timestamp from
+ *
+ * @return      Timestamp in ms when MODULE_CORE_MSG_TIMESTAMP_MSEC is used,
+ *              Timestamp in ns when MODULE_CORE_MSG_TIMESTAMP_NSEC is used,
+ *              0 if neither are used
+ */
+static inline ztimer_now_t msg_get_timestamp(const msg_t *m)
+{
+#if IS_USED(MODULE_CORE_MSG_TIMESTAMP_MSEC) || \
+    IS_USED(MODULE_CORE_MSG_TIMESTAMP_NSEC)
+    return m->timestamp;
+#endif
+    (void)m;
+    return 0;
+}
 
 /**
  * @brief Send a message (blocking).

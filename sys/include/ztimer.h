@@ -265,13 +265,25 @@
 #include <stdint.h>
 
 #include "sched.h"
-#include "msg.h"
-#include "mutex.h"
-#include "rmutex.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief   Forward declaration of RIOTs message struct to avoid circular inclusion
+ */
+struct msg;
+
+/**
+ * @brief   Forward declaration of RIOTs mutex struct to avoid circular inclusion
+ */
+struct mutex;
+
+/**
+ * @brief   Forward declaration of RIOTs rmutex struct to avoid circular inclusion
+ */
+struct rmutex;
 
 /**
  * @brief   Disables interaction with pm_layered for a clock
@@ -457,7 +469,7 @@ bool ztimer_remove(ztimer_clock_t *clock, ztimer_t *timer);
  * @param[in]   target_pid      pid the message will be sent to
  */
 void ztimer_set_msg(ztimer_clock_t *clock, ztimer_t *timer, uint32_t offset,
-                    msg_t *msg, kernel_pid_t target_pid);
+                    struct msg *msg, kernel_pid_t target_pid);
 
 /**
  * @brief receive a message (blocking, with timeout)
@@ -476,7 +488,7 @@ void ztimer_set_msg(ztimer_clock_t *clock, ztimer_t *timer, uint32_t offset,
  * @return  >=0 if a message was received
  * @return  -ETIME on timeout
  */
-int ztimer_msg_receive_timeout(ztimer_clock_t *clock, msg_t *msg,
+int ztimer_msg_receive_timeout(ztimer_clock_t *clock, struct msg *msg,
                                uint32_t timeout);
 
 /* created with dist/tools/define2u16.py */
@@ -696,7 +708,7 @@ void ztimer_set_timeout_flag(ztimer_clock_t *clock, ztimer_t *timer,
  * @retval  0               Success, caller has the mutex
  * @retval  -ECANCELED      Failed to obtain mutex within @p timeout
  */
-int ztimer_mutex_lock_timeout(ztimer_clock_t *clock, mutex_t *mutex,
+int ztimer_mutex_lock_timeout(ztimer_clock_t *clock, struct mutex *mutex,
                               uint32_t timeout);
 
 /**
@@ -709,7 +721,7 @@ int ztimer_mutex_lock_timeout(ztimer_clock_t *clock, mutex_t *mutex,
  * @retval  0               Success, caller has the rmutex
  * @retval  -ECANCELED      Failed to obtain rmutex within @p timeout
  */
-int ztimer_rmutex_lock_timeout(ztimer_clock_t *clock, rmutex_t *rmutex,
+int ztimer_rmutex_lock_timeout(ztimer_clock_t *clock, struct rmutex *rmutex,
                                uint32_t timeout);
 
 /**

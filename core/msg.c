@@ -20,6 +20,7 @@
  * @}
  */
 
+#include <kernel_defines.h>
 #include <stddef.h>
 #include <inttypes.h>
 #include <assert.h>
@@ -61,6 +62,16 @@ static int queue_msg(thread_t *target, const msg_t *m)
     return 1;
 }
 
+static inline void _msg_set_timestamp(msg_t *m)
+{
+    (void)m;
+#if IS_USED(MODULE_CORE_MSG_TIMESTAMP_MSEC)
+    m->timestamp = ztimer_now(ZTIMER_MSEC);
+#elif IS_USED(MODULE_CORE_MSG_TIMESTAMP_NSEC)
+    m->timestamp = ztimer_now(ZTIMER_NSEC);
+#endif
+}
+
 int msg_send(msg_t *m, kernel_pid_t target_pid)
 {
     if (irq_is_in()) {
@@ -95,6 +106,7 @@ static int _msg_send(msg_t *m, kernel_pid_t target_pid, bool block,
     thread_t *target = thread_get_unchecked(target_pid);
 
     m->sender_pid = thread_getpid();
+    _msg_set_timestamp(m);
 
     if (target == NULL) {
         DEBUG("msg_send(): target thread %d does not exist\n", target_pid);
@@ -185,6 +197,7 @@ int msg_send_to_self(msg_t *m)
     unsigned state = irq_disable();
 
     m->sender_pid = thread_getpid();
+    _msg_set_timestamp(m);
     int res = queue_msg(thread_get_active(), m);
 
     irq_restore(state);
@@ -233,6 +246,7 @@ int msg_send_int(msg_t *m, kernel_pid_t target_pid)
     int res;
 
     m->sender_pid = KERNEL_PID_ISR;
+    _msg_set_timestamp(m);
 
     res = _msg_send_oneway(m, target_pid);
 
@@ -247,6 +261,7 @@ int msg_send_bus(msg_t *m, msg_bus_t *bus)
 
     m->sender_pid = (in_irq ? KERNEL_PID_ISR : thread_getpid())
                     | MSB_BUS_PID_FLAG;
+    _msg_set_timestamp(m);
 
     unsigned state = irq_disable();
 
@@ -305,6 +320,7 @@ int msg_reply(msg_t *m, msg_t *reply)
 
     DEBUG("msg_reply(): %" PRIkernel_pid ": Direct msg copy.\n",
           thread_getpid());
+    _msg_set_timestamp(m);
     /* copy msg to target */
     msg_t *target_message = (msg_t *)target->wait_data;
 
@@ -331,6 +347,7 @@ int msg_reply_int(msg_t *m, msg_t *reply)
 
     msg_t *target_message = (msg_t *)target->wait_data;
 
+    _msg_set_timestamp(m);
     *target_message = *reply;
     sched_set_status(target, STATUS_PENDING);
     sched_context_switch_request = 1;
