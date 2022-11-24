@@ -35,7 +35,7 @@ extern "C" {
 /**
  * @brief Mutex structure. Must never be modified by the user.
  */
-typedef struct rmutex_t {
+typedef struct rmutex {
     /* fields are managed by mutex functions, don't touch */
     /**
      * @brief The mutex used for locking. **Must never be changed by
