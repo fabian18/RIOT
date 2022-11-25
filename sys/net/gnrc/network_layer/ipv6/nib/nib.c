@@ -132,6 +132,7 @@ void gnrc_ipv6_nib_iface_up(gnrc_netif_t *netif)
 {
     assert(netif != NULL);
     gnrc_netif_acquire(netif);
+    _nib_acquire();
 
     _init_iface_arsm(netif);
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
@@ -152,6 +153,7 @@ void gnrc_ipv6_nib_iface_up(gnrc_netif_t *netif)
     }
 #endif  /* CONFIG_GNRC_IPV6_NIB_ROUTER */
 
+    _nib_release();
     gnrc_netif_release(netif);
 }
 
@@ -160,6 +162,7 @@ void gnrc_ipv6_nib_iface_down(gnrc_netif_t *netif, bool send_final_ra)
     assert(netif != NULL);
     DEBUG("nib: Deinitialize interface %u\n", netif->pid);
     gnrc_netif_acquire(netif);
+    _nib_acquire();
 
     _deinit_iface_arsm(netif);
     if (!gnrc_netif_is_6lbr(netif) &&
@@ -185,6 +188,7 @@ void gnrc_ipv6_nib_iface_down(gnrc_netif_t *netif, bool send_final_ra)
         }
     }
 
+    _nib_release();
     gnrc_netif_release(netif);
 }
 
