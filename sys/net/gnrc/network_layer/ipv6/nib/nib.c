@@ -568,20 +568,11 @@ static uint32_t _handle_rio(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                             const ndp_opt_ri_t *pio);
 /** @} */
 
-/* Iterator for NDP options in a packet */
-#define FOREACH_OPT(ndp_pkt, opt, icmpv6_len) \
-    for (opt = (ndp_opt_t *)(ndp_pkt + 1); \
-         icmpv6_len > 0; \
-         icmpv6_len -= (opt->len << 3), \
-         opt = (ndp_opt_t *)(((uint8_t *)opt) + (opt->len << 3)))
-
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ROUTER)
 static void _handle_rtr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                             const ndp_rtr_sol_t *rtr_sol, size_t icmpv6_len)
 {
-    size_t tmp_len = icmpv6_len - sizeof(ndp_rtr_sol_t);
     _nib_onl_entry_t *nce = NULL;
-    ndp_opt_t *opt;
 
     assert(netif != NULL);
     if (!gnrc_netif_is_rtr(netif) || !gnrc_netif_is_rtr_adv(netif)) {
@@ -604,10 +595,9 @@ static void _handle_rtr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
         return;
     }
     /* pre-check option length */
-    FOREACH_OPT(rtr_sol, opt, tmp_len) {
-        if (tmp_len > icmpv6_len) {
-            DEBUG("nib: Payload length (%u) of RS doesn't align with options\n",
-                  (unsigned)icmpv6_len);
+    FOREACH_OPT(rtr_sol, opt, icmpv6_len - sizeof(ndp_rtr_sol_t)) {
+        if (opt > (ndp_opt_t *)(((uint8_t *)rtr_sol) + icmpv6_len)) {
+            DEBUG("nib: Payload length (%zu) of RS doesn't align with options\n", icmpv6_len);
             return;
         }
         if (opt->len == 0U) {
@@ -628,8 +618,7 @@ static void _handle_rtr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     DEBUG("     - Destination address: %s\n",
           ipv6_addr_to_str(addr_str, &ipv6->dst, sizeof(addr_str)));
     if (!ipv6_addr_is_unspecified(&ipv6->src)) {
-        tmp_len = icmpv6_len - sizeof(ndp_rtr_sol_t);
-        FOREACH_OPT(rtr_sol, opt, tmp_len) {
+        FOREACH_OPT(rtr_sol, opt, icmpv6_len - sizeof(ndp_rtr_sol_t)) {
             switch (opt->type) {
                 case NDP_OPT_SL2A:
                     _handle_sl2ao(netif, ipv6, (const icmpv6_hdr_t *)rtr_sol, opt);
@@ -697,9 +686,7 @@ static inline uint32_t _min(uint32_t a, uint32_t b)
 static void _handle_rtr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                             const ndp_rtr_adv_t *rtr_adv, size_t icmpv6_len)
 {
-    size_t tmp_len = icmpv6_len - sizeof(ndp_rtr_adv_t);
     _nib_dr_entry_t *dr = NULL;
-    ndp_opt_t *opt;
 
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
     sixlowpan_nd_opt_abr_t *abro = NULL;
@@ -732,10 +719,9 @@ static void _handle_rtr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
         return;
     }
     /* pre-check option length */
-    FOREACH_OPT(rtr_adv, opt, tmp_len) {
-        if (tmp_len > icmpv6_len) {
-            DEBUG("nib: Payload length (%u) of RA doesn't align with options\n",
-                  (unsigned)icmpv6_len);
+    FOREACH_OPT(rtr_adv, opt, icmpv6_len - sizeof(ndp_rtr_adv_t)) {
+        if (opt > (ndp_opt_t *)(((uint8_t *)rtr_adv) + icmpv6_len)) {
+            DEBUG("nib: Payload length (%zu) of RA doesn't align with options\n", icmpv6_len);
             return;
         }
         if (opt->len == 0U) {
@@ -827,8 +813,7 @@ static void _handle_rtr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     if (rtr_adv->retrans_timer.u32 != 0) {
         netif->ipv6.retrans_time = byteorder_ntohl(rtr_adv->retrans_timer);
     }
-    tmp_len = icmpv6_len - sizeof(ndp_rtr_adv_t);
-    FOREACH_OPT(rtr_adv, opt, tmp_len) {
+    FOREACH_OPT(rtr_adv, opt, icmpv6_len - sizeof(ndp_rtr_adv_t)) {
         switch (opt->type) {
             case NDP_OPT_SL2A:
                 _handle_sl2ao(netif, ipv6, (const icmpv6_hdr_t *)rtr_adv,
@@ -1033,10 +1018,7 @@ static void _send_delayed_nbr_adv(const gnrc_netif_t *netif,
 static void _handle_nbr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                             const ndp_nbr_sol_t *nbr_sol, size_t icmpv6_len)
 {
-    size_t tmp_len = icmpv6_len - sizeof(ndp_nbr_sol_t);
     int tgt_idx;
-    ndp_opt_t *opt;
-
     /* check validity, see: https://tools.ietf.org/html/rfc4861#section-7.1.1 */
     /* checksum is checked by GNRC's ICMPv6 module */
     if ((ipv6->hl != NDP_HOP_LIMIT) || (nbr_sol->code != 0U) ||
@@ -1067,10 +1049,9 @@ static void _handle_nbr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
         return;
     }
     /* pre-check option length */
-    FOREACH_OPT(nbr_sol, opt, tmp_len) {
-        if (tmp_len > icmpv6_len) {
-            DEBUG("nib: Payload length (%u) of NS doesn't align with options\n",
-                  (unsigned)icmpv6_len);
+    FOREACH_OPT(nbr_sol, opt, icmpv6_len - sizeof(ndp_nbr_sol_t)) {
+        if (opt > (ndp_opt_t *)(((uint8_t *)nbr_sol) + icmpv6_len)) {
+            DEBUG("nib: Payload length (%zu) of NS doesn't align with options\n", icmpv6_len);
             return;
         }
         if (opt->len == 0U) {
@@ -1135,14 +1116,13 @@ static void _handle_nbr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
 #define sl2ao   (NULL)
 #define aro     (NULL)
 #endif  /* CONFIG_GNRC_IPV6_NIB_6LR */
-        tmp_len = icmpv6_len - sizeof(ndp_nbr_sol_t);
 
         if (!(netif->flags & GNRC_NETIF_FLAGS_HAS_L2ADDR)) {
             /* Set STALE NCE if link-layer has no addresses */
             _nib_nc_add(&ipv6->src, netif->pid,
                         GNRC_IPV6_NIB_NC_INFO_NUD_STATE_STALE);
         }
-        FOREACH_OPT(nbr_sol, opt, tmp_len) {
+        FOREACH_OPT(nbr_sol, opt, icmpv6_len - sizeof(ndp_nbr_sol_t)) {
             switch (opt->type) {
                 case NDP_OPT_SL2A:
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LR)
@@ -1194,8 +1174,6 @@ static void _handle_nbr_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
 static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
                             const ndp_nbr_adv_t *nbr_adv, size_t icmpv6_len)
 {
-    size_t tmp_len = icmpv6_len - sizeof(ndp_nbr_adv_t);
-    ndp_opt_t *opt;
     _nib_onl_entry_t *nce;
 
     /* check validity, see: https://tools.ietf.org/html/rfc4861#section-7.1.2 */
@@ -1222,10 +1200,9 @@ static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
         return;
     }
     /* pre-check option length */
-    FOREACH_OPT(nbr_adv, opt, tmp_len) {
-        if (tmp_len > icmpv6_len) {
-            DEBUG("nib: Payload length (%u) of NA doesn't align with options\n",
-                  (unsigned)icmpv6_len);
+    FOREACH_OPT(nbr_adv, opt, icmpv6_len - sizeof(ndp_nbr_adv_t)) {
+        if (opt > (ndp_opt_t *)(((uint8_t *)nbr_adv) + icmpv6_len)) {
+            DEBUG("nib: Payload length (%zu) of NA doesn't align with options\n", icmpv6_len);
             return;
         }
         if (opt->len == 0U) {
@@ -1287,9 +1264,7 @@ static void _handle_nbr_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_6LN)
         uint8_t aro_status = _ADDR_REG_STATUS_UNAVAIL;
 #endif
-
-        tmp_len = icmpv6_len - sizeof(ndp_nbr_adv_t);
-        FOREACH_OPT(nbr_adv, opt, tmp_len) {
+        FOREACH_OPT(nbr_adv, opt, icmpv6_len - sizeof(ndp_nbr_adv_t)) {
             switch (opt->type) {
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_ARSM)
                 case NDP_OPT_TL2A:

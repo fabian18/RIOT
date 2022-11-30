@@ -86,6 +86,18 @@ extern "C" {
 #define _NIB_IF_MAX         (_NIB_IF_MASK >> _NIB_IF_POS)
 
 /**
+ * @brief   Iterator for NDP options in a packet
+ *
+ * @param[in]       ndp_pkt     Pointer to ICMPv6 packet
+ * @param[out]      opt         Name of loop variable pointing to the next option
+ * @param[in]       opt_len     Length of options in ICMPv6 packet
+ */
+#define FOREACH_OPT(ndp_pkt, opt, opt_len) \
+    for (ndp_opt_t *opt = (ndp_opt_t *)((ndp_pkt) + 1); \
+         opt != (ndp_opt_t *)(((uint8_t *)((ndp_pkt) + 1)) + (opt_len)); \
+         opt = (ndp_opt_t *)(((uint8_t *)opt) + (opt->len << 3)))
+
+/**
  * @brief   On-link NIB entry
  * @anchor  _nib_onl_entry_t
  */
