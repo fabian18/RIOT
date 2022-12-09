@@ -58,6 +58,38 @@ static gnrc_netif_t *_find_upstream_netif(void)
     return NULL;
 }
 
+static inline bool _is_netif_blacklisted(gnrc_netif_t * netif)
+{
+#ifdef CONFIG_GNRC_DHCPV6_CLIENT_6LBR_DOWNSTREAM_BLACKLIST
+    kernel_pid_t blacklist[] = CONFIG_GNRC_DHCPV6_CLIENT_6LBR_DOWNSTREAM_BLACKLIST;
+    for (unsigned i = 0; i < ARRAY_SIZE(blacklist); i++) {
+        if (netif->pid == blacklist[i]) {
+            return true;
+        }
+    }
+#endif
+    (void)netif;
+    return false;
+}
+
+static void _configure_downstream_netif(gnrc_netif_t *upstream) {
+
+    gnrc_netif_t *netif = NULL;
+    while ((netif = gnrc_netif_iter(netif))) {
+        if (IS_USED(MODULE_GNRC_DHCPV6_CLIENT_6LBR)
+            && !gnrc_netif_is_6lo(netif)) {
+            continue;
+        }
+        if (netif == upstream) {
+            continue;
+        }
+        if (_is_netif_blacklisted(netif)) {
+            continue;
+        }
+        dhcpv6_client_req_ia_pd(netif->pid, 64U);
+    }
+}
+
 /**
  * @brief   Configure upstream netif to be in line with configuration script
  *
@@ -91,20 +123,11 @@ static void _configure_upstream_netif(gnrc_netif_t *upstream_netif)
  */
 static void _configure_dhcpv6_client(void)
 {
-    gnrc_netif_t *netif = NULL;
     gnrc_netif_t *upstream = _find_upstream_netif();
     if (IS_ACTIVE(MODULE_DHCPV6_CLIENT_IA_NA)) {
         upstream->ipv6.aac_mode |= GNRC_NETIF_AAC_DHCP;
     }
-    while ((netif = gnrc_netif_iter(netif))) {
-        if (IS_USED(MODULE_GNRC_DHCPV6_CLIENT_6LBR)
-            && !gnrc_netif_is_6lo(netif)) {
-            continue;
-        }
-        if (netif != upstream) {
-            dhcpv6_client_req_ia_pd(netif->pid, 64U);
-        }
-    }
+    _configure_downstream_netif(upstream);
 }
 
 /**
