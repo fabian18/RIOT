@@ -724,12 +724,17 @@ void gnrc_ipv6_nib_send_handle_cp_sol(gnrc_netif_t *netif, const ipv6_hdr_t *ipv
     gnrc_send_cache_cpa_t *ctx = NULL;
     ipv6_addr_t dst;
     bool to_all;
-    if ((to_all = ipv6_addr_is_unspecified(&ipv6->src))) {
+    if ((to_all = ipv6_addr_is_unspecified(&ipv6->src)) ||
+        (to_all = !gnrc_send_check_cpa_rate(&netif->ipv6.send_ctx))) {
         dst = ipv6_addr_all_nodes_link_local;
     }
     else {
-        to_all = !gnrc_send_check_cpa_rate(&netif->ipv6.send_ctx);
-        ipv6_addr_set_solicited_nodes(&dst, &ipv6->src);
+        if (gnrc_netif_is_6lo(netif)) {
+            dst = ipv6->src;
+        }
+        else {
+            ipv6_addr_set_solicited_nodes(&dst, &ipv6->src);
+        }
     }
     if (cp && !(ctx = gnrc_send_new_cpa_ctx(netif, &dst, sol_ident, cp))) {
         DEBUG_NIB_SEND("No CPA context available\n");

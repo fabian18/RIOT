@@ -2064,7 +2064,7 @@ static void _handle_cp_adv(gnrc_netif_t *netif, const ipv6_hdr_t *ipv6,
     if ((ipv6->hl != NDP_HOP_LIMIT) ||
         (icmpv6_len < sizeof(ndp_cp_adv_t)) ||
         (!ipv6_addr_is_link_local(&ipv6->src)) ||
-        (!ipv6_addr_is_solicited_node(&ipv6->dst) &&
+        ((!gnrc_netif_is_6lo(netif) && !ipv6_addr_is_solicited_node(&ipv6->dst)) &&
          !ipv6_addr_equal(&ipv6->dst, &ipv6_addr_all_nodes_link_local)) ||
         (cp_adv->ident.u16 == 0 && !ipv6_addr_equal(&ipv6->dst, &ipv6_addr_all_nodes_link_local)) ||
         (cp_adv->ident.u16 != 0 && ipv6_addr_equal(&ipv6->dst, &ipv6_addr_all_nodes_link_local)) ||
