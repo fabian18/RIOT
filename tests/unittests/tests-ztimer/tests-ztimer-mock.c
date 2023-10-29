@@ -15,6 +15,7 @@
  * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se>
  */
 
+#include "embUnit/AssertImpl.h"
 #include "ztimer.h"
 #include "ztimer/mock.h"
 
@@ -156,36 +157,55 @@ static void test_ztimer_mock_set32(void)
     TEST_ASSERT_EQUAL_INT(0, now);
 
     uint32_t count = 0;
+    uint32_t timeout;
     ztimer_t alarm = { .callback = cb_incr, .arg = &count, };
     ztimer_set(z, &alarm, 1000);
+    TEST_ASSERT(ztimer_get(z, &alarm, &timeout));
+    TEST_ASSERT_EQUAL_INT(1000, timeout);
 
     ztimer_mock_advance(&zmock,    1);    /* now =    1*/
     TEST_ASSERT_EQUAL_INT(0, count);
+    TEST_ASSERT(ztimer_get(z, &alarm, &timeout));
+    TEST_ASSERT_EQUAL_INT(1000 - 1, timeout);
     ztimer_mock_advance(&zmock,  100);    /* now =  101 */
     TEST_ASSERT_EQUAL_INT(0, count);
+    TEST_ASSERT(ztimer_get(z, &alarm, &timeout));
+    TEST_ASSERT_EQUAL_INT(1000 - 101, timeout);
     ztimer_mock_advance(&zmock,  898);    /* now =  999 */
+    TEST_ASSERT(ztimer_get(z, &alarm, &timeout));
+    TEST_ASSERT_EQUAL_INT(1000 - 999, timeout);
     now = ztimer_now(z);
     TEST_ASSERT_EQUAL_INT(999, now);
     TEST_ASSERT_EQUAL_INT(0, count);
     ztimer_mock_advance(&zmock,    1);    /* now = 1000*/
     TEST_ASSERT_EQUAL_INT(1, count);
+    TEST_ASSERT(!ztimer_get(z, &alarm, &timeout));
     ztimer_mock_advance(&zmock,    1);    /* now = 1001*/
     TEST_ASSERT_EQUAL_INT(1, count);
+    TEST_ASSERT(!ztimer_get(z, &alarm, &timeout));
     ztimer_mock_advance(&zmock, 1000);    /* now = 2001*/
     TEST_ASSERT_EQUAL_INT(1, count);
+    TEST_ASSERT(!ztimer_get(z, &alarm, &timeout));
     ztimer_set(z, &alarm, 3);
+    TEST_ASSERT(ztimer_get(z, &alarm, &timeout));
+    TEST_ASSERT_EQUAL_INT(3, timeout);
     ztimer_mock_advance(&zmock,  999);    /* now = 3000*/
     TEST_ASSERT_EQUAL_INT(2, count);
+    TEST_ASSERT(!ztimer_get(z, &alarm, &timeout));
     ztimer_set(z, &alarm, 4000001000ul);
     ztimer_mock_advance(&zmock, 1000);    /* now = 4000*/
     TEST_ASSERT_EQUAL_INT(2, count);
+    TEST_ASSERT(ztimer_get(z, &alarm, &timeout));
+    TEST_ASSERT_EQUAL_INT(4000001000ul - 1000, timeout);
     ztimer_mock_advance(&zmock, 4000000000ul); /* now = 4000004000*/
     now = ztimer_now(z);
     TEST_ASSERT_EQUAL_INT(4000004000ul, now);
     TEST_ASSERT_EQUAL_INT(3, count);
+    TEST_ASSERT(!ztimer_get(z, &alarm, &timeout));
     ztimer_set(z, &alarm, 15);
     ztimer_mock_advance(&zmock,  14);
     ztimer_remove(z, &alarm);
+    TEST_ASSERT(!ztimer_get(z, &alarm, &timeout));
     ztimer_mock_advance(&zmock, 1000);
     TEST_ASSERT_EQUAL_INT(3, count);
 }
