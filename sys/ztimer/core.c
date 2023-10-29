@@ -221,6 +221,34 @@ uint32_t ztimer_set(ztimer_clock_t *clock, ztimer_t *timer, uint32_t val)
     return now;
 }
 
+bool ztimer_get(ztimer_clock_t *clock, const ztimer_t *timer, uint32_t *val)
+{
+    bool res = false;
+    unsigned state = irq_disable();
+
+    if (!_is_set(clock, timer)) {
+        goto out;
+    }
+    _ztimer_update_head_offset(clock);
+
+    uint32_t delta_sum = 0;
+    const ztimer_base_t *list = &clock->list;
+    while (list->next) {
+        const ztimer_base_t *list_entry = list->next;
+        if (list_entry == &timer->base) {
+            *val = delta_sum + list_entry->offset;
+            res = true;
+            break;
+        }
+        delta_sum += list_entry->offset;
+        list = list->next;
+    }
+
+out:
+    irq_restore(state);
+    return res;
+}
+
 static void _add_entry_to_list(ztimer_clock_t *clock, ztimer_base_t *entry)
 {
     uint32_t delta_sum = 0;

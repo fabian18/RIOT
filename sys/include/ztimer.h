@@ -262,6 +262,7 @@
 #ifndef ZTIMER_H
 #define ZTIMER_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "sched.h"
@@ -472,6 +473,19 @@ static inline bool ztimer_release(ztimer_clock_t *clock)
  *         (`now() + @p val = absolute trigger time`).
  */
 uint32_t ztimer_set(ztimer_clock_t *clock, ztimer_t *timer, uint32_t val);
+
+/**
+ * @brief   Get the timeout of a pending timer on a clock
+ *
+ * @param[in]   clock       ztimer clock to operate on
+ * @param[in]   timer       timer entry to look up
+ * @param[out]  val         number or ticks until the timer triggers,
+ *                          if it is active on the given clock
+ *
+ * @returns true    If the timer is active on the given clock
+ * @return false    If the timer is not active on the given clock
+ */
+bool ztimer_get(ztimer_clock_t *clock, const ztimer_t *timer, uint32_t *val);
 
 /**
  * @brief   Check if a timer is currently active
