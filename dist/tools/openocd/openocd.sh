@@ -436,9 +436,11 @@ do_debugserver() {
             echo \$! > $OCD_PIDFILE ; \
             wait \$(cat $OCD_PIDFILE)" &
 
-    while read -r line; do
-        echo "Exit with Ctrl+D"
-    done
+    if [ ps -p $(cat ${OCD_PIDFILE}) > /dev/null 2>&1 ]; then
+        while read -r line; do
+            echo "Exit with Ctrl+D"
+        done
+    fi
 }
 
 do_reset() {
