@@ -3,6 +3,8 @@ DEBUGGER ?= $(RIOTTOOLS)/openocd/openocd.sh
 DEBUGSERVER ?= $(RIOTTOOLS)/openocd/openocd.sh
 DEBUGCLIENT ?= $(RIOTTOOLS)/openocd/openocd.sh
 RESET ?= $(RIOTTOOLS)/openocd/openocd.sh
+TERM_RTT_SERVER ?= $(RIOTTOOLS)/openocd/openocd.sh
+TERM_RTT_CLIENT ?= $(RIOTTOOLS)/openocd/openocd.sh
 
 FLASHFILE ?= $(ELFFILE)
 FFLAGS ?= flash $(FLASHFILE)
@@ -10,6 +12,8 @@ DEBUGGER_FLAGS ?= debug $(DEBUG_ELFFILE)
 DEBUGSERVER_FLAGS ?= debug-server
 DEBUGCLIENT_FLAGS ?= debug-client $(DEBUG_ELFFILE)
 RESET_FLAGS ?= reset
+TERM_RTT_SERVER_FLAGS ?= term-rtt-server
+TERM_RTT_CLIENT_FLAGS ?= term-rtt-client
 
 ifneq (,$(OPENOCD_DEBUG_ADAPTER))
   include $(RIOTMAKE)/tools/openocd-adapters/$(OPENOCD_DEBUG_ADAPTER).inc.mk
@@ -20,7 +24,7 @@ endif
 
 OPENOCD_CONFIG ?= $(BOARDDIR)/dist/openocd.cfg
 
-OPENOCD_TARGETS = debug% flash% reset
+OPENOCD_TARGETS = debug% flash% reset term%
 
 # Export GDB_PORT_CORE_OFFSET to required targets
 $(call target-export-variables,$(OPENOCD_TARGETS),GDB_PORT_CORE_OFFSET)
@@ -85,4 +89,16 @@ endif
 ifneq (,$(OPENOCD_PRE_FLASH_CHECK_SCRIPT))
   # Export OPENOCD_PRE_FLASH_CHECK_SCRIPT only to the flash/flash-only targets
   $(call target-export-variables,$(OPENOCD_FLASH_TARGETS),OPENOCD_PRE_FLASH_CHECK_SCRIPT)
+endif
+
+OPENOCD_TERM_TARGETS = term-rtt term-rtt-server term-rtt-client
+
+ifneq (,$(OPENOCD_TERMPROG))
+  # Export OPENOCD_TERMPROG only to the term targets
+  $(call target-export-variables,$(OPENOCD_TERM_TARGETS),OPENOCD_TERMPROG)
+endif
+
+ifneq (,$(OPENOCD_TERMFLAGS))
+  # Export OPENOCD_TERMFLAGS only to the term targets
+  $(call target-export-variables,$(OPENOCD_TERM_TARGETS),OPENOCD_TERMFLAGS)
 endif
