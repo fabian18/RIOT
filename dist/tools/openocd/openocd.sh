@@ -474,8 +474,6 @@ do_term() {
     # cleanup after script terminates
     trap "cleanup ${OPENOCD_PIDFILE}" EXIT INT
 
-    set -x
-    echo test
     # start OpenOCD as RTT server for channel 0
     sh -x -c "${OPENOCD} \
             ${OPENOCD_ADAPTER_INIT} \
@@ -492,6 +490,52 @@ do_term() {
             >/dev/null & \
             echo  \$! > $OPENOCD_PIDFILE" &
     sleep 1
+
+    do_term_client
+}
+
+do_term_server() {
+    test_config
+
+    # temporary file that save the OpenOCD pid
+    OPENOCD_PIDFILE=$(mktemp -t "openocd_pid.XXXXXXXXXX")
+    # will be called by trap
+    cleanup() {
+        if [ -f $OPENOCD_PIDFILE ]; then
+            OPENOCD_PID="$(cat ${OPENOCD_PIDFILE})"
+            kill ${OPENOCD_PID}
+            rm -r "${OPENOCD_PIDFILE}"
+        fi
+        exit 0
+    }
+    # cleanup after script terminates
+    trap "cleanup ${OPENOCD_PIDFILE}" EXIT INT
+
+    # start OpenOCD as RTT server for channel 0
+    sh -x -c "${OPENOCD} \
+            ${OPENOCD_ADAPTER_INIT} \
+            -f '${OPENOCD_CONFIG}' \
+            ${OPENOCD_EXTRA_INIT} \
+            -c 'bindto ${OPENOCD_SERVER_ADDRESS}' \
+            -c 'tcl_port 0' \
+            -c 'telnet_port 0' \
+            -c 'gdb_port 3333' \
+            -c init \
+            -c 'rtt setup '${RAM_START_ADDR}' '${RAM_LEN}' \"SEGGER RTT\"' \
+            -c 'rtt start' \
+            -c 'rtt server start '${RTT_PORT}' 0' \
+            & \
+            echo  \$! > $OPENOCD_PIDFILE; \
+            wait \$(cat $OCD_PIDFILE)" &
+    sleep 1
+
+    while read -r line; do
+        echo "Exit with Ctrl+D"
+    done
+}
+
+do_term_client() {
+    test_config
 
     ${OPENOCD_TERMPROG:-${_OPENOCD_TERMPROG}} ${OPENOCD_TERMFLAGS:-${_OPENOCD_TERMFLAGS}}
 }
@@ -540,8 +584,16 @@ case "${ACTION}" in
     echo "### Starting RTT terminal ###"
     do_term
     ;;
+  term-rtt-server)
+    echo "### Starting RTT terminal server ###"
+    do_term_server
+    ;;
+  term-rtt-client)
+    echo "### Attaching to RTT terminal server ###"
+    do_term_client
+    ;;
   *)
-    echo "Usage: $0 {flash|debug|debug-server|reset}"
+    echo "Usage: $0 {flash|debug|debug-client|debug-server|reset|term-rtt|term-rtt-server|term-rtt-client} <file>"
     echo "          flash <flashfile>"
     echo "          debug <elffile>"
     exit 2
