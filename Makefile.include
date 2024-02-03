@@ -622,7 +622,13 @@ include $(RIOTMAKE)/bindist.inc.mk
 include $(RIOTMAKE)/modules.inc.mk
 
 
-.PHONY: all link clean flash flash-only termdeps term doc debug debug-server reset objdump help info-modules
+.PHONY: all clean link
+.PHONY: flash flash-only reset
+.PHONY: term term-rtt-client term-rtt-server termdeps
+.PHONY: debug debug-client debug-server
+.PHONY: objdump
+.PHONY: doc help
+.PHONY: info-modules
 .PHONY: print-size elffile lstfile binfile hexfile flashfile cosy
 .PHONY: ..in-docker-container
 
@@ -908,6 +914,14 @@ debug-client:
 debug-server:
 	$(call check_cmd,$(DEBUGSERVER),Debug server program)
 	$(DEBUGSERVER) $(DEBUGSERVER_FLAGS)
+
+term-rtt-server:
+	$(call check_cmd,$(TERM_RTT_SERVER),RTT server program)
+	$(TERM_RTT_SERVER) $(TERM_RTT_SERVER_FLAGS)
+
+term-rtt-client:
+	$(call check_cmd,$(TERM_RTT_CLIENT),RTT client program)
+	$(TERM_RTT_CLIENT) $(TERM_RTT_CLIENT_FLAGS)
 
 ifeq (1,$(EMULATE))
 emulate:
