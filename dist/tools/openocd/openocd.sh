@@ -521,7 +521,7 @@ do_term_server() {
             -c 'bindto ${OPENOCD_SERVER_ADDRESS}' \
             -c 'tcl_port 0' \
             -c 'telnet_port 0' \
-            -c 'gdb_port 3333' \
+            -c 'gdb_port ${GDB_PORT}' \
             -c init \
             -c 'rtt setup '${RAM_START_ADDR}' '${RAM_LEN}' \"SEGGER RTT\"' \
             -c 'rtt start' \
@@ -529,11 +529,12 @@ do_term_server() {
             & \
             echo  \$! > $OPENOCD_PIDFILE; \
             wait \$(cat $OCD_PIDFILE)" &
-    sleep 1
 
-    while read -r line; do
-        echo "Exit with Ctrl+D"
-    done
+    if [ ps -p $(cat ${OPENOCD_PIDFILE}) > /dev/null 2>&1 ]; then
+        while read -r line; do
+            echo "Exit with Ctrl+D"
+        done
+    fi
 }
 
 do_term_client() {
