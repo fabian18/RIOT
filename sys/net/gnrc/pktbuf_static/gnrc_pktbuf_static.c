@@ -438,7 +438,7 @@ static void *_pktbuf_alloc(size_t size)
 #endif
         assert(0);
     }
-
+    printf("ALLOCATE: %p, %lu, %u\n", (void *)ptr, (unsigned long)size, (unsigned)thread_getpid());
     return (void *)ptr;
 }
 
@@ -467,7 +467,7 @@ void gnrc_pktbuf_free_internal(void *data, size_t size)
     if (!gnrc_pktbuf_contains(data)) {
         return;
     }
-
+    printf("FREE: %p, %lu, %u\n", (void *)data, (unsigned long)_align(size), (unsigned)thread_getpid());
     if (CONFIG_GNRC_PKTBUF_CHECK_USE_AFTER_FREE) {
         memset(data, CANARY, _align(size));
     }
