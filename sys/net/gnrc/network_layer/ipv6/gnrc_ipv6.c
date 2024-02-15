@@ -749,7 +749,8 @@ static inline bool _pkt_not_for_me(gnrc_netif_t **netif, ipv6_hdr_t *hdr)
         return (gnrc_netif_get_by_ipv6_addr(&hdr->dst) == NULL);
     }
 }
-
+#undef ENABLE_DEBUG
+#define ENABLE_DEBUG 1
 static void _receive(gnrc_pktsnip_t *pkt)
 {
     gnrc_netif_t *netif = NULL;
@@ -929,5 +930,6 @@ static void _receive(gnrc_pktsnip_t *pkt)
     }
     _demux(netif, pkt, first_nh);
 }
-
+#undef ENABLE_DEBUG
+#define ENABLE_DEBUG 0
 /** @} */
