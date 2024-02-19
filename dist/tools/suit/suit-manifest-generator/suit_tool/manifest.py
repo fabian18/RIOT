@@ -446,16 +446,38 @@ class SUITCompressionInfo(SUITKeyMap):
         'lzma' : 7
     })
 
+class SUITVersionArray(SUITManifestArray):
+    field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITInt)
+
+    def to_suit(self):
+        return [i.v for i in self.items]
+
+    def to_debug(self, indent):
+        newindent = indent + one_indent
+        s = '[' + ''.join([v.to_debug(newindent) for v in self.items]) + ']'
+        return s
+
+class SUITComponentVersion(SUITManifestDict):
+    fields = SUITManifestDict.mkfields({
+        '>' : ('>', 1, SUITVersionArray),
+        '>=' : ('>=', 2, SUITVersionArray),
+        '==' : ('==', 3, SUITVersionArray),
+        '<=' : ('<=', 4, SUITVersionArray),
+        '<' : ('<', 5, SUITVersionArray),
+    })
+
 class SUITParameters(SUITManifestDict):
     fields = SUITManifestDict.mkfields({
         'vendor-id' : ('vendor-id', 1, SUITUUID),
         'class-id' : ('class-id', 2, SUITUUID),
+        'device-id' : ('device-id', 24, SUITUUID),
         'digest' : ('image-digest', 3, SUITBWrapField(SUITDigest)),
         'size' : ('image-size', 14, SUITPosInt),
         'uri' : ('uri', 21, SUITTStr),
         'src' : ('source-component', 22, SUITComponentIndex),
         'compress' : ('compression-info', 19, SUITCompressionInfo),
-        'offset' : ('offset', 5, SUITPosInt)
+        'offset' : ('offset', 5, SUITPosInt),
+        'version' : ('version', 28, SUITComponentVersion)
     })
     def from_json(self, j):
         return super(SUITParameters, self).from_json(j)
@@ -539,7 +561,7 @@ SUITCommand.commands = [
     SUITCommandContainer('condition-image-match',          3,  mkPolicy(policy=0xF), dp=['digest']),
     SUITCommandContainer('condition-use-before',           4,  mkPolicy(policy=0xA)),
     SUITCommandContainer('condition-component-offset',     5,  mkPolicy(policy=0x5), dp=['offset']),
-    SUITCommandContainer('condition-device-identifier',    24, mkPolicy(policy=0xF)),
+    SUITCommandContainer('condition-device-identifier',    24, mkPolicy(policy=0xF), dp=['device-id']),
     SUITCommandContainer('condition-image-not-match',      25, mkPolicy(policy=0xF)),
     SUITCommandContainer('condition-minimum-battery',      26, mkPolicy(policy=0xA)),
     SUITCommandContainer('condition-update-authorised',    27, mkPolicy(policy=0x3)),

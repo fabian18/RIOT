@@ -182,13 +182,17 @@ def compile_manifest(options, m):
         'offset': lambda cid, data: mkCommand(cid, 'condition-component-offset', None),
         'vendor-id': lambda cid, data: mkCommand(cid, 'condition-vendor-identifier', None),
         'class-id': lambda cid, data: mkCommand(cid, 'condition-class-identifier', None),
+        'device-id': lambda cid, data: mkCommand(cid, 'condition-device-identifier', None),
+        'version': lambda cid, data: mkCommand(cid, 'condition-version', None),
     }
     CommonParams = {
         'install-digest': lambda cid, data: ('image-digest', data['install-digest']),
         'install-size': lambda cid, data: ('image-size', data['install-size']),
         'vendor-id' : lambda cid, data: ('vendor-id', data['vendor-id']),
         'class-id' : lambda cid, data: ('class-id', data['class-id']),
-        'offset' : lambda cid, data: ('offset', data['offset'])
+        'device-id': lambda cid, data: ('device-id', data['device-id']),
+        'offset' : lambda cid, data: ('offset', data['offset']),
+        'version' : lambda cid, data: ('version', data['version']),
     }
     # print('Common')
     CommonSeq = SUITSequence()
