@@ -345,17 +345,17 @@ static void submac_tx_done(ieee802154_submac_t *submac, int status,
         break;
     case TX_STATUS_FRAME_PENDING:
         DEBUG("IEEE802154 submac: NETDEV_EVENT_TX_COMPLETE_DATA_PENDING\n");
-        netdev_submac->ev = NETDEV_EVENT_TX_COMPLETE_DATA_PENDING;
+        /* netdev_submac->ev = NETDEV_EVENT_TX_COMPLETE_DATA_PENDING; */
         break;
     case TX_STATUS_MEDIUM_BUSY:
         DEBUG("IEEE802154 submac: NETDEV_EVENT_TX_MEDIUM_BUSY\n");
         netdev_submac->bytes_tx = -EBUSY;
-        netdev_submac->ev = NETDEV_EVENT_TX_MEDIUM_BUSY;
+        /* netdev_submac->ev = NETDEV_EVENT_TX_MEDIUM_BUSY; */
         break;
     case TX_STATUS_NO_ACK:
         DEBUG("IEEE802154 submac: NETDEV_EVENT_TX_NOACK\n");
         netdev_submac->bytes_tx = -EHOSTUNREACH;
-        netdev_submac->ev = NETDEV_EVENT_TX_NOACK;
+        /* netdev_submac->ev = NETDEV_EVENT_TX_NOACK; */
         break;
     default:
         break;
