@@ -41,8 +41,10 @@ typedef struct {
  * @brief RGBA color value
  */
 typedef struct {
-    color_rgb_t color;  /**< RGB value */
-    uint8_t alpha;      /**< alpha value [0 - 255] */
+    uint8_t r;          /**< red value      [0 - 255] */
+    uint8_t g;          /**< green value    [0 - 255] */
+    uint8_t b;          /**< blue value     [0 - 255] */
+    uint8_t a;          /**< alpha value    [0 - 255] */
 } color_rgba_t;
 
 /**

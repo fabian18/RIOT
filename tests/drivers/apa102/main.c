@@ -53,17 +53,18 @@ static color_rgba_t leds[APA102_PARAM_LED_NUMOF];
 static void setcolor(int color, uint8_t alpha)
 {
     for (int i = 0; i < (int)APA102_PARAM_LED_NUMOF; i++) {
+        memset(&leds[i], 0, sizeof(leds[i]));
         leds[i].alpha = alpha;
-        memset(&leds[i].color, 0, sizeof(color_rgb_t));
+
         switch (color) {
             case 0:
-                leds[i].color.r = 255;
+                leds[i].r = 255;
                 break;
             case 1:
-                leds[i].color.g = 255;
+                leds[i].g = 255;
                 break;
             case 2:
-                leds[i].color.b = 255;
+                leds[i].b = 255;
                 break;
         }
     }

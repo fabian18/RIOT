@@ -65,10 +65,10 @@ void apa102_load_rgba(const apa102_t *dev, const color_rgba_t vals[])
         uint32_t data = HEAD;
         /* we scale the 8-bit alpha value to a 5-bit value by cutting off the
          * 3 least significant bits */
-        data |= (((uint32_t)vals[i].alpha << BRIGHT_SHIFT) & BRIGHT);
-        data |= ((uint32_t)vals[i].color.b << BLUE_SHIFT);
-        data |= ((uint32_t)vals[i].color.g << GREEN_SHIFT);
-        data |= vals[i].color.r;
+        data |= (((uint32_t)vals[i].a << BRIGHT_SHIFT) & BRIGHT);
+        data |= ((uint32_t)vals[i].b << BLUE_SHIFT);
+        data |= ((uint32_t)vals[i].g << GREEN_SHIFT);
+        data |= vals[i].r;
         shift(dev, data);
     }
     shift(dev, END);
