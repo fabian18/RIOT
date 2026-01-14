@@ -68,6 +68,10 @@ extern "C" {
  * @brief   Offset for the blue color component
  */
 #define WS281X_OFFSET_B                 (2U)
+/**
+ * @brief   Offset for the alpha color component (only for 4-byte variants)
+ */
+#define WS281X_OFFSET_A                 (3U)
 /**@}*/
 
 #ifdef __cplusplus
