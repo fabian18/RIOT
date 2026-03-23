@@ -549,7 +549,7 @@ static void _init_key_lookup_implicit(ieee802154_sec_key_lookup_t *key_lookup,
         memcpy_reversed(key_lookup->key_lookup.implicit.dev_addr, dev_addr,
                         IEEE802154_SHORT_ADDRESS_LEN);
     }
-    else if(dev_mode == IEEE802154_SEC_DEV_ADDRMODE_LONG) {
+    else if (dev_mode == IEEE802154_SEC_DEV_ADDRMODE_LONG) {
         memcpy(key_lookup->key_lookup.implicit.dev_pan_id, dev_pan_id,
                sizeof(key_lookup->key_lookup.implicit.dev_pan_id));
         memcpy_reversed(key_lookup->key_lookup.implicit.dev_addr, dev_addr,
