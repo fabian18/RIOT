@@ -914,14 +914,16 @@ int ieee802154_sec_decrypt_frame(ieee802154_sec_context_t *ctx,
                 ieee802154_get_src_len(header));
 #if IS_USED(MODULE_IEEE802154_SECURITY_REPLAY_PROTECTION)
         if (!dev) {
-            /* The device has to exist and must be known by long address. */
-            /* If it would not have to exist, an attacker could replay any frame by creating an arbitrary device. */
-            /* If it exists, it is trusted and a lookup descriptor is created for tracking key usage and frame counter. */
+            /* The device has to exist and must be known by long address.
+             * If it would not have to exist, an attacker could replay any frame by creating
+             * an arbitrary device with a new source address.
+             * If it exists, it is trusted and a lookup descriptor is created for tracking the
+             * frame counter. */
             CTX_UNLOCK(ctx);
             DEBUG_SEC("device not found\n");
             return -IEEE802154_SEC_NO_DEV;
         }
-        /* get or create peer lookup descriptor to track key usage and frame counter */
+        /* get or create peer lookup descriptor to track frame counter */
         ieee802154_sec_peer_lookup_t *dev_lookup =  _get_peer_lookup(
             ctx,
             dev - ctx->devstore.peers,
@@ -952,7 +954,8 @@ int ieee802154_sec_decrypt_frame(ieee802154_sec_context_t *ctx,
             memcpy_reversed(src_address, dev->long_addr, sizeof(dev->long_addr));
         }
         else if (ieee802154_get_src_len(header) == IEEE802154_LONG_ADDRESS_LEN) {
-            memcpy_reversed(src_address, ieee802154_get_src_ptr(header), IEEE802154_LONG_ADDRESS_LEN);
+            memcpy_reversed(src_address, ieee802154_get_src_ptr(header),
+                            IEEE802154_LONG_ADDRESS_LEN);
         }
         else {
             CTX_UNLOCK(ctx);
