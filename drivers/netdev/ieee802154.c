@@ -49,10 +49,10 @@ void netdev_ieee802154_reset(netdev_ieee802154_t *dev)
 
 #if IS_USED(MODULE_IEEE802154_SECURITY)
     /* We can use explicit key index by default.
-       This way, we only require one lookup descriptor with a matching index.
-       For implicit keys we would actually need to store a
-       lookup descriptor for every device we communicate with.
-       MIC64 is the only mandatory security mode */
+     * This way, we only require one lookup descriptor with a matching index.
+     * For implicit keys we would actually need to store a
+     * lookup descriptor for every device we communicate with.
+     * MIC64 is the only mandatory security mode */
     ieee802154_sec_init(&dev->sec_ctx,
                         CONFIG_IEEE802154_SEC_DEFAULT_SEC_MODE,
                         CONFIG_IEEE802154_SEC_DEFAULT_KEY_MODE,
