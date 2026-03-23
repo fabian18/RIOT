@@ -8,28 +8,35 @@
  *
  * @file
  * @internal
- * This is an informal explanation about the internal organization of peer devices that we share a cryptographic key with.
- * In the Security section of the IEEE 802.15.4 standard, there are some datatype structures defined, which are in some way
- * connected to make it possible to find the correct key for a frame that needs to be decrypted or encrypted, and to realize
- * replay protection per peer device. The datatype structures are called "descriptors". There are actually a lot of
- * them, which requires a lot of memory and lookup overhead. So if you wanted to implement the standard very complete, the
- * process becomes more complicated. Due to that reason, I made some simplifications and I hope I did understand the
- * procedures in the standard and did not violate the intended connections between the individual descriptors.
+ * This is an informal explanation about the internal organization of peer devices that we share a
+ * cryptographic key with. In the Security section of the IEEE 802.15.4 standard, there are some
+ * datatype structures defined, which are in some way connected to make it possible to find the
+ * correct key for a frame that needs to be decrypted or encrypted, and to realize replay protection
+ * per peer device. The datatype structures are called "descriptors". There are actually a lot of
+ * them, which requires a lot of memory and lookup overhead. So if you wanted to implement the
+ * standard very complete, the process becomes more complicated. Due to that reason, I made some
+ * simplifications and I hope I did understand the procedures in the standard and did not violate
+ * the intended connections between the individual descriptors.
  *
- * Our implementation shall get along with the, for my understanding, most important descriptors, which are the so called
- * secKeyDescriptor, secDeviceDescriptor, and secKeyIdLookupDescriptor. The secKeyDescriptor represents the cryptographic key
- * material. The secDeviceDescriptor represents a peer device. The device descriptor must of course store the address
- * information of a device.
- * The secKeyIdLookupDescriptor stores information, necessary to find the correct key from data contained in a frame.
- * It stores a reference to a key and the frame counter how often this key has been used to encrypt a frame.
- * The key can be found implicitly from a device address in the frame header, or a frame must contain auxiliary information in
- * which case the key is identified explicitly.
- * The DeviceLookupDescriptor stores a reference to a key and device pair and tracks the incoming frame counter for replay protection.
+ * Our implementation shall get along with the, for my understanding, most important descriptors,
+ * which are the so called secKeyDescriptor, secDeviceDescriptor, and secKeyIdLookupDescriptor. The
+ * secKeyDescriptor represents the cryptographic key material. The secDeviceDescriptor represents a
+ * peer device. The device descriptor must of course store the address information of a device.
+ * The secKeyIdLookupDescriptor stores information, necessary to find the correct key from data
+ * contained in a frame when decrypting, or from the security context when encrypting.
+ * It stores a reference to a key and the frame counter how often this key has been used to encrypt
+ * a frame. The key can be found implicitly from a device address in the frame header, or a frame
+ * must contain auxiliary information in which case the key is identified explicitly.
+ * The DeviceLookupDescriptor stores a reference to a key and device pair and tracks the incoming
+ * frame counter for replay protection.
  *
  * @verbatim
+ *
+ *                                + externally provisioned device key
+ *                                |
  *  +------------------+        +-----------------------------------------------------+
- *  | secKeyDescriptor +-       | secKeyIdLookupDescriptor (implicit)                 | <-- externally provisioned
- *  +------------------+ \      +-----------------------------------------------------+     device key
+ *  | secKeyDescriptor +-       | secKeyIdLookupDescriptor (implicit)                 |
+ *  +------------------+ \      +-----------------------------------------------------+
  *  | byte key[]       |  \     | byte key_mode = IEEE802154_SEC_SCF_KEYMODE_IMPLICIT |
  *  +------------------+   \    | byte dev_mode                                       |
  *  |                       \   | byte dev_pan_id[2]                                  |
@@ -38,9 +45,11 @@
  *  |                           | u32 fc                                              |
  *  |                           +-----------------------------------------------------+
  *  |
+ *  |                                  + externally provisioned network key
+ *  |                                  |
  *  |   +------------------+        +-----------------------------------------------------------+
- *  |   | secKeyDescriptor +-       | secKeyIdLookupDescriptor (explicit)                       | <-- externally provisioned
- *  |   +------------------+ \      +-----------------------------------------------------------+     network key
+ *  |   | secKeyDescriptor +-       | secKeyIdLookupDescriptor (explicit)                       |
+ *  |   +------------------+ \      +-----------------------------------------------------------+
  *  |   | byte key[]       |  \     | byte key_mode = IEEE802154_SEC_SCF_KEYMODE_INDEX or       |
  *  |   +------------------+   \    |                 IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX or |
  *  |   |                       \   |                 IEEE802154_SEC_SCF_KEYMODE_HW_INDEX       |
@@ -49,10 +58,14 @@
  *  |    \                         -+ byte key                                                  |
  *  |     \                         | u32 fc                                                    |
  *  |      \                        +-----------------------------------------------------------+
- *  |       ---------------
+ *  |       \
+ *  |        \
+ *  |         \
+ *  |          \      externally provisioned peer device for replay protection +
+ *  |           -----------                                                    |
  *  |                      \    +-------------------------+                  +---------------------+
- *  |                       \   | DeviceLookupDescriptor  |                  + secDeviceDescriptor | <-- externally provisioned
- *  |                        \  +-------------------------+                / +---------------------+     peer device for replay protection
+ *  |                       \   | DeviceLookupDescriptor  |                  + secDeviceDescriptor |
+ *  |                        \  +-------------------------+                / +---------------------+
  *  |                         --+ byte key                |               / || byte pan_id[2]      |
  *  |                           | byte dev                +---------------  || byte short_addr[2]  |
  *   \                          | u32 fc                  |                 || byte long_addr[8]   |
@@ -67,10 +80,11 @@
  *                              | u32 fc                  |
  *                              +-------------------------+
  * @endverbatim
- * Furthermore, the standard offers two ways where to store the frame counter. Depending on whether secFrameCounterPerKey is
- * true or false, you can have a global frame counter for an interface or you can store the outgoing frame counter per key.
- * As you can see from the picture above, this implementation stores a frame counter per key, because it is easier to update
- * only one link with a new key instead of updating all links with a new key, which could be error prone.
+ * Furthermore, the standard offers two ways where to store the frame counter. Depending on whether
+ * secFrameCounterPerKey is true or false, you can have a global frame counter for an interface or
+ * you can store the outgoing frame counter per key. As you can see from the picture above, this
+ * implementation stores a frame counter per key, because it is easier to update only one link with
+ * a new key instead of updating all links with a new key, which could be error prone.
  *
  * @author Fabian Hüßler <fabian.huessler@mlpa.com>
  * @}
