@@ -117,7 +117,7 @@ struct ieee802154_sec_dev {
  * @note    Predefine it yourself,
  *          if you want another key to be set up on initialization
  */
-#define CONFIG_IEEE802154_SEC_DEFAULT_KEY       "pizza_margherita"
+#  define CONFIG_IEEE802154_SEC_DEFAULT_KEY                 "pizza_margherita"
 #endif
 
 #if !defined(CONFIG_IEEE802154_SEC_DEFAULT_SEC_MODE) || defined(DOXYGEN)
@@ -127,7 +127,7 @@ struct ieee802154_sec_dev {
  * @note    The default is set to the mandatory
  *          security level of 802.15.4, which provides encryption and a 64 bit MIC.
  */
-#define CONFIG_IEEE802154_SEC_DEFAULT_SEC_MODE    IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64
+#  define CONFIG_IEEE802154_SEC_DEFAULT_SEC_MODE            IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64
 #endif
 
 #if !defined(CONFIG_IEEE802154_SEC_DEFAULT_KEY_MODE) || defined(DOXYGEN)
@@ -137,7 +137,7 @@ struct ieee802154_sec_dev {
  * @note    The default is set to explicit key mode, which means that the key
  *          is determined from the key index field of the auxiliary header.
  */
-#define CONFIG_IEEE802154_SEC_DEFAULT_KEY_MODE    IEEE802154_SEC_SCF_KEYMODE_INDEX
+#  define CONFIG_IEEE802154_SEC_DEFAULT_KEY_MODE            IEEE802154_SEC_SCF_KEYMODE_INDEX
 #endif
 
 #if !defined(CONFIG_IEEE802154_SEC_DEFAULT_KEY_INDEX) || defined(DOXYGEN)
@@ -145,7 +145,7 @@ struct ieee802154_sec_dev {
  * @brief   Default key index to use for encryption if using explicit key mode
  *
  */
-#define CONFIG_IEEE802154_SEC_DEFAULT_KEY_INDEX         0x01
+#  define CONFIG_IEEE802154_SEC_DEFAULT_KEY_INDEX           0x01
 #endif
 
 #if !defined(CONFIG_IEEE802154_SEC_DEFAULT_KEY_SOURCE) || defined(DOXYGEN)
@@ -153,35 +153,35 @@ struct ieee802154_sec_dev {
  * @brief   Default key source to use for encryption if using explicit key mode
  *
  */
-#define CONFIG_IEEE802154_SEC_DEFAULT_KEY_SOURCE       NULL
+#  define CONFIG_IEEE802154_SEC_DEFAULT_KEY_SOURCE          NULL
 #endif
 
 #if !defined(CONFIG_IEEE802154_SEC_DEFAULT_KEYSTORE_SIZE) || defined(DOXYGEN)
 /**
  * @brief   Array size to store key structs @ref ieee802154_sec_key_t
  */
-#define CONFIG_IEEE802154_SEC_DEFAULT_KEYSTORE_SIZE     1U
+#  define CONFIG_IEEE802154_SEC_DEFAULT_KEYSTORE_SIZE       1U
 #endif
 
 #if !defined(CONFIG_IEEE802154_SEC_DEFAULT_KEYLOOKUP_SIZE) || defined(DOXYGEN)
 /**
  * @brief   Array size to store key lookup structs @ref ieee802154_sec_key_lookup_t
  */
-#define CONFIG_IEEE802154_SEC_DEFAULT_KEYLOOKUP_SIZE    CONFIG_IEEE802154_SEC_DEFAULT_KEYSTORE_SIZE
+#  define CONFIG_IEEE802154_SEC_DEFAULT_KEYLOOKUP_SIZE  CONFIG_IEEE802154_SEC_DEFAULT_KEYSTORE_SIZE
 #endif
 
 #if !defined(CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE) || defined(DOXYGEN)
 /**
  * @brief   Array size to store device structs @ref ieee802154_sec_peer_t
  */
-#define CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE     1U
+#  define CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE       1U
 #endif
 
 #if !defined(CONFIG_IEEE802154_SEC_DEFAULT_PEERLOOKUP_SIZE) || defined(DOXYGEN)
 /**
  * @brief   Array size to store peer lookup structs @ref ieee802154_sec_peer_lookup_t
  */
-#define CONFIG_IEEE802154_SEC_DEFAULT_PEERLOOKUP_SIZE    CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE
+#  define CONFIG_IEEE802154_SEC_DEFAULT_PEERLOOKUP_SIZE     CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE
 #endif
 
 /**
