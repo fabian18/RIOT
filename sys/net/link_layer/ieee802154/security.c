@@ -242,17 +242,17 @@ static inline uint8_t _get_key_id_mode(uint8_t scf)
 static inline uint8_t _mac_size(uint8_t sec_level)
 {
     switch (sec_level) {
-        case IEEE802154_SEC_SCF_SECLEVEL_MIC32:
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC32:
-            return 4;
-        case IEEE802154_SEC_SCF_SECLEVEL_MIC64:
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64:
-            return 8;
-        case IEEE802154_SEC_SCF_SECLEVEL_MIC128:
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC128:
-            return 16;
-        default:
-            return 0;
+    case IEEE802154_SEC_SCF_SECLEVEL_MIC32:
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC32:
+        return 4;
+    case IEEE802154_SEC_SCF_SECLEVEL_MIC64:
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64:
+        return 8;
+    case IEEE802154_SEC_SCF_SECLEVEL_MIC128:
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC128:
+        return 16;
+    default:
+        return 0;
     }
 }
 
@@ -260,15 +260,15 @@ static inline uint8_t _mac_size(uint8_t sec_level)
 static inline bool _req_mac(uint8_t sec_level)
 {
     switch (sec_level) {
-        case IEEE802154_SEC_SCF_SECLEVEL_MIC32:
-        case IEEE802154_SEC_SCF_SECLEVEL_MIC64:
-        case IEEE802154_SEC_SCF_SECLEVEL_MIC128:
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC32:
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64:
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC128:
-            return true;
-        default:
-            return false;
+    case IEEE802154_SEC_SCF_SECLEVEL_MIC32:
+    case IEEE802154_SEC_SCF_SECLEVEL_MIC64:
+    case IEEE802154_SEC_SCF_SECLEVEL_MIC128:
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC32:
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64:
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC128:
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -276,25 +276,25 @@ static inline bool _req_mac(uint8_t sec_level)
 static inline bool _req_encryption(uint8_t sec_level)
 {
     switch (sec_level) {
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC:
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC32:
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64:
-        case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC128:
-            return true;
-        default:
-            return false;
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC:
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC32:
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64:
+    case IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC128:
+        return true;
+    default:
+        return false;
     }
 }
 
 static inline uint8_t _key_source_size(uint8_t key_mode)
 {
     switch (key_mode) {
-        case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
-            return 4;
-        case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
-            return 8;
-        default:
-            return 0;
+    case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
+        return 4;
+    case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
+        return 8;
+    default:
+        return 0;
     }
 }
 
@@ -311,42 +311,42 @@ static inline uint8_t _get_aux_hdr_size(uint8_t security_level,
             return 0;
     }
     switch (key_mode) {
-        case IEEE802154_SEC_SCF_KEYMODE_IMPLICIT:
-            return 5;
-        case IEEE802154_SEC_SCF_KEYMODE_INDEX:
-            return 6;
-        case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
-            return 10;
-        case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
-            return 14;
-        default:
-            return 0;
+    case IEEE802154_SEC_SCF_KEYMODE_IMPLICIT:
+        return 5;
+    case IEEE802154_SEC_SCF_KEYMODE_INDEX:
+        return 6;
+    case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
+        return 10;
+    case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
+        return 14;
+    default:
+        return 0;
     }
 }
 
 static inline uint8_t _get_aux_key_index(uint8_t key_mode, const void *identifier)
 {
     switch (key_mode) {
-        case IEEE802154_SEC_SCF_KEYMODE_INDEX:
-            return ((const ieee802154_sec_aux_key_identifier_1_t *)identifier)->key_index;
-        case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
-            return ((const ieee802154_sec_aux_key_identifier_5_t *)identifier)->key_index;
-        case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
-            return ((const ieee802154_sec_aux_key_identifier_9_t *)identifier)->key_index;
-        default:
-            return 0;
+    case IEEE802154_SEC_SCF_KEYMODE_INDEX:
+        return ((const ieee802154_sec_aux_key_identifier_1_t *)identifier)->key_index;
+    case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
+        return ((const ieee802154_sec_aux_key_identifier_5_t *)identifier)->key_index;
+    case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
+        return ((const ieee802154_sec_aux_key_identifier_9_t *)identifier)->key_index;
+    default:
+        return 0;
     }
 }
 
 static inline const void *_get_aux_key_source(uint8_t key_mode, const void *identifier)
 {
     switch (key_mode) {
-        case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
-            return ((const ieee802154_sec_aux_key_identifier_5_t *)identifier)->key_source;
-        case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
-            return ((const ieee802154_sec_aux_key_identifier_9_t *)identifier)->key_source;
-        default:
-            return NULL;
+    case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
+        return ((const ieee802154_sec_aux_key_identifier_5_t *)identifier)->key_source;
+    case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
+        return ((const ieee802154_sec_aux_key_identifier_9_t *)identifier)->key_source;
+    default:
+        return NULL;
     }
 }
 
@@ -362,24 +362,24 @@ static uint8_t _set_aux_hdr(uint8_t sec_level,
     ahr->fc = byteorder_htoll(frame_counter).u32;
     size_t len = 5;
     switch (key_mode) {
-        case IEEE802154_SEC_SCF_KEYMODE_IMPLICIT:
-            break;
-        case IEEE802154_SEC_SCF_KEYMODE_INDEX:
-            memcpy(ahr->key_id, &identifier->key_index, 1);
-            len++;
-            break;
-        case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
-            memcpy(ahr->key_id, identifier->key_source, 4);
-            memcpy(ahr->key_id + 4, &identifier->key_index, 1);
-            len += 5;
-            break;
-        case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
-            memcpy(ahr->key_id, identifier->key_source, 8);
-            memcpy(ahr->key_id + 8, &identifier->key_index, 1);
-            len += 9;
-            break;
-        default:
-            break;
+    case IEEE802154_SEC_SCF_KEYMODE_IMPLICIT:
+        break;
+    case IEEE802154_SEC_SCF_KEYMODE_INDEX:
+        memcpy(ahr->key_id, &identifier->key_index, 1);
+        len++;
+        break;
+    case IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX:
+        memcpy(ahr->key_id, identifier->key_source, 4);
+        memcpy(ahr->key_id + 4, &identifier->key_index, 1);
+        len += 5;
+        break;
+    case IEEE802154_SEC_SCF_KEYMODE_HW_INDEX:
+        memcpy(ahr->key_id, identifier->key_source, 8);
+        memcpy(ahr->key_id + 8, &identifier->key_index, 1);
+        len += 9;
+        break;
+    default:
+        break;
     }
     return len;
 }
