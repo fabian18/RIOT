@@ -181,7 +181,7 @@ struct ieee802154_sec_dev {
 /**
  * @brief   Array size to store peer lookup structs @ref ieee802154_sec_peer_lookup_t
  */
-#  define CONFIG_IEEE802154_SEC_DEFAULT_PEERLOOKUP_SIZE     CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE
+#  define CONFIG_IEEE802154_SEC_DEFAULT_PEERLOOKUP_SIZE CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE
 #endif
 
 /**
@@ -712,6 +712,8 @@ void ieee802154_sec_init(ieee802154_sec_context_t *ctx,
  * @param[in]       new                     The new key material
  *
  * @retval          IEEE802154_SEC_OK on success
+ * @retval          -IEEE802154_SEC_UNSUPPORTED if configuration does not match
+ * @retval          -IEEE802154_SEC_NO_KEY if new key could not be added
  */
 int ieee802154_sec_update(ieee802154_sec_context_t *ctx,
                           ieee802154_sec_scf_seclevel_t sec_level,
@@ -734,8 +736,7 @@ int ieee802154_sec_update(ieee802154_sec_context_t *ctx,
  *
  * @pre     @p header should be large enough to also store the auxiliary header
  *
- * @return          0 Success
- * @return          negative integer on error
+ * @return          0 Success or negative integer on error
  */
 int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
                                  const uint8_t *header, uint8_t *header_size,
@@ -757,8 +758,7 @@ int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
  *
  * @pre     After @p header follows the auxiliary header
  *
- * @return          0 Success
- * @return          negative integer on error
+ * @return          0 Success or negative integer on error
  */
 int ieee802154_sec_decrypt_frame(ieee802154_sec_context_t *ctx,
                                  uint16_t frame_size,
@@ -829,8 +829,8 @@ int ieee802154_sec_key_lookup_explicit(ieee802154_sec_context_t *ctx,
  * @param[in]           long_addr               Device long address
  * @param[in]           add                     Add or remove the device
  *
- * @return              IEEE802154_SEC_OK if device removal or addition was successful
- * @return              -IEEE802154_SEC_NO_DEVICE no more space to store the device
+ * @retval              IEEE802154_SEC_OK if device removal or addition was successful
+ * @retval              -IEEE802154_SEC_NO_DEVICE no more space to store the device
  */
 int ieee802154_sec_peer(ieee802154_sec_context_t *ctx,
                          uint16_t pan_id,
