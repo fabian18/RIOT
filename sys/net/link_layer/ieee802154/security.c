@@ -762,9 +762,9 @@ void ieee802154_sec_init(ieee802154_sec_context_t *ctx,
 #endif
         memset(&ctx->devstore, 0, sizeof(ctx->devstore));
         CTX_UNLOCK(ctx);
-        /* add an explicit default key */
-        /* implicit key cannot be added without a known peer address */
-        /* default key mode and security level are independent of that */
+        /* add an explicit default key
+         * implicit keys cannot be added without a known peer address
+         * default key mode and security level are independent of that */
         if (sec_key_index > 0) {
             ieee802154_sec_key_lookup_explicit(ctx, IEEE802154_SEC_SCF_KEYMODE_INDEX,
                                                sec_key_index, ctx->key_source, key, true);
