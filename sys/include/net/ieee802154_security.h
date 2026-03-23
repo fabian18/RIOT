@@ -248,9 +248,9 @@ typedef enum {
     IEEE802154_SEC_SCF_SECLEVEL_MIC64           = 0x02, /**< 64 bit MIC */
     IEEE802154_SEC_SCF_SECLEVEL_MIC128          = 0x03, /**< 128 bit MIC */
     IEEE802154_SEC_SCF_SECLEVEL_ENC             = 0x04, /**< encryption */
-    IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC32       = 0x05, /**< enc. + 32 bit MIC */
-    IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64       = 0x06, /**< enc. + 64 bit MIC (mandatory) */
-    IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC128      = 0x07  /**< enc. + 128 bit MIC */
+    IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC32       = 0x05, /**< enc. and 32 bit MIC */
+    IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC64       = 0x06, /**< enc. and 64 bit MIC (mandatory) */
+    IEEE802154_SEC_SCF_SECLEVEL_ENC_MIC128      = 0x07  /**< enc. and 128 bit MIC */
 } ieee802154_sec_scf_seclevel_t;
 
 /**
@@ -286,8 +286,10 @@ typedef enum {
 typedef enum {
     IEEE802154_SEC_SCF_KEYMODE_IMPLICIT         = 0x00, /**< Key is determined implicitly */
     IEEE802154_SEC_SCF_KEYMODE_INDEX            = 0x01, /**< Key is determined from key index */
-    IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX      = 0x02, /**< Key is determined from 4 byte key source and key index */
-    IEEE802154_SEC_SCF_KEYMODE_HW_INDEX         = 0x03  /**< Key is determined from 8 byte key source and key index */
+    IEEE802154_SEC_SCF_KEYMODE_SHORT_INDEX      = 0x02, /**< Key is determined from
+                                                             4 byte key source and key index */
+    IEEE802154_SEC_SCF_KEYMODE_HW_INDEX         = 0x03  /**< Key is determined from
+                                                             8 byte key source and key index */
 } ieee802154_sec_scf_keymode_t;
 
 /**
@@ -304,11 +306,14 @@ typedef enum {
  */
 typedef enum {
     IEEE802154_SEC_OK,                                  /**< Everything went fine */
-    IEEE802154_SEC_FRAME_COUNTER_OVERFLOW,              /**< The requested operation would let the frame counter overflow */
-    IEEE802154_SEC_FRAME_COUNTER_REPLAY,                /**< The received frame counter is less than expected */
-    IEEE802154_SEC_NO_KEY,                              /**< Could not find the key to perform a requested cipher operation */
-    IEEE802154_SEC_NO_DEV,                              /**< Could not find peer device to check the frame counter */
-    IEEE802154_SEC_NO_PEER,                             /**< Device was found but pairing has not been done to use the key */
+    IEEE802154_SEC_FRAME_COUNTER_OVERFLOW,              /**< The requested operation would let the
+                                                             frame counter overflow */
+    IEEE802154_SEC_FRAME_COUNTER_REPLAY,                /**< The received frame counter is less than
+                                                             expected */
+    IEEE802154_SEC_NO_KEY,                              /**< Could not find the key to perform a
+                                                             requested cipher operation */
+    IEEE802154_SEC_NO_DEV,                              /**< Could not find peer device to check the
+                                                             frame counter */
     IEEE802154_SEC_MAC_CHECK_FAILURE,                   /**< The computed MAC did not match */
     IEEE802154_SEC_UNSUPPORTED,                         /**< Unsupported operation */
 } ieee802154_sec_error_t;
@@ -727,7 +732,8 @@ int ieee802154_sec_update(ieee802154_sec_context_t *ctx,
  *
  * @param[in]       ctx                     IEEE 802.15.4 security context
  * @param[in]       header                  Pointer to frame header
- * @param[in, out]  header_size             in: Header size; out: Size of header and auxiliary header
+ * @param[in, out]  header_size             in: Header size;
+ *                                          out: Size of header and auxiliary header
  * @param[in,out]   payload                 in: Plain payload; out: Encrypted payload
  * @param[in]       payload_size            Size of payload
  * @param[out]      mic                     Buffer to store computed MIC
@@ -750,7 +756,8 @@ int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
  * @param[in]       ctx                     IEEE 802.15.4 security context
  * @param[in]       frame_size              Size of received frame
  * @param[in]       header                  Pointer to header, which is also the frame
- * @param[in, out]  header_size             in: Header size; out: Size of header and auxiliary header
+ * @param[in, out]  header_size             in: Header size;
+ *                                          out: Size of header and auxiliary header
  * @param[out]      payload                 Will point to the beginning of the payload
  * @param[out]      payload_size            Pointer to store the payload size
  * @param[out]      mic                     Will point to the beginning of the MIC
