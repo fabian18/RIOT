@@ -516,7 +516,7 @@ static void _init_peer(ieee802154_sec_peer_t *peer,
                        const uint8_t *long_addr)
 {
     /* save pan in little endian and address reversed
-       because that´s how it is ordered in the header */
+     * because that´s how it is ordered in the header */
     memcpy(peer->pan_id, pan, sizeof(peer->pan_id));
     if (short_addr) {
         memcpy_reversed(peer->short_addr, short_addr, sizeof(peer->short_addr));
@@ -533,14 +533,14 @@ static void _init_key_lookup_implicit(ieee802154_sec_key_lookup_t *key_lookup,
                                       const uint8_t *dev_pan_id,
                                       const uint8_t *dev_addr)
 {
-    /* save pan and address reversed
-       because that´s how it is ordered in the header */
+    /* save pan in little endian and address reversed
+     * because that´s how it is ordered in the header */
     memset(key_lookup, 0, sizeof(*key_lookup));
     key_lookup->key_mode = IEEE802154_SEC_SCF_KEYMODE_IMPLICIT;
     key_lookup->key_lookup.implicit.dev_mode = dev_mode;
     if (dev_mode == IEEE802154_SEC_DEV_ADDRMODE_NONE) {
         /* We cannot deal with NONE addressing mode right now
-           because we do not have a PAN coordinator implementation */
+         * because we do not have a PAN coordinator implementation */
         return;
     }
     if (dev_mode == IEEE802154_SEC_DEV_ADDRMODE_SHORT) {
@@ -779,7 +779,7 @@ int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
                                  const uint8_t *src_address)
 {
     /* For non data frames (MAC commands, beacons) a and a_len would be larger.
-       ACKs are not encrypted. */
+     * ACKs are not encrypted. */
     assert((*((uint8_t *)header)) & IEEE802154_FCF_TYPE_DATA);
 
     uint32_t fc;
@@ -815,7 +815,7 @@ int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
         fc = key->fc;
         if (fc == 0xFFFFFFFF) {
             /* Letting the frame counter overflow is explicitly prohibited by the specification.
-            (see 9.4.2) */
+             * (see 9.4.2) */
             CTX_UNLOCK(ctx);
             DEBUG_SEC("Frame counter would overflow\n");
             return -IEEE802154_SEC_FRAME_COUNTER_OVERFLOW;
@@ -862,7 +862,7 @@ int ieee802154_sec_decrypt_frame(ieee802154_sec_context_t *ctx,
                                  uint8_t **mic, uint8_t *mic_size)
 {
     /* For non data frames (MAC commands, beacons) a and a_len would be larger.
-       ACKs are not encrypted. */
+     * ACKs are not encrypted. */
     assert(*header & IEEE802154_FCF_TYPE_DATA);
 
     /* read the fields of the auxiliary header */
@@ -1112,8 +1112,6 @@ int ieee802154_sec_key_lookup_explicit(ieee802154_sec_context_t *ctx,
         return -IEEE802154_SEC_NO_KEY;
     }
     ctx->key_lookup_table.key_lookup[l] = tmp_lookup;
-    /* device bit in key descriptor should be set during pairings phase,
-       see ieee802154_sec_peer_dev() */
     CTX_UNLOCK(ctx);
     return IEEE802154_SEC_OK;
 }
@@ -1191,17 +1189,20 @@ int ieee802154_sec_update(ieee802154_sec_context_t *ctx,
     }
     if (sec_key_index == 0 && sec_key_mode != IEEE802154_SEC_SCF_KEYMODE_IMPLICIT) {
         DEBUG_SEC("unsupported key index\n");
-        return -IEEE802154_SEC_UNSUPPORTED; /* not allowed */
+        /* not allowed */
+        return -IEEE802154_SEC_UNSUPPORTED;
     }
     if (sec_key_mode != IEEE802154_SEC_SCF_KEYMODE_IMPLICIT &&
         sec_key_mode != IEEE802154_SEC_SCF_KEYMODE_INDEX &&
         !sec_key_source) {
         DEBUG_SEC("unsupported key source\n");
-        return -IEEE802154_SEC_UNSUPPORTED; /* key source must be given for explicit keys */
+        /* key source must be given for explicit keys */
+        return -IEEE802154_SEC_UNSUPPORTED;
     }
     if (sec_level != IEEE802154_SEC_SCF_SECLEVEL_NONE && !new) {
         DEBUG_SEC("missing key material\n");
-        return -IEEE802154_SEC_UNSUPPORTED; /* new key material must be given if security level is not NONE */
+        /* new key material must be given if security level is not NONE */
+        return -IEEE802154_SEC_UNSUPPORTED;
     }
     ieee802154_sec_key_lookup_explicit(ctx, ctx->key_id_mode,
                                        ctx->key_index, ctx->key_source,
