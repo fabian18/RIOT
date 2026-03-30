@@ -1,17 +1,16 @@
 /*
- * SPDX-FileCopyrightText: 2017 Thomas Perrot <thomas.perrot@tupi.fr>
+ * SPDX-FileCopyrightText: 2026 ML!PA Consulting GmbH
  * SPDX-License-Identifier: LGPL-2.1-only
  */
 
 /**
- * @ingroup     boards_arduino-leonardo
+ * @ingroup     boards_common_atmega
  * @{
  *
  * @file
- * @brief       Board specific initialization for Arduino Leonardo
+ * @brief       Definitions for all atmega boards.
  *
- * @author      Thomas Perrot <thomas.perrot@tupi.fr>
- *
+ * @author      Fabian Hüßler <fabian.huessler@ml-pa.com>
  * @}
  */
 
@@ -22,7 +21,3 @@
 static mtd_eeprom_t eeprom_mtd = MTD_EEPROM_INIT_VAL;
 MTD_XFA_ADD(eeprom_mtd, 0);
 #endif /* MODULE_MTD_EEPROM */
-
-void board_init(void)
-{
-}
