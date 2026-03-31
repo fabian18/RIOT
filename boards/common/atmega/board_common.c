@@ -11,6 +11,7 @@
  * @brief       Definitions for all atmega boards.
  *
  * @author      Fabian Hüßler <fabian.huessler@ml-pa.com>
+ * @}
  */
 
 #include "board.h"
