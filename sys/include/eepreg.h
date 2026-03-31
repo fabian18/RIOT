@@ -109,7 +109,7 @@ extern "C" {
  *
  * @return  the size of the EEPROM registry
  */
-static inline size_t eepreg_size(mtd_dev_t *dev)
+static inline uint32_t eepreg_size(mtd_dev_t *dev)
 {
     /* works anyway only up to 4GiB because of 32bit position in API */
     return dev->sector_count * dev->pages_per_sector * dev->page_size;
@@ -124,7 +124,7 @@ static inline size_t eepreg_size(mtd_dev_t *dev)
  */
 static inline uint8_t eepreg_ptr_len(mtd_dev_t *dev)
 {
-    size_t size = eepreg_size(dev);
+    uint32_t size = eepreg_size(dev);
     if (size > 0x1000000) {
         return 4U;
     }
