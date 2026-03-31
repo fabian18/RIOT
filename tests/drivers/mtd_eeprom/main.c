@@ -4,10 +4,17 @@
  */
 
 /**
+ * @ingroup     tests
  * @{
  *
  * @file
+ * @brief       Application for testing MTD EEPROM implementations
+ *
+ * @author      Fabian Hüßler <fabian.huessler@ml-pa.com>
+ *
+ * @}
  */
+
 #include <string.h>
 #include <errno.h>
 
@@ -132,4 +139,3 @@ int main(void)
     TESTS_END();
     return 0;
 }
-/** @} */
