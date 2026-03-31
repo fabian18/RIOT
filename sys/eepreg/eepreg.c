@@ -136,7 +136,7 @@ static inline void _get_name(mtd_dev_t *dev, uint32_t meta_loc, char *name, uint
 {
     /* name is after entry length */
     mtd_read(dev, name, meta_loc + ENT_LEN_SIZ,
-             _calc_name_len(dev,meta_len));
+             _calc_name_len(dev, meta_len));
 }
 
 static inline int _cmp_name(mtd_dev_t *dev, uint32_t meta_loc, const char *name,
