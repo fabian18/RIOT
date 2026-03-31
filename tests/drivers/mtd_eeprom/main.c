@@ -84,7 +84,6 @@ static void test_mtd_write_erase(void)
     TEST_ASSERT_EQUAL_INT(0, memcmp(buf_empty, buf_read, sizeof(buf_empty)));
 }
 
-
 static void test_mtd_write_read(void)
 {
     const char buf[] = "ABCDEFGHIJKLMNO";
