@@ -8,9 +8,10 @@
  * @{
  *
  * @file
- * @brief       Definitions for all atmega boards.
+ * @brief       Definitions for all nucleo boards.
  *
  * @author      Fabian Hüßler <fabian.huessler@ml-pa.com>
+ * @}
  */
 
 #include "board.h"
