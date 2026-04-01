@@ -81,6 +81,7 @@ void _native_LED_RED_TOGGLE(void);
 
 /** Default MTD device (mtd flash emulation device) */
 #define MTD_0 mtd_dev_get(0)
+#define MTD_1 mtd_dev_get(1)
 #endif
 
 /**
