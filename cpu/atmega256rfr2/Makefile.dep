@@ -8,7 +8,3 @@ ifneq (,$(filter netdev_default,$(USEMODULE)))
 endif
 
 include $(RIOTCPU)/atmega_common/Makefile.dep
-
-ifneq (,$(filter mtd,$(USEMODULE)))
-  USEMODULE  += mtd_eeprom
-endif
