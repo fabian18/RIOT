@@ -19,6 +19,9 @@
 
 #include "cpu.h"
 #include "periph_conf.h"
+#if MODULE_MTD
+#  include "mtd.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,6 +53,15 @@ extern "C" {
 #define XTIMER_BACKOFF              (8)
 #endif
 /** @} */
+
+#if defined(MODULE_MTD) || defined(DOXYGEN)
+/**
+ * @name MTD configuration
+ * @{
+ */
+#define MTD_0 mtd_dev_get(0)
+/** @} */
+#endif
 
 #ifdef __cplusplus
 }
