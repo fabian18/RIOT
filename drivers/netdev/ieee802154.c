@@ -265,8 +265,8 @@ int netdev_ieee802154_set(netdev_ieee802154_t *dev, netopt_t opt, const void *va
             assert(len >= IEEE802154_SEC_KEY_LENGTH);
             /* update default key */
             if (IEEE802154_SEC_OK !=
-                ieee802154_sec_update(&dev->sec_ctx, ctx->sec_level, ctx->key_id_mode,
-                                      ctx->key_index, ctx->key_source, value)) {
+                ieee802154_sec_update(&dev->sec_ctx, dev->sec_ctx.security_level, dev->sec_ctx.key_id_mode,
+                                      dev->sec_ctx.key_index, dev->sec_ctx.key_source, value)) {
                 return -ECANCELED;
             }
             res = IEEE802154_SEC_KEY_LENGTH;
