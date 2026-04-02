@@ -1,0 +1,3 @@
+ifneq (,$(filter ieee802154_security,$(USEMODULE)))
+  USEMODULE += cfg_ieee802154_security
+endif

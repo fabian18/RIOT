@@ -52,3 +52,10 @@ endif
 ifneq (,$(filter configuration_shell_command,$(USEMODULE)))
   USEMODULE += shell
 endif
+
+USEMODULE += cfg_riot
+USEMODULE += $(foreach m,$(USEMODULE),$(if $(wildcard $(RIOTBASE)/sys/configuration/modules/$(m)),cfg_$(m)))
+
+# Include Makefile.dep for each cfg_*
+-include $(foreach m,$(USEMODULE),\
+            $(wildcard $(RIOTBASE)/sys/configuration/modules/$(patsubst cfg_%,%,$(m))/Makefile.dep))
