@@ -37,6 +37,7 @@
 #include "crypto/ciphers.h"
 #include "bitfield.h"
 #include "mutex.h"
+#include "configuration.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -496,12 +497,35 @@ typedef struct ieee802154_sec_peer_lookup_table {
     /**
      * @brief   Bitmask that shows which slots are occupied
      */
-    BITFIELD(mask, CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE);
+    BITFIELD(mask, CONFIG_IEEE802154_SEC_DEFAULT_PEERLOOKUP_SIZE);
     /**
      * @brief   Array of peer lookups
      */
-    ieee802154_sec_peer_lookup_t peer_lookup[CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE];
+    ieee802154_sec_peer_lookup_t peer_lookup[CONFIG_IEEE802154_SEC_DEFAULT_PEERLOOKUP_SIZE];
 } ieee802154_sec_peer_lookup_table_t;
+
+/**
+ * @brief   Struct to hold all security configuration parameters
+ */
+typedef struct ieee802154_security_config {
+    /**
+     * @brief   Key table
+     */
+    ieee802154_sec_key_table_t keystore;
+    /**
+     * @brief   Key lookup table
+     */
+    ieee802154_sec_key_lookup_table_t key_lookup_table;
+    /**
+     * @brief   Device table
+     */
+    ieee802154_sec_peer_table_t devstore;
+    /**
+     * @brief   Peer lookup table
+     *
+     */
+    ieee802154_sec_peer_lookup_table_t peer_lookup_table;
+} ieee802154_security_config_t;
 
 /**
  * @brief   Struct to hold IEEE 802.15.4 security information
@@ -534,31 +558,13 @@ typedef struct ieee802154_sec_context {
      */
     uint8_t key_source[IEEE802154_LONG_ADDRESS_LEN];
     /**
-     * @brief   Key lookup table
-     *
-     * This data structure should be stored in persistent storage.
+     * @brief   Security configuration parameters
      */
-    ieee802154_sec_key_lookup_table_t key_lookup_table;
+    ieee802154_security_config_t config;
     /**
-     * @brief   Keystore for this netdev
-     *
-     * This data structure should be stored in persistent storage.
+     * @brief   Instance base SID for configuration
      */
-    ieee802154_sec_key_table_t keystore;
-#if IS_USED(MODULE_IEEE802154_SECURITY_REPLAY_PROTECTION)
-    /**
-     * @brief   Peer device lookup table
-     *
-     * This data structure should be stored in persistent storage.
-     */
-    ieee802154_sec_peer_lookup_table_t peer_lookup_table;
-#endif
-    /**
-     * @brief   Peer device table
-     *
-     * This data structure should be stored in persistent storage.
-     */
-    ieee802154_sec_peer_table_t devstore;
+    conf_sid_t sid;
     /**
      * @brief   Internal lock to protect concurrent operations on data structures
      */

@@ -106,6 +106,33 @@
 #include "net/ieee802154_security.h"
 #include "string_utils.h"
 
+#if MODULE_CFG_IEEE802154_SECURITY
+#include "configuration.h"
+/* need SIDs but no instantiation */
+#define _CFG_NO_INSTANCE
+#define CONFIG_IEEE802154_SECURITY_LOWER_SID    0
+#include "cfg_ieee802154_security_sid.h"
+static void _config_set(conf_sid_t sid, const void *value, size_t size)
+{
+    CONF_KEY(cfg_key, sid, CONFIG_IEEE802154_SECURITY_KEY_BUF_MAX);
+    configuration_set(&cfg_key, value, &size);
+}
+static void _config_get(conf_sid_t sid, void *value, size_t size)
+{
+    CONF_KEY(cfg_key, sid, CONFIG_IEEE802154_SECURITY_KEY_BUF_MAX);
+    configuration_get(&cfg_key, value, &size);
+}
+static void _config_export(conf_sid_t sid)
+{
+    CONF_KEY(cfg_key, sid, CONFIG_IEEE802154_SECURITY_KEY_BUF_MAX);
+    configuration_export(&cfg_key);
+}
+#else
+#define _config_set(...)
+#define _config_get(...)
+#define _config_export(...)
+#endif
+
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
 
@@ -119,18 +146,18 @@ for (size_t i = 0; i < (nbits); i++) {                                          
     }                                                                           \
 }
 #define KEYLOOKUP_FOR_EACH(ctx, lookup, code) {                                 \
-    BITMAP_FOR_EACH(&(ctx)->key_lookup_table.key_lookup,                        \
-                    (lookup), (ctx)->key_lookup_table.mask,                     \
+    BITMAP_FOR_EACH(&(ctx)->config.key_lookup_table.key_lookup,                 \
+                    (lookup), (ctx)->config.key_lookup_table.mask,              \
                     CONFIG_IEEE802154_SEC_DEFAULT_KEYLOOKUP_SIZE, code)         \
 }
 #define PEERLOOKUP_FOR_EACH(ctx, dev, code) {                                   \
-    BITMAP_FOR_EACH(&(ctx)->peer_lookup_table.peer_lookup,                      \
-                    (dev), (ctx)->peer_lookup_table.mask,                       \
+    BITMAP_FOR_EACH(&(ctx)->config.peer_lookup_table.peer_lookup,               \
+                    (dev), (ctx)->config.peer_lookup_table.mask,                \
                     CONFIG_IEEE802154_SEC_DEFAULT_PEERLOOKUP_SIZE, code)        \
 }
 #define PEER_FOR_EACH(ctx, dev, code) {                                         \
-    BITMAP_FOR_EACH(&(ctx)->devstore.peers,                                     \
-                    (dev), (ctx)->devstore.mask,                                \
+    BITMAP_FOR_EACH(&(ctx)->config.devstore.peers,                              \
+                    (dev), (ctx)->config.devstore.mask,                         \
                     CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE, code)          \
 }
 
@@ -691,18 +718,25 @@ int _peer_lookup(ieee802154_sec_context_t *ctx,
     if (tmp) {
         if (!add) {
             /* remove */
-            bf_unset(ctx->peer_lookup_table.mask, tmp - ctx->peer_lookup_table.peer_lookup);
+            bf_unset(ctx->config.peer_lookup_table.mask,
+                     tmp - ctx->config.peer_lookup_table.peer_lookup);
             memset(tmp, 0, sizeof(*tmp));
+            _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_PEER_LOOKUP_TABLE_LOWER_SID,
+                        &ctx->config.peer_lookup_table, sizeof(ctx->config.peer_lookup_table));
+            _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_PEER_LOOKUP_TABLE_LOWER_SID);
         }
         return IEEE802154_SEC_OK;
     }
     /* allocate a lookup descriptor */
-    int l = bf_get_unset(ctx->peer_lookup_table.mask,
+    int l = bf_get_unset(ctx->config.peer_lookup_table.mask,
                          CONFIG_IEEE802154_SEC_DEFAULT_PEERLOOKUP_SIZE);
     if (l < 0) {
         return IEEE802154_SEC_NO_DEV;
     }
-    ctx->peer_lookup_table.peer_lookup[l] = tmp_lookup;
+    ctx->config.peer_lookup_table.peer_lookup[l] = tmp_lookup;
+    _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_PEER_LOOKUP_TABLE_LOWER_SID,
+                &ctx->config.peer_lookup_table, sizeof(ctx->config.peer_lookup_table));
+    _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_PEER_LOOKUP_TABLE_LOWER_SID);
     return IEEE802154_SEC_OK;
 }
 #endif
@@ -714,20 +748,26 @@ static ieee802154_sec_key_descriptor_t _add_key(ieee802154_sec_context_t *ctx,
     memset(&tmp_key, 0, sizeof(tmp_key));
     memcpy(&tmp_key.key, key, sizeof(tmp_key.key));
     /* do not check for duplicate key material */
-    int k = bf_get_unset(ctx->keystore.mask,
+    int k = bf_get_unset(ctx->config.keystore.mask,
                          CONFIG_IEEE802154_SEC_DEFAULT_KEYSTORE_SIZE);
     if (k < 0) {
         return IEEE802154_SEC_NO_IDENT;
     }
-    ctx->keystore.keys[k] = tmp_key;
+    ctx->config.keystore.keys[k] = tmp_key;
+    _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_KEYSTORE_LOWER_SID,
+                &ctx->config.keystore, sizeof(ctx->config.keystore));
+    _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_KEYSTORE_LOWER_SID);
     return k;
 }
 
 static void _remove_key(ieee802154_sec_context_t *ctx, ieee802154_sec_key_descriptor_t k)
 {
     assert(k < CONFIG_IEEE802154_SEC_DEFAULT_KEYSTORE_SIZE);
-    bf_unset(ctx->keystore.mask, k);
-    memset(&ctx->keystore.keys[k], 0, sizeof(ctx->keystore.keys[k]));
+    bf_unset(ctx->config.keystore.mask, k);
+    memset(&ctx->config.keystore.keys[k], 0, sizeof(ctx->config.keystore.keys[k]));
+    _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_KEYSTORE_LOWER_SID,
+                &ctx->config.keystore, sizeof(ctx->config.keystore));
+    _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_KEYSTORE_LOWER_SID);
 }
 
 void ieee802154_sec_init(ieee802154_sec_context_t *ctx,
@@ -750,17 +790,28 @@ void ieee802154_sec_init(ieee802154_sec_context_t *ctx,
     cipher_init(&ctx->cipher, CIPHER_AES, key, IEEE802154_SEC_KEY_LENGTH);
     mutex_init(&ctx->lock);
 
-    if (0 /* TODO: initialize from persistent storage */) {
+    if (IS_USED(MODULE_CFG_IEEE802154_SECURITY)) {
+        /* try to restore from persistent storage */
+        _config_get(ctx->sid + CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_LOWER_SID,
+                    &ctx->config.key_lookup_table, sizeof(ctx->config.key_lookup_table));
+        _config_get(ctx->sid + CONFIG_IEEE802154_SECURITY_KEYSTORE_LOWER_SID,
+                    &ctx->config.keystore, sizeof(ctx->config.keystore));
+#if IS_USED(MODULE_IEEE802154_SECURITY_REPLAY_PROTECTION)
+        _config_get(ctx->sid + CONFIG_IEEE802154_SECURITY_PEER_LOOKUP_TABLE_LOWER_SID,
+                    &ctx->config.peer_lookup_table, sizeof(ctx->config.peer_lookup_table));
+#endif
+        _config_get(ctx->sid + CONFIG_IEEE802154_SECURITY_DEVSTORE_LOWER_SID,
+                    &ctx->config.devstore, sizeof(ctx->config.devstore));
     }
     else {
         /* no persistent storage or failure */
         CTX_LOCK(ctx);
-        memset(&ctx->key_lookup_table, 0, sizeof(ctx->key_lookup_table));
-        memset(&ctx->keystore, 0, sizeof(ctx->keystore));
+        memset(&ctx->config.key_lookup_table, 0, sizeof(ctx->config.key_lookup_table));
+        memset(&ctx->config.keystore, 0, sizeof(ctx->config.keystore));
 #if IS_USED(MODULE_IEEE802154_SECURITY_REPLAY_PROTECTION)
-        memset(&ctx->peer_lookup_table, 0, sizeof(ctx->peer_lookup_table));
+        memset(&ctx->config.peer_lookup_table, 0, sizeof(ctx->config.peer_lookup_table));
 #endif
-        memset(&ctx->devstore, 0, sizeof(ctx->devstore));
+        memset(&ctx->config.devstore, 0, sizeof(ctx->config.devstore));
         CTX_UNLOCK(ctx);
     }
     /* add an explicit default key
@@ -811,7 +862,7 @@ int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
             DEBUG_SEC("key not found\n");
             return -IEEE802154_SEC_NO_KEY;
         }
-        ieee802154_sec_key_t *k = &ctx->keystore.keys[key->key];
+        ieee802154_sec_key_t *k = &ctx->config.keystore.keys[key->key];
         fc = key->fc;
         if (fc == 0xFFFFFFFF) {
             /* Letting the frame counter overflow is explicitly prohibited by the specification.
@@ -822,6 +873,15 @@ int ieee802154_sec_encrypt_frame(ieee802154_sec_context_t *ctx,
         }
         key->fc++;
         DEBUG_SEC("Frame counter for key: %u is %"PRIu32"\n", key->key, key->fc);
+        _config_set(ctx->sid +
+                CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_KEYLOOKUP_FC_LOWER_SID +
+                    ((key - ctx->config.key_lookup_table.key_lookup) *
+                        CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_KEYLOOKUP_INDEX_STRIDE),
+                    &key->fc, sizeof(key->fc));
+        _config_export(ctx->sid +
+                CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_KEYLOOKUP_FC_LOWER_SID +
+                    ((key - ctx->config.key_lookup_table.key_lookup) *
+                        CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_KEYLOOKUP_INDEX_STRIDE));
         key_mode = key->key_mode;
         _set_key(ctx, k->key);
         CTX_UNLOCK(ctx);
@@ -927,17 +987,18 @@ int ieee802154_sec_decrypt_frame(ieee802154_sec_context_t *ctx,
         /* get or create peer lookup descriptor to track frame counter */
         ieee802154_sec_peer_lookup_t *dev_lookup =  _get_peer_lookup(
             ctx,
-            dev - ctx->devstore.peers,
+            dev - ctx->config.devstore.peers,
             key->key);
         if (!dev_lookup) {
-            if (_peer_lookup(ctx, dev - ctx->devstore.peers, key->key, true) != IEEE802154_SEC_OK) {
+            if (_peer_lookup(ctx, dev - ctx->config.devstore.peers, key->key, true)
+                != IEEE802154_SEC_OK) {
                 CTX_UNLOCK(ctx);
                 DEBUG_SEC("peer lookup table full\n");
                 return -IEEE802154_SEC_NO_DEV;
             }
             dev_lookup = _get_peer_lookup(
                 ctx,
-                dev - ctx->devstore.peers,
+                dev - ctx->config.devstore.peers,
                 key->key);
             assert(dev_lookup); /* must exist as it was just created */
         }
@@ -949,6 +1010,15 @@ int ieee802154_sec_decrypt_frame(ieee802154_sec_context_t *ctx,
         }
         /* store the next minimum expected frame counter */
         dev_lookup->fc = frame_counter + 1;
+        _config_set(ctx->sid +
+                CONFIG_IEEE802154_SECURITY_PEER_LOOKUP_TABLE_PEERLOOKUP_FC_LOWER_SID +
+                    ((dev_lookup - ctx->config.peer_lookup_table.peer_lookup) *
+                        CONFIG_IEEE802154_SECURITY_PEER_LOOKUP_TABLE_PEERLOOKUP_INDEX_STRIDE),
+                    &dev_lookup->fc, sizeof(dev_lookup->fc));
+        _config_export(ctx->sid +
+                CONFIG_IEEE802154_SECURITY_PEER_LOOKUP_TABLE_PEERLOOKUP_FC_LOWER_SID +
+                    ((dev_lookup - ctx->config.peer_lookup_table.peer_lookup) *
+                        CONFIG_IEEE802154_SECURITY_PEER_LOOKUP_TABLE_PEERLOOKUP_INDEX_STRIDE));
         memcpy_reversed(src_address, dev->long_addr, sizeof(dev->long_addr));
 #else
         if (dev) {
@@ -964,7 +1034,7 @@ int ieee802154_sec_decrypt_frame(ieee802154_sec_context_t *ctx,
             return -IEEE802154_SEC_NO_DEV;
         }
 #endif
-        _set_key(ctx, ctx->keystore.keys[key->key].key);
+        _set_key(ctx, ctx->config.keystore.keys[key->key].key);
         CTX_UNLOCK(ctx);
     }
     const uint8_t *a = header;
@@ -1032,8 +1102,12 @@ int ieee802154_sec_key_lookup_implicit(ieee802154_sec_context_t *ctx,
         if (!add) {
             /* remove */
             _remove_key(ctx, tmp->key);
-            bf_unset(ctx->key_lookup_table.mask, tmp - ctx->key_lookup_table.key_lookup);
+            bf_unset(ctx->config.key_lookup_table.mask,
+                     tmp - ctx->config.key_lookup_table.key_lookup);
             memset(tmp, 0, sizeof(*tmp));
+            _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_LOWER_SID,
+                        &ctx->config.key_lookup_table, sizeof(ctx->config.key_lookup_table));
+            _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_LOWER_SID);
         }
         CTX_UNLOCK(ctx);
         return IEEE802154_SEC_OK;
@@ -1047,7 +1121,7 @@ int ieee802154_sec_key_lookup_implicit(ieee802154_sec_context_t *ctx,
     }
     tmp_lookup.key = k;
     /* allocate a lookup descriptor */
-    int l = bf_get_unset(ctx->key_lookup_table.mask,
+    int l = bf_get_unset(ctx->config.key_lookup_table.mask,
                          CONFIG_IEEE802154_SEC_DEFAULT_KEYLOOKUP_SIZE);
     if (l < 0) {
         _remove_key(ctx, k);
@@ -1055,7 +1129,10 @@ int ieee802154_sec_key_lookup_implicit(ieee802154_sec_context_t *ctx,
         DEBUG_SEC("key lookup table full\n");
         return -IEEE802154_SEC_NO_KEY;
     }
-    ctx->key_lookup_table.key_lookup[l] = tmp_lookup;
+    ctx->config.key_lookup_table.key_lookup[l] = tmp_lookup;
+    _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_LOWER_SID,
+                &ctx->config.key_lookup_table, sizeof(ctx->config.key_lookup_table));
+    _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_LOWER_SID);
     CTX_UNLOCK(ctx);
     return IEEE802154_SEC_OK;
 }
@@ -1092,8 +1169,12 @@ int ieee802154_sec_key_lookup_explicit(ieee802154_sec_context_t *ctx,
         if (!add) {
             /* remove */
             _remove_key(ctx, tmp->key);
-            bf_unset(ctx->key_lookup_table.mask, tmp - ctx->key_lookup_table.key_lookup);
+            bf_unset(ctx->config.key_lookup_table.mask,
+                     tmp - ctx->config.key_lookup_table.key_lookup);
             memset(tmp, 0, sizeof(*tmp));
+            _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_LOWER_SID,
+                        &ctx->config.key_lookup_table, sizeof(ctx->config.key_lookup_table));
+            _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_LOWER_SID);
         }
         CTX_UNLOCK(ctx);
         return IEEE802154_SEC_OK;
@@ -1107,7 +1188,7 @@ int ieee802154_sec_key_lookup_explicit(ieee802154_sec_context_t *ctx,
     }
     tmp_lookup.key = k;
     /* allocate a lookup descriptor */
-    int l = bf_get_unset(ctx->key_lookup_table.mask,
+    int l = bf_get_unset(ctx->config.key_lookup_table.mask,
                          CONFIG_IEEE802154_SEC_DEFAULT_KEYLOOKUP_SIZE);
     if (l < 0) {
         _remove_key(ctx, k);
@@ -1115,7 +1196,10 @@ int ieee802154_sec_key_lookup_explicit(ieee802154_sec_context_t *ctx,
         DEBUG_SEC("key lookup table full\n");
         return -IEEE802154_SEC_NO_KEY;
     }
-    ctx->key_lookup_table.key_lookup[l] = tmp_lookup;
+    ctx->config.key_lookup_table.key_lookup[l] = tmp_lookup;
+    _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_LOWER_SID,
+                &ctx->config.key_lookup_table, sizeof(ctx->config.key_lookup_table));
+    _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_KEY_LOOKUP_TABLE_LOWER_SID);
     CTX_UNLOCK(ctx);
     return IEEE802154_SEC_OK;
 }
@@ -1123,8 +1207,8 @@ int ieee802154_sec_key_lookup_explicit(ieee802154_sec_context_t *ctx,
 static void _remove_peer(ieee802154_sec_context_t *ctx, ieee802154_sec_peer_descriptor_t d)
 {
     assert(d < CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE);
-    bf_unset(ctx->devstore.mask, d);
-    memset(&ctx->devstore.peers[d], 0, sizeof(ctx->devstore.peers[d]));
+    bf_unset(ctx->config.devstore.mask, d);
+    memset(&ctx->config.devstore.peers[d], 0, sizeof(ctx->config.devstore.peers[d]));
 }
 
 int ieee802154_sec_peer(ieee802154_sec_context_t *ctx,
@@ -1144,24 +1228,30 @@ int ieee802154_sec_peer(ieee802154_sec_context_t *ctx,
     if (tmp) {
         if (!add) {
 #if IS_USED(MODULE_IEEE802154_SECURITY_REPLAY_PROTECTION)
-            while (_get_peer_lookup(ctx, tmp - ctx->devstore.peers, IEEE802154_SEC_NO_IDENT)) {
-                _peer_lookup(ctx, tmp - ctx->devstore.peers, IEEE802154_SEC_NO_IDENT, false);
+            while (_get_peer_lookup(ctx, tmp - ctx->config.devstore.peers, IEEE802154_SEC_NO_IDENT)) {
+                _peer_lookup(ctx, tmp - ctx->config.devstore.peers, IEEE802154_SEC_NO_IDENT, false);
             };
 #endif
-            _remove_peer(ctx, tmp - ctx->devstore.peers);
+            _remove_peer(ctx, tmp - ctx->config.devstore.peers);
         }
         *tmp = tmp_dev; /* update pan and short address */
+        _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_DEVSTORE_LOWER_SID,
+                    &ctx->config.devstore, sizeof(ctx->config.devstore));
+        _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_DEVSTORE_LOWER_SID);
         CTX_UNLOCK(ctx);
         return IEEE802154_SEC_OK;
     }
-    int d = bf_get_unset(ctx->devstore.mask,
+    int d = bf_get_unset(ctx->config.devstore.mask,
                          CONFIG_IEEE802154_SEC_DEFAULT_DEVSTORE_SIZE);
     if (d < 0) {
         CTX_UNLOCK(ctx);
         DEBUG_SEC("device store full\n");
         return -IEEE802154_SEC_NO_DEV;
     }
-    ctx->devstore.peers[d] = tmp_dev;
+    ctx->config.devstore.peers[d] = tmp_dev;
+    _config_set(ctx->sid + CONFIG_IEEE802154_SECURITY_DEVSTORE_LOWER_SID,
+                &ctx->config.devstore, sizeof(ctx->config.devstore));
+    _config_export(ctx->sid + CONFIG_IEEE802154_SECURITY_DEVSTORE_LOWER_SID);
     CTX_UNLOCK(ctx);
     return IEEE802154_SEC_OK;
 }
