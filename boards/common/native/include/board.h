@@ -132,8 +132,10 @@ void _native_LED_RED_TOGGLE(void);
 #endif
 
 #if SPIFFS_HAL_CALLBACK_EXTRA == 0
-/* Default MTD device if no callback parameter */
 #ifndef SPIFFS_MTD_DEV
+/**
+ * @brief   Default MTD device if no callback parameter is provided
+ */
 #define SPIFFS_MTD_DEV                      (MTD_0)
 #endif
 #endif
