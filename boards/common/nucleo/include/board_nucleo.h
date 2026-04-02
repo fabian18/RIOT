@@ -59,6 +59,9 @@ extern "C" {
  * @name MTD configuration
  * @{
  */
+/**
+ * @brief   First MTD
+ */
 #define MTD_0 mtd_dev_get(0)
 /** @} */
 #endif
