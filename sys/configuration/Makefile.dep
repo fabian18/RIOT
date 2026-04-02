@@ -10,6 +10,11 @@ ifneq (,$(filter configuration_backend_riotconf,$(USEMODULE)))
   USEMODULE += riotconf
 endif
 
+ifneq (,$(filter configuration_backend_eepreg,$(USEMODULE)))
+  USEMODULE += eepreg
+  USEMODULE += fmt
+endif
+
 ifneq (,$(filter configuration_backend_flashdb%,$(USEMODULE)))
   # this backend needs strings
   USEMODULE += configuration_strings
