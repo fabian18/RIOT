@@ -21,5 +21,9 @@
 
 void cfg_at86rf215_instance(at86rf215_t *instance, conf_sid_t sid_stride)
 {
+    (void)instance;
+    (void)sid_stride;
+#if MODULE_CFG_IEEE802154
     cfg_ieee802154_instance(&instance->netdev, sid_stride);
+#endif
 }

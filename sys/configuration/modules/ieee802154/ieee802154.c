@@ -21,5 +21,9 @@
 
 void cfg_ieee802154_instance(netdev_ieee802154_t *instance, conf_sid_t sid_stride)
 {
+    (void)instance;
+    (void)sid_stride;
+#if MODULE_CFG_IEEE802154_SECURITY
     cfg_ieee802154_security_instance(&instance->sec_ctx, sid_stride);
+#endif
 }
