@@ -75,7 +75,7 @@ void auto_init_at86rf215(void)
             dev_09   = &at86rf215_devs[i];
             stack_09 = &_at86rf215_stacks[i];
             netif_09 = &_netif[i];
-#if MODULE_CFG_RIOT
+#if MODULE_CFG_AT86RF215
             cfg_at86rf215_instance(dev_09, i * CONFIG_AT86RF215_INDEX_STRIDE);
 #endif
             ++i;
@@ -85,7 +85,7 @@ void auto_init_at86rf215(void)
             dev_24   = &at86rf215_devs[i];
             stack_24 = &_at86rf215_stacks[i];
             netif_24 = &_netif[i];
-#if MODULE_CFG_RIOT
+#if MODULE_CFG_AT86RF215
             cfg_at86rf215_instance(dev_24, i * CONFIG_AT86RF215_INDEX_STRIDE);
 #endif
             ++i;
