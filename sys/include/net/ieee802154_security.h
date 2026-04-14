@@ -37,6 +37,7 @@
 #include "crypto/ciphers.h"
 #include "bitfield.h"
 #include "mutex.h"
+#include "configuration.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -560,6 +561,10 @@ typedef struct ieee802154_sec_context {
      * @brief   Security configuration parameters
      */
     ieee802154_security_config_t config;
+    /**
+     * @brief   Instance base SID for configuration
+     */
+    conf_sid_t sid;
     /**
      * @brief   Internal lock to protect concurrent operations on data structures
      */
