@@ -27,6 +27,10 @@
 
 #include "at86rf215.h"
 #include "at86rf215_params.h"
+#if MODULE_CFG_RIOT
+#define _CFG_NO_INSTANCE
+#include "cfg_riot_sid.h"
+#endif
 
 /**
  * @brief   Define stack parameters for the MAC layer thread
@@ -71,6 +75,9 @@ void auto_init_at86rf215(void)
             dev_09   = &at86rf215_devs[i];
             stack_09 = &_at86rf215_stacks[i];
             netif_09 = &_netif[i];
+#if MODULE_CFG_AT86RF215
+            cfg_at86rf215_instance(dev_09, i * CONFIG_AT86RF215_INDEX_STRIDE);
+#endif
             ++i;
         }
 
@@ -78,6 +85,9 @@ void auto_init_at86rf215(void)
             dev_24   = &at86rf215_devs[i];
             stack_24 = &_at86rf215_stacks[i];
             netif_24 = &_netif[i];
+#if MODULE_CFG_AT86RF215
+            cfg_at86rf215_instance(dev_24, i * CONFIG_AT86RF215_INDEX_STRIDE);
+#endif
             ++i;
         }
 
