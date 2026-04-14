@@ -1,0 +1,7 @@
+ifneq (,$(filter ieee802154_security,$(USEMODULE)))
+  USEMODULE += cfg_ieee802154_security
+endif
+
+ifneq (,$(filter cfg_ieee802154_security,$(USEMODULE)))
+  USEMODULE += configuration_key_subkey
+endif
